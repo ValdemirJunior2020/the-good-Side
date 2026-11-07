@@ -1,4 +1,4 @@
-export type DigestCandidate = {news_id:string; category:string; approval_status:string; confidence_score:string; source_published_at:string};
+export type DigestCandidate = {news_id:string; title:string; category:string; approval_status:string; confidence_score:string; source_published_at:string};
 export function chooseDigest(articles:DigestCandidate[], interests:string[], previouslySent:Set<string>) {
   const approved=articles.filter(a=>a.approval_status==="approved" && !previouslySent.has(a.news_id));
   const matching=approved.filter(a=>interests.includes(a.category));
