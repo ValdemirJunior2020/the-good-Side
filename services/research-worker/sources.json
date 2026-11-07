@@ -1,0 +1,62 @@
+[
+  {
+    "publisher": "Positive News",
+    "feed": "https://www.positive.news/feed/",
+    "category": "world-progress",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Good News Network",
+    "feed": "https://www.goodnewsnetwork.org/feed/",
+    "category": "community",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Reasons to be Cheerful",
+    "feed": "https://reasonstobecheerful.world/feed/",
+    "category": "world-progress",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "The Optimist Daily",
+    "feed": "https://www.optimistdaily.com/feed/",
+    "category": "world-progress",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Good Good Good",
+    "feed": "https://www.goodgoodgood.co/articles/rss.xml",
+    "category": "kindness",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Nice News",
+    "feed": "https://nicenews.com/feed/",
+    "category": "kindness",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Squirrel News",
+    "feed": "https://squirrel-news.net/feed/",
+    "category": "world-progress",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Anthropocene Magazine",
+    "feed": "https://www.anthropocenemagazine.org/feed/",
+    "category": "environment",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Upworthy",
+    "feed": "https://www.upworthy.com/feed",
+    "category": "kindness",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Sunny Skyz",
+    "feed": "https://www.sunnyskyz.com/rss_tebow.php",
+    "category": "kindness",
+    "status": "review_terms"
+  }
+]

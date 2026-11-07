@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "The Good Side",
+    "slug": "the-good-side",
+    "scheme": "thegoodside",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.thegoodside.app"
+    },
+    "android": {
+      "package": "com.thegoodside.app"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "color": "#F2A34C"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
