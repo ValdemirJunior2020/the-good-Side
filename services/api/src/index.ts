@@ -54,6 +54,42 @@ app.get("/admin/pending",asyncRoute(async(req,res)=>send(res,await sheet("listPe
 app.post("/admin/news",asyncRoute(async(req,res)=>send(res,await sheet("addNews",{...req.body,actor_id:req.uid}))));
 app.patch("/admin/news/:id",asyncRoute(async(req,res)=>send(res,await sheet("editNews",{...req.body,news_id:req.params.id,actor_id:req.uid}))));
 app.post("/admin/news/:id/status",asyncRoute(async(req,res)=>{const body=z.object({status:z.enum(["approved","rejected","pending"])}).parse(req.body);send(res,await sheet("setNewsStatus",{news_id:req.params.id,status:body.status,actor_id:req.uid}));}));
+app.get("/admin/broadcast/preview",asyncRoute(async(req,res)=>{
+ const body=z.object({news_id:z.string().min(1).max(128),audience:z.enum(["all","matching"]).default("matching")}).parse(req.query);
+ const story=await sheet("adminGetNews",{news_id:body.news_id});
+ if(!story||story.approval_status!=="approved"||!story.original_url||!/^https:\/\//i.test(story.original_url))return res.status(409).json({error:"Only approved articles with a valid original source can be sent"});
+ const preview=await sheet("broadcastPreview",body);send(res,{...preview,story:{news_id:story.news_id,title:story.title,publisher:story.publisher,original_url:story.original_url}});
+}));
+app.post("/admin/broadcast/send",asyncRoute(async(req,res)=>{
+ const body=z.object({news_id:z.string().min(1).max(128),audience:z.enum(["all","matching"]),confirmation:z.literal("SEND"),request_id:z.string().uuid()}).parse(req.body);
+ const story=await sheet("adminGetNews",{news_id:body.news_id});
+ if(!story||story.approval_status!=="approved"||!/^https:\/\//i.test(story.original_url||"")||!story.publisher)return res.status(409).json({error:"Approval, publisher and original HTTPS source required"});
+ if(!encryptionKey||encryptionKey.length!==32)return res.status(503).json({error:"Push service encryption is not configured"});
+ const recipients=await sheet("broadcastRecipients",{news_id:body.news_id,audience:body.audience,request_id:body.request_id,limit:75});
+ let accepted=0,failed=0,attempted=0;
+ for(const d of recipients.devices||[]){
+  const key="manual:"+body.request_id+":"+d.device_id;
+  // Claim before sending to prevent double sends if a client retries.
+  const claim=await sheet("claimNotification",{notification_id:crypto.randomUUID(),user_id:d.user_id,news_id:body.news_id,scheduled_at:new Date().toISOString(),delivery_status:"pending",idempotency_key:key});
+  if(claim?.duplicate)continue;
+  attempted++;
+  try{
+   const token=decrypt(d.push_token_reference);
+   const push=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"☀️ The Good Side",body:story.title.slice(0,150),data:{news_id:story.news_id,original_url:story.original_url},sound:"default"})});
+   const result=await push.json() as any;
+   const ticket=result?.data;
+   const ok=push.ok&&ticket?.status==="ok";
+   await sheet("updateNotificationByKey",{idempotency_key:key,delivery_status:ok?"accepted":"error",sent_at:new Date().toISOString(),error_code:ticket?.details?.error||(!push.ok?"push_http_"+push.status:"")});
+   if(ticket?.details?.error==="DeviceNotRegistered")await sheet("disableDevice",{device_id:d.device_id,user_id:d.user_id});
+   ok?accepted++:failed++;
+  }catch(e){
+   failed++;
+   try{await sheet("updateNotificationByKey",{idempotency_key:key,delivery_status:"error",sent_at:new Date().toISOString(),error_code:"push_request_failed"})}catch{}
+  }
+ }
+ send(res,{request_id:body.request_id,attempted,accepted_by_push_service:accepted,failed,remaining_eligible:recipients.remaining_eligible||0,note:"Accepted is not confirmation of handset delivery. Limit is 75 eligible devices per request."});
+}));
+app.get("/admin/broadcast/history",asyncRoute(async(req,res)=>send(res,await sheet("broadcastHistory",{limit:100}))));
 app.get("/admin/sources",asyncRoute(async(req,res)=>send(res,await sheet("listSources"))));
 app.post("/admin/sources",asyncRoute(async(req,res)=>send(res,await sheet("upsertSource",{...req.body,actor_id:req.uid}))));
 app.post("/worker/candidates",asyncRoute(async(req,res)=>{const key=req.get("x-worker-key")||"";if(!process.env.RESEARCH_WORKER_KEY||!safeEqual(key,process.env.RESEARCH_WORKER_KEY))return res.status(403).json({error:"Unauthorized"});const story=z.object({news_id:z.string(),title:z.string().max(300),summary:z.string().max(1200),full_summary:z.string().max(5000),category:z.string(),publisher:z.string(),original_url:z.string().url(),source_published_at:z.string(),content_hash:z.string(),confidence_score:z.number().min(0).max(100),positivity_score:z.number().min(0).max(100),language:z.string().default("en"),country:z.string().default(""),image_url:z.string().default("")}).parse(req.body);send(res,await sheet("addNews",{...story,approval_status:"pending",actor_id:"research-worker"}));}));

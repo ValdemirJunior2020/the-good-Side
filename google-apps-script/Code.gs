@@ -31,6 +31,7 @@ function doPost(e){
    unsaveNews:unsaveNews_,registerDevice:registerDevice_,listNotifications:listNotifications_,
    deleteUser:deleteUser_,stats:stats_,listPending:listPending_,addNews:addNews_,editNews:editNews_,
    setNewsStatus:setNewsStatus_,listSources:listSources_,upsertSource:upsertSource_,
+   adminGetNews:adminGetNews_,broadcastPreview:broadcastPreview_,broadcastRecipients:broadcastRecipients_,claimNotification:claimNotification_,updateNotificationByKey:updateNotificationByKey_,broadcastHistory:broadcastHistory_,
    digestUsers:digestUsers_,digestSeen:digestSeen_,listDevices:listDevices_,logNotification:logNotification_,disableDevice:disableDevice_
   };
   if(!Object.prototype.hasOwnProperty.call(allowed,body.action))return json_({ok:false,error:"Unknown action"});
@@ -74,3 +75,40 @@ function editNews_(p){required_(p,"news_id");const record=find_("NEWS","news_id"
 function setNewsStatus_(p){const item=find_("NEWS","news_id",p.news_id);if(!item)throw Error("News not found");if(!["approved","rejected","pending"].includes(p.status))throw Error("Invalid status");patch_("NEWS",item,{approval_status:p.status,verified_at:p.status==="approved"?now_():"",updated_at:now_()});audit_(p.actor_id,p.status,"news",p.news_id);return {status:p.status};}
 function listSources_(){return records_("NEWS_SOURCES");}
 function upsertSource_(p){required_(p,"feed_url");if(!isHttps_(p.feed_url))throw Error("HTTPS feed required");const old=records_("NEWS_SOURCES").find(x=>x.feed_url===p.feed_url),data={source_id:old?old.source_id:Utilities.getUuid(),publisher:String(p.publisher||"").slice(0,100),feed_url:p.feed_url,homepage_url:p.homepage_url||"",category:p.category||"",country:p.country||"",language:p.language||"en",reliability:p.reliability||"review",terms_reviewed:Boolean(p.terms_reviewed),active:Boolean(p.active),last_fetched_at:old?old.last_fetched_at:"",created_at:old?old.created_at:now_()};audit_(p.actor_id,"upsert","source",data.source_id);return old?patch_("NEWS_SOURCES",old,data):append_("NEWS_SOURCES",data);}
+
+
+/* Manual editorial push: this service is available only through the admin-verified Node gateway. */
+function adminGetNews_(p){required_(p,"news_id");return find_("NEWS","news_id",p.news_id)||null;}
+function broadcastDevicePool_(p){
+ const approved=find_("NEWS","news_id",p.news_id);
+ if(!approved||approved.approval_status!=="approved"||!isHttps_(String(approved.original_url||"")))throw Error("Approved sourced article required");
+ const prefs=new Map(records_("USER_PREFERENCES").map(x=>[String(x.user_id),x]));
+ const users=new Set(records_("USERS").filter(x=>x.account_status==="active").map(x=>String(x.user_id)));
+ return records_("PUSH_DEVICES").filter(d=>{
+  const pref=prefs.get(String(d.user_id));
+  if(!users.has(String(d.user_id))||!pref||String(pref.notification_enabled)!=="true"||String(d.enabled)!=="true")return false;
+  if(p.audience==="matching"){const interests=String(pref.selected_categories||"").split(",").map(s=>s.trim());if(!interests.includes(String(approved.category)))return false;}
+  return true;
+ });
+}
+function broadcastPreview_(p){const devices=broadcastDevicePool_(p);return {eligible_devices:devices.length,eligible_users:new Set(devices.map(d=>String(d.user_id))).size,audience:p.audience,category:find_("NEWS","news_id",p.news_id).category};}
+function broadcastRecipients_(p){
+ required_(p,"request_id");const max=Math.min(75,Math.max(1,Number(p.limit)||75));
+ const keys=new Set(records_("NOTIFICATION_LOGS").map(x=>String(x.idempotency_key)));
+ const all=broadcastDevicePool_(p).filter(d=>!keys.has("manual:"+p.request_id+":"+d.device_id));
+ const devices=all.slice(0,max).map(x=>({device_id:x.device_id,user_id:x.user_id,push_token_reference:x.push_token_reference}));
+ return {devices,remaining_eligible:Math.max(0,all.length-devices.length)};
+}
+function claimNotification_(p){
+ required_(p,"idempotency_key");
+ if(records_("NOTIFICATION_LOGS").some(x=>x.idempotency_key===p.idempotency_key))return {duplicate:true};
+ append_("NOTIFICATION_LOGS",p);
+ return {duplicate:false};
+}
+function updateNotificationByKey_(p){
+ required_(p,"idempotency_key");const record=find_("NOTIFICATION_LOGS","idempotency_key",p.idempotency_key);
+ if(!record)throw Error("Notification not found");
+ const allowed={delivery_status:String(p.delivery_status||"error"),sent_at:p.sent_at||now_(),error_code:p.error_code||""};
+ patch_("NOTIFICATION_LOGS",record,allowed);return {updated:true};
+}
+function broadcastHistory_(p){return records_("NOTIFICATION_LOGS").filter(x=>String(x.idempotency_key).indexOf("manual:")===0).slice(-Math.min(100,Number(p.limit)||100)).reverse().map(x=>({news_id:x.news_id,sent_at:x.sent_at,delivery_status:x.delivery_status,error_code:x.error_code,idempotency_key:x.idempotency_key}));}
