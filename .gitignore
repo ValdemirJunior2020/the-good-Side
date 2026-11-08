@@ -9,3 +9,4 @@ coverage/
 *.log
 .DS_Store
 google-apps-script/.clasp.json
+.netlify/
