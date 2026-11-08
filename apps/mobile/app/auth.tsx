@@ -5,7 +5,7 @@ import * as Google from "expo-auth-session/providers/google";
 import {api,auth,json} from "../src/client";
 import {Background,Brand,Pill,Surface,styles} from "../src/components";
 import {colors} from "../src/theme";
-export default function SignIn(){
+function GoogleSignIn(){
  const [error,setError]=useState(""),[busy,setBusy]=useState(false);
  const [request,response,promptAsync]=Google.useIdTokenAuthRequest({
   clientId:process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID||"",
@@ -28,4 +28,10 @@ export default function SignIn(){
 function atobCompat(input:string){
  const p=input.replace(/-/g,"+").replace(/_/g,"/");if(typeof atob==="function")return decodeURIComponent(Array.from(atob(p),c=>"%"+c.charCodeAt(0).toString(16).padStart(2,"0")).join(""));
  return "{}";
+}
+
+export default function SignIn(){
+ const configured=Boolean(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID||process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID||process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
+ if(configured)return <GoogleSignIn/>;
+ return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><TouchableOpacity onPress={()=>router.back()}><Text>← Back</Text></TouchableOpacity><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:12}]}>Google sign-in setup</Text><Surface><Text style={styles.subtitle}>To enable secure login, configure the Google OAuth client IDs in apps/mobile/.env and restart Expo. Firebase is not used.</Text></Surface><Pill title="Browse good news as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
 }
