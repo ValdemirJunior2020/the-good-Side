@@ -23,9 +23,10 @@ if (original.includes(marker)) {
   console.log("Already patched; no change.");
   process.exit(0);
 }
-const needle = "    ...(spec.extra ?? {}),\n  };";
-if (!original.includes(needle)) {
-  console.error("AIHOT request builder differs from expected version; no changes made.");
+const needle = /^(\s*)\.\.\.\(spec\.extra\s*\?\?\s*\{\}\),\s*$/gm;
+const matches = [...original.matchAll(needle)];
+if (matches.length !== 1) {
+  console.error(`Expected exactly one spec.extra line; found ${matches.length}. No changes made.`);
   process.exit(1);
 }
 const patch = `    ...(spec.extra ?? {}),
@@ -60,7 +61,10 @@ const patch = `    ...(spec.extra ?? {}),
         })()
       : {}),
   };`;
-const result = original.replace(needle, patch);
+const line = matches[0][0];
+const indent = matches[0][1];
+const extraLines = patch.split("\n").slice(1, -1).map((s) => s).join("\n");
+const result = original.replace(line, line + "\n" + extraLines);
 const backup = target + ".goodside-original.bak";
 if (!existsSync(backup)) copyFileSync(target, backup);
 writeFileSync(target, result, "utf8");
