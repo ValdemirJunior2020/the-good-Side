@@ -1,0 +1,3 @@
+[submodule "third_party/AIHOT"]
+	path = third_party/AIHOT
+	url = https://github.com/KKKKhazix/AIHOT.git

@@ -11,6 +11,7 @@
     "test": "npm run test --workspaces --if-present",
     "mobile": "npm run start -w @goodside/mobile",
     "api": "npm run dev -w @goodside/api",
-    "research": "npm run research -w @goodside/research"
+    "research": "npm run research -w @goodside/research",
+    "aihot:import": "npm run aihot:import -w @goodside/research"
   }
 }
