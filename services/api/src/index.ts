@@ -2,15 +2,16 @@ import "dotenv/config";
 import express,{type Request,type Response,type NextFunction} from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import {initializeApp,applicationDefault,getApps} from "firebase-admin/app";
-import {getAuth} from "firebase-admin/auth";
+import {OAuth2Client} from "google-auth-library";
 import {createCipheriv,createDecipheriv,randomBytes,createHash,timingSafeEqual} from "node:crypto";
 import {z} from "zod";
 import {chooseDigest,localClock,isValidTimezone} from "./schedule.js";
 
-const required=["FIREBASE_PROJECT_ID","APPS_SCRIPT_URL","APPS_SCRIPT_SHARED_SECRET"];
+const required=["GOOGLE_CLIENT_IDS","APPS_SCRIPT_URL","APPS_SCRIPT_SHARED_SECRET"];
 for(const key of required) if(!process.env[key]) throw new Error("Missing configuration: "+key);
-if(!getApps().length) initializeApp({credential:applicationDefault(),projectId:process.env.FIREBASE_PROJECT_ID});
+const oauthClient=new OAuth2Client();
+const allowedClients=(process.env.GOOGLE_CLIENT_IDS||"").split(",").map(s=>s.trim()).filter(Boolean);
+const adminEmails=new Set((process.env.ADMIN_GOOGLE_EMAILS||"").split(",").map(s=>s.trim().toLowerCase()).filter(Boolean));
 const app=express();app.disable("x-powered-by");app.use(express.json({limit:"64kb"}));
 app.use(cors({origin:process.env.ALLOWED_ORIGIN?.split(",").filter(Boolean)||false}));
 app.use(rateLimit({windowMs:60000,limit:90,standardHeaders:"draft-7",legacyHeaders:false}));
@@ -19,10 +20,18 @@ type Authed=Request & {uid?:string;email?:string;admin?:boolean};
 const asyncRoute=(fn:(req:Authed,res:Response)=>Promise<unknown>)=>(req:Request,res:Response,next:NextFunction)=>Promise.resolve(fn(req as Authed,res)).catch(next);
 function safeEqual(a:string,b:string){const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);}
 async function identity(req:Authed,res:Response,next:NextFunction){
-  try{const token=req.get("authorization")?.match(/^Bearer (.+)$/)?.[1];if(!token)return void res.status(401).json({error:"Sign in required"});
-  const user=await getAuth().verifyIdToken(token,true);req.uid=user.uid;req.email=user.email;req.admin=user.admin===true;next();
-  }catch{res.status(401).json({error:"Session expired or invalid"});}
+ try{
+  const token=req.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
+  if(!token)return void res.status(401).json({error:"Google sign-in required"});
+  const ticket=await oauthClient.verifyIdToken({idToken:token,audience:allowedClients});
+  const user=ticket.getPayload();
+  if(!user?.sub||!user.email||!user.email_verified)return void res.status(401).json({error:"Verified Google account required"});
+  req.uid="google:"+user.sub;req.email=user.email;
+  req.admin=adminEmails.has(user.email.toLowerCase());
+  next();
+ }catch{res.status(401).json({error:"Google session expired or invalid. Sign in again."});}
 }
+
 function encrypt(value:string){if(!encryptionKey||encryptionKey.length!==32)throw Error("Push encryption key not configured");const iv=randomBytes(12);const cipher=createCipheriv("aes-256-gcm",encryptionKey,iv);const result=Buffer.concat([cipher.update(value,"utf8"),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),result]).toString("base64");}
 function decrypt(value:string){if(!encryptionKey||encryptionKey.length!==32)throw Error("Push encryption key not configured");const buf=Buffer.from(value,"base64");const dec=createDecipheriv("aes-256-gcm",encryptionKey,buf.subarray(0,12));dec.setAuthTag(buf.subarray(12,28));return Buffer.concat([dec.update(buf.subarray(28)),dec.final()]).toString("utf8");}
 async function sheet(action:string,payload:Record<string,unknown>={}){
@@ -47,7 +56,7 @@ app.post("/me/saved/:id",asyncRoute(async(req,res)=>send(res,await sheet("saveNe
 app.delete("/me/saved/:id",asyncRoute(async(req,res)=>send(res,await sheet("unsaveNews",{user_id:req.uid,news_id:req.params.id}))));
 app.get("/me/notifications",asyncRoute(async(req,res)=>send(res,await sheet("listNotifications",{user_id:req.uid}))));
 app.post("/me/device",asyncRoute(async(req,res)=>{const body=z.object({device_id:z.string().max(128),platform:z.enum(["ios","android"]),token:z.string().startsWith("ExponentPushToken[").max(250)}).parse(req.body);send(res,await sheet("registerDevice",{...body,user_id:req.uid,push_token_reference:encrypt(body.token),token:undefined}));}));
-app.delete("/me",asyncRoute(async(req,res)=>{await sheet("deleteUser",{user_id:req.uid});await getAuth().deleteUser(req.uid!);send(res,{deleted:true})}));
+app.delete("/me",asyncRoute(async(req,res)=>{await sheet("deleteUser",{user_id:req.uid});send(res,{deleted:true,google_account_unchanged:true})}));
 app.use("/admin",identity,(req:Authed,res,next)=>req.admin?next():res.status(403).json({error:"Admin only"}));
 app.get("/admin/stats",asyncRoute(async(req,res)=>send(res,await sheet("stats"))));
 app.get("/admin/pending",asyncRoute(async(req,res)=>send(res,await sheet("listPending"))));

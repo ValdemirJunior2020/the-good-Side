@@ -1,16 +1,20 @@
-# Setup — Windows 11
+# The Good Side — Windows 11 (no Firebase)
 
-1. Clone the repository and run npm install with Node 22 LTS.
-2. Configure Firebase Email/Password Authentication and the Firebase Admin service credentials in the Node environment. Set EXPO_PUBLIC_FIREBASE_* values in the mobile environment.
-3. Open the existing spreadsheet and confirm the nine headers/tabs.
-4. Create a Google Apps Script project bound to the Sheet; paste google-apps-script/Code.gs and appsscript.json. Configure Script Properties BACKEND_SHARED_SECRET with a long random value.
-5. Deploy the Apps Script as a web app (execute as owner; allow Anyone). Put the deployment exec URL in APPS_SCRIPT_URL and set the same shared secret in the API as APPS_SCRIPT_SHARED_SECRET. This script deployment is not performed by a GitHub commit.
-6. Configure services/api/.env.example values in services/api/.env. Run npm run api. Expose this API over HTTPS using an authenticated/restricted Cloudflare Tunnel; do not expose Ollama publicly.
-7. Configure services/research-worker/.env and ensure Ollama is installed with model qwen3:8b. Edit sources.json to change review_terms to approved ONLY after checking each publisher's feed terms; run npm run research.
-8. Configure apps/mobile/.env and run npm run mobile. Push notifications require an EAS project ID and native push credentials. Test on an actual device; Expo Go may not support remote notifications.
-9. Grant Firebase custom claim admin:true to your own account with a one-time trusted Firebase Admin script; never provide client-side role escalation. Configure apps/admin/.env and run npm run dev -w @goodside/admin. Netlify base directory is apps/admin; build command npm run build; publish dist.
-10. Keep the Node API always online with ENABLE_PUSH_SCHEDULER=true and a 32-byte AES encryption key provided as base64 in PUSH_TOKEN_ENCRYPTION_KEY_BASE64. Do not run multiple independent scheduler replicas.
+The project now uses Google Identity Services (web) and Google OAuth (Expo native) instead of Firebase. Passwords are never stored in Sheets.
 
-Test commands: npm run check; npm test; npm run build -w @goodside/admin.
+1. Clone: git clone https://github.com/ValdemirJunior2020/the-good-Side.git
+2. cd the-good-Side && npm install
+3. Create OAuth client IDs in Google Cloud Console, configure OAuth consent screen and authorized JavaScript origins http://localhost:5173 for local admin. Configure separate platform client IDs for Expo mobile (iOS/Android) and the applicable redirect settings.
+4. Copy apps/admin/.env.example to apps/admin/.env, set VITE_GOOGLE_WEB_CLIENT_ID. Run npm run dev -w @goodside/admin.
+5. Copy services/api/.env.example to services/api/.env. Set GOOGLE_CLIENT_IDS to comma-separated allowed web/iOS/Android OAuth client IDs, set ADMIN_GOOGLE_EMAILS to your exact trusted Google account address. Create long random APPS_SCRIPT_SHARED_SECRET.
+6. In the Apps Script project corresponding to the provided URL, install this repository's google-apps-script/Code.gs and manifest, set Script Property BACKEND_SHARED_SECRET to match the Node server value, deploy a NEW web app version, and check its URL. The user-supplied deployment endpoint is currently prefilled in the backend example, but no claim is made that it runs this version of Code.gs.
+7. Run npm run api. The browser calls the Node API, not the Apps Script URL. Keep Apps Script secret server-side.
+8. For Expo, copy apps/mobile/.env.example to apps/mobile/.env, set Google OAuth client IDs and EXPO_PUBLIC_API_URL to your HTTPS Node gateway. Run npm run mobile. Native sign-in and push permissions require device tests and OAuth redirect configuration.
+9. For manual pushes, configure EAS/Expo credentials and PUSH_TOKEN_ENCRYPTION_KEY_BASE64; the Node server must be reachable and continuously running for scheduled sends.
+10. On Netlify set VITE_API_URL and VITE_GOOGLE_WEB_CLIENT_ID as build environment variables. Allow your deployed admin origin in Google Cloud OAuth settings and ALLOWED_ORIGIN on the Node API.
 
-Real Apple TestFlight/App Store publishing requires an Apple Developer account. A publicly available always-on backend, iOS distribution, and publisher licenses may have costs even if the local AI and open-source code are free.
+A static Netlify site cannot securely hold the Apps Script secret or function as a privileged backend. Cloudflare Tunnel can expose your protected Node API, not your local Ollama process. Google OAuth client IDs are public identifiers; secrets and tokens are not.
+
+Testing: npm run check && npm test && npm run build -w @goodside/admin
+
+Limitations: Google Identity ID tokens expire and this starter currently prompts users to reauthenticate rather than automatically refreshing; the initial mobile experience uses Google sign-in rather than email/password. Google OAuth requires cloud-project setup but does not require Firebase. The code push does not deploy your Apps Script.

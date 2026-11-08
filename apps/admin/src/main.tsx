@@ -1,28 +1,52 @@
 import React,{useEffect,useState} from "react";
 import{createRoot}from"react-dom/client";
-import{initializeApp}from"firebase/app";
-import{getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut}from"firebase/auth";
 import"./style.css";
 
-const firebase=initializeApp({apiKey:import.meta.env.VITE_FIREBASE_API_KEY,authDomain:import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,projectId:import.meta.env.VITE_FIREBASE_PROJECT_ID,appId:import.meta.env.VITE_FIREBASE_APP_ID});
-const auth=getAuth(firebase);
+const googleClientId=import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID||"";
+type GoogleCredential={credential:string};
+type GoogleApi={accounts:{id:{initialize(o:{client_id:string;callback:(v:GoogleCredential)=>void;auto_select?:boolean}):void;renderButton(el:HTMLElement,opts:Record<string,unknown>):void;disableAutoSelect():void}}};
+declare global {interface Window {google?:GoogleApi}}
+let activeToken:string|null=null;
+function extractEmail(token:string){try{const part=token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");return JSON.parse(atob(part)).email as string||""}catch{return ""}}
 type Story={news_id:string;title:string;summary:string;publisher:string;original_url:string;source_published_at:string;category:string;approval_status:string};
 type Stats=Record<string,number>;
 type Preview={eligible_devices:number;eligible_users:number;audience:string;category:string;story:{title:string;publisher:string;original_url:string}};
 type Dispatch={request_id:string;attempted:number;accepted_by_push_service:number;failed:number;remaining_eligible:number;note:string};
 type History={news_id:string;sent_at:string;delivery_status:string;error_code:string;idempotency_key:string};
 async function api<T>(path:string,options:RequestInit={}):Promise<T>{
- const token=await auth.currentUser?.getIdToken();if(!token)throw Error("Sign in first");
+ const token=activeToken;if(!token)throw Error("Sign in with Google first");
  const response=await fetch(import.meta.env.VITE_API_URL+path,{...options,headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json",...options.headers}});
  const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||"Request failed");return result.data as T;
 }
 const menu=[["review","Review queue"],["publish","Manual news"],["send","Send notification"],["sources","News sources"],["history","Delivery logs"]] as const;
 const categories=[["Acts of kindness","kindness"],["Science","science"],["Medical progress","medical"],["Animals","animals"],["Environment","environment"],["Technology for good","technology"],["Community heroes","community"],["World progress","world-progress"],["Faith (opt-in)","faith"]];
 function Dashboard(){
- const [user,setUser]=useState(auth.currentUser),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[tab,setTab]=useState<string>("review"),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[queue,setQueue]=useState<Story[]>([]),[published,setPublished]=useState<Story[]>([]),[stats,setStats]=useState<Stats>({}),[history,setHistory]=useState<History[]>([]);
+ const [user,setUser]=useState<{email:string}|null>(null),[googleReady,setGoogleReady]=useState(false),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[tab,setTab]=useState<string>("review"),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[queue,setQueue]=useState<Story[]>([]),[published,setPublished]=useState<Story[]>([]),[stats,setStats]=useState<Stats>({}),[history,setHistory]=useState<History[]>([]);
  const [title,setTitle]=useState(""),[summary,setSummary]=useState(""),[publisher,setPublisher]=useState(""),[originalUrl,setOriginalUrl]=useState(""),[date,setDate]=useState(""),[category,setCategory]=useState("kindness"),[sourceUrl,setSourceUrl]=useState("");
  const [selected,setSelected]=useState(""),[audience,setAudience]=useState<"all"|"matching">("matching"),[preview,setPreview]=useState<Preview|null>(null),[dispatch,setDispatch]=useState<Dispatch|null>(null);
- useEffect(()=>onAuthStateChanged(auth,setUser),[]);
+ useEffect(()=>{
+  if(!googleClientId)return;
+  let cancelled=false;
+  const script=document.createElement("script");
+  script.src="https://accounts.google.com/gsi/client";script.async=true;script.defer=true;
+  script.onload=()=>{if(!cancelled)setGoogleReady(true)};
+  script.onerror=()=>{if(!cancelled)setMessage("Google sign-in could not load. Check your internet connection.")};
+  document.head.appendChild(script);
+  return()=>{cancelled=true;script.remove()};
+ },[]);
+ useEffect(()=>{
+  if(!googleReady||!window.google||!googleClientId)return;
+  const mount=document.getElementById("google-signin");
+  if(!mount)return;
+  window.google.accounts.id.initialize({client_id:googleClientId,callback:async ({credential})=>{
+   activeToken=credential;
+   const e=extractEmail(credential);
+   try{await api<Stats>("/admin/stats");setUser({email:e});setMessage("")}
+   catch(err){activeToken=null;setMessage("Admin access denied: "+String(err));}
+  }});
+  mount.innerHTML="";
+  window.google.accounts.id.renderButton(mount,{theme:"outline",size:"large",shape:"pill",text:"signin_with",width:280});
+ },[googleReady,user]);
  const load=async()=>{try{const [s,p,n,h]=await Promise.all([api<Stats>("/admin/stats"),api<Story[]>("/admin/pending"),api<{items:Story[]}>("/news?limit=50"),api<History[]>("/admin/broadcast/history")]);setStats(s);setQueue(p);setPublished(n.items||[]);setHistory(h);setMessage("")}catch(e){setMessage(String(e))}};
  useEffect(()=>{if(user)void load()},[user]);
  useEffect(()=>{setPreview(null);setDispatch(null)},[selected,audience]);
@@ -42,8 +66,8 @@ function Dashboard(){
  setDispatch(result);await load();setMessage("Push requests processed. 'Accepted' does not mean delivered to a handset.");
  });
  const addSource=()=>act(async()=>{if(new URL(sourceUrl).protocol!=="https:")throw Error("HTTPS feed URL required");await api("/admin/sources",{method:"POST",body:JSON.stringify({feed_url:sourceUrl,publisher:"New source — verify",active:false,terms_reviewed:false})});setSourceUrl("");setMessage("Source saved inactive pending licensing review")});
- if(!user)return <main className="login"><section className="panel login-card"><div className="sun">☀</div><h1>the good side<span>.</span></h1><p>Command Center · Secure editor access</p><form onSubmit={async e=>{e.preventDefault();await act(async()=>{await signInWithEmailAndPassword(auth,email,password)})}}><label>Email<input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Admin email" required/></label><label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password" required/></label><button disabled={busy} className="primary">Sign in securely</button></form><p className="hint">Admin access requires a verified Firebase custom claim.</p>{message&&<p role="alert" className="error">{message}</p>}</section></main>;
- return <main className="layout"><aside><div className="brand"><div className="sun">☀</div><h2>the good side<span>.</span></h2></div><p className="eyebrow">COMMAND CENTER</p>{menu.map(x=><button key={x[0]} className={"nav "+(tab===x[0]?"active":"")} onClick={()=>setTab(x[0])}>{x[1]}</button>)}<div className="sidebar-bottom"><small>{user.email}</small><button className="nav" onClick={()=>signOut(auth)}>Sign out</button></div></aside>
+ if(!user)return <main className="login"><section className="panel login-card"><div className="sun">☀</div><h1>the good side<span>.</span></h1><p>Command Center · Google sign-in · No Firebase</p>{!googleClientId?<div className="notice"><strong>Google sign-in needs configuration.</strong><p>Create a Google OAuth web client, set <code>VITE_GOOGLE_WEB_CLIENT_ID</code> in apps/admin/.env, and restart Vite. Keep the Node gateway running and configure <code>ADMIN_GOOGLE_EMAILS</code> there.</p><p>The Apps Script URL belongs on the Node server, not in browser code.</p></div>:<div id="google-signin" style={{margin:"25px 0"}}>{!googleReady?"Loading Google sign-in…":null}</div>}<p className="hint">Access is granted only to Google accounts explicitly approved on the server.</p>{message&&<p role="alert" className="error">{message}</p>}</section></main>;
+ return <main className="layout"><aside><div className="brand"><div className="sun">☀</div><h2>the good side<span>.</span></h2></div><p className="eyebrow">COMMAND CENTER</p>{menu.map(x=><button key={x[0]} className={"nav "+(tab===x[0]?"active":"")} onClick={()=>setTab(x[0])}>{x[1]}</button>)}<div className="sidebar-bottom"><small>{user.email}</small><button className="nav" onClick={()=>{activeToken=null;window.google?.accounts.id.disableAutoSelect();setUser(null)}}>Sign out</button></div></aside>
  <section className="content"><header><div><p className="eyebrow">THE EDITOR'S DESK</p><h1>Make the world feel brighter.</h1><p className="description">Authentic good news, curated with care.</p></div><button className="soft" onClick={()=>void act(load)} disabled={busy}>↻ Refresh</button></header>
  <div className="stats">{[["Members",stats.users],["Approved stories",stats.approved],["Awaiting approval",stats.pending],["Push records",stats.notifications]].map(([label,value])=><div className="panel metric" key={label}><span>{label}</span><strong>{value??0}</strong></div>)}</div>
  {message&&<p role="status" className="notice">{message}</p>}

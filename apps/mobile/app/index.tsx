@@ -1,14 +1,14 @@
 import React,{useEffect,useState} from "react";
 import {ScrollView,View,Text,TouchableOpacity,ActivityIndicator,RefreshControl,Linking} from "react-native";
 import {router} from "expo-router";
-import {onAuthStateChanged} from "firebase/auth";
+
 import {api,auth,type News} from "../src/client";
 import {Background,Brand,Pill,Surface,styles} from "../src/components";
 import {colors,categories} from "../src/theme";
 export default function Home(){
  const [loading,setLoading]=useState(true),[refreshing,setRefreshing]=useState(false),[news,setNews]=useState<News[]>([]),[error,setError]=useState(""),[logged,setLogged]=useState(false),[category,setCategory]=useState("");
  const load=async(c=category)=>{try{setError("");const result=await api<{items:News[]}>("/news?limit=30"+(c?"&category="+encodeURIComponent(c):""));setNews(result.items||[])}catch(e){setError(e instanceof Error?e.message:"Connection error")}};
- useEffect(()=>{const u=onAuthStateChanged(auth,user=>{setLogged(Boolean(user));setLoading(false)});load();return u},[]);
+ useEffect(()=>{const unsub=auth.subscribe(user=>{setLogged(Boolean(user));setLoading(false)});void auth.restore();load();return unsub},[]);
  const refresh=async()=>{setRefreshing(true);await load();setRefreshing(false)};
  return <Background><ScrollView contentContainerStyle={{padding:23,paddingTop:60,paddingBottom:70}} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh}/>}>
   <View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center"}}><Brand small/><TouchableOpacity onPress={()=>router.push((logged?"/profile":"/auth") as any)}><Text style={{fontSize:27}}>{logged?"◉":"♙"}</Text></TouchableOpacity></View>

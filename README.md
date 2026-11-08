@@ -1,7 +1,11 @@
 # The Good Side
 
-The world has good news, too.
+**The world has good news, too.**
 
-An Expo mobile client, secure API gateway, Apps Script-backed Google Sheet, and a local Ollama-assisted RSS research worker.
+Expo + TypeScript mobile application, Liquid Glass Netlify Command Center, Node backend, Google Apps Script + Google Sheets database, and local Ollama RSS researcher.
 
-**Status:** Implementation in progress. Requires Firebase, Apps Script deployment, push credentials, and real device testing. No article is published unless approved.
+**No Firebase.** Google account sign-in uses Google OAuth / Identity Services. Protected Node routes verify signed Google ID tokens and admin access is restricted by a server-side allowlist.
+
+Quick start and Google OAuth configuration: [docs/SETUP.md](docs/SETUP.md).
+
+**Current deployment:** This repository is source code. The provided Apps Script URL must be updated with this repository's Code.gs and configured with the server secret. The Node backend and Netlify app have not been deployed by this commit.

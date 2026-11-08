@@ -1,18 +1,31 @@
-import React,{useState} from "react";
-import {View,Text,TextInput,ScrollView,Alert,TouchableOpacity} from "react-native";
+import React,{useEffect,useState} from "react";
+import {Text,ScrollView,TouchableOpacity,Platform} from "react-native";
 import {router} from "expo-router";
-import {createUserWithEmailAndPassword,signInWithEmailAndPassword,sendPasswordResetEmail,updateProfile} from "firebase/auth";
+import * as Google from "expo-auth-session/providers/google";
 import {api,auth,json} from "../src/client";
 import {Background,Brand,Pill,Surface,styles} from "../src/components";
 import {colors} from "../src/theme";
-export default function Auth(){
- const [mode,setMode]=useState<"login"|"register"|"reset">("login"),[name,setName]=useState(""),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
- const submit=async()=>{setBusy(true);setError("");try{
- if(mode==="reset"){await sendPasswordResetEmail(auth,email.trim());Alert.alert("Check your inbox","If an account exists, you'll receive reset instructions.");setMode("login");return;}
- const credential=mode==="register"?await createUserWithEmailAndPassword(auth,email.trim(),password):await signInWithEmailAndPassword(auth,email.trim(),password);
- if(mode==="register"&&name.trim())await updateProfile(credential.user,{displayName:name.trim()});
- await api("/me",json({display_name:name.trim()||credential.user.displayName||"",preferred_language:"en",timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/New_York"}),true);
- router.replace(mode==="register"?"/categories":"/");
- }catch(e){setError(e instanceof Error?e.message:"Could not sign in")}finally{setBusy(false)}};
- return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><TouchableOpacity onPress={()=>router.back()}><Text style={{color:colors.ink}}>← Back</Text></TouchableOpacity><View style={{marginTop:45,marginBottom:30}}><Brand/></View><Text style={[styles.title,{marginBottom:10}]}>{mode==="register"?"Come on in.":mode==="reset"?"Reset your password":"Welcome back."}</Text><Text style={[styles.subtitle,{marginBottom:32}]}>A brighter world is one sign-in away.</Text><Surface>{mode==="register"&&<TextInput autoCapitalize="words" placeholder="Your name" value={name} onChangeText={setName} style={styles.input}/>}<TextInput placeholder="Email address" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={styles.input}/>{mode!=="reset"&&<TextInput placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} style={styles.input}/>}<Text style={{color:"#B54440",marginBottom:error?15:0}}>{error}</Text><Pill title={busy?"Please wait…":mode==="register"?"Create account":mode==="reset"?"Send reset email":"Sign in"} disabled={busy} onPress={submit}/></Surface><TouchableOpacity onPress={()=>{setError("");setMode(mode==="register"?"login":"register")}} style={{marginTop:25,alignItems:"center"}}><Text style={{color:colors.ink,fontWeight:"700"}}>{mode==="register"?"Already have an account? Sign in":"New here? Create an account"}</Text></TouchableOpacity><TouchableOpacity onPress={()=>setMode("reset")} style={{marginTop:19,alignItems:"center"}}><Text style={styles.muted}>Forgot password?</Text></TouchableOpacity><Pill title="Continue as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
+export default function SignIn(){
+ const [error,setError]=useState(""),[busy,setBusy]=useState(false);
+ const [request,response,promptAsync]=Google.useIdTokenAuthRequest({
+  clientId:process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID||"",
+  iosClientId:process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID||"",
+  androidClientId:process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID||"",
+  webClientId:process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID||""
+ });
+ useEffect(()=>{if(response?.type!=="success")return;const token=response.params?.id_token;if(!token){setError("Google did not return an ID token");return}
+  setBusy(true);
+  // The server verifies the signed Google token before any profile is accepted.
+  (async()=>{
+   const info=JSON.parse(atobCompat(token.split(".")[1]||"")) as {email?:string;name?:string};
+   await auth.signIn(token,{email:info.email||"",displayName:info.name||""});
+   await api("/me",json({display_name:info.name||"",timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC",preferred_language:"en"}),true);
+   router.replace("/categories");
+  })().catch(e=>{auth.signOut();setError(String(e))}).finally(()=>setBusy(false));
+ },[response]);
+ return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><TouchableOpacity onPress={()=>router.back()}><Text style={{color:colors.ink}}>← Back</Text></TouchableOpacity><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:14}]}>Your bright side starts here.</Text><Text style={[styles.subtitle,{marginBottom:25}]}>Sign in securely with your Google account. We do not store passwords.</Text><Surface><Pill title={busy?"Signing in…":"Continue with Google"} onPress={()=>{setError("");if(!request){setError("Configure the Google OAuth client IDs first");return}void promptAsync()}} disabled={busy||!request}/>{error?<Text style={{color:"#B54440",marginTop:15}}>{error}</Text>:null}<Text style={[styles.muted,{marginTop:17}]}>A Google OAuth client and the HTTPS API gateway must be configured before sign-in.</Text></Surface><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
+}
+function atobCompat(input:string){
+ const p=input.replace(/-/g,"+").replace(/_/g,"/");if(typeof atob==="function")return decodeURIComponent(Array.from(atob(p),c=>"%"+c.charCodeAt(0).toString(16).padStart(2,"0")).join(""));
+ return "{}";
 }

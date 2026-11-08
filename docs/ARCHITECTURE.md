@@ -1,9 +1,7 @@
-# Architecture
+# The Good Side security architecture
 
-Expo app -> HTTPS Node API -> secret-protected Google Apps Script -> private Google Sheet.
+Web Google Identity Services or native Google OAuth ID token → Node HTTPS API (google-auth-library verifies issuer, audience, signature, expiry and verified email) → protected Apps Script webhook → private Sheets.
 
-Firebase ID tokens are verified in Node, including admin custom claims. Apps Script is never called by the mobile app directly. A separate Ollama RSS worker sends pending stories to the API, and editorial review is required before publication.
+No Firebase. Admin authorization checks server-configured ADMIN_GOOGLE_EMAILS. The backend requires APPS_SCRIPT_SHARED_SECRET for the provided Google Apps Script URL, and the identical value must be in Apps Script Script Properties under BACKEND_SHARED_SECRET. Never put it in Netlify's VITE variables or Expo EXPO_PUBLIC variables.
 
-The push scheduler requires an always-on Node instance with one replica. It encrypts push tokens in the Sheet using AES-256-GCM and logs Expo acceptance tickets, not guaranteed delivery receipts.
-
-Google Sheets scans are linear and not suitable for high-volume public production use. For growth, migrate the storage abstraction and scheduler to PostgreSQL and a transactional queue. The home Ollama host should never be exposed without authentication.
+Local Ollama runs independently and publishes draft candidates for human approval. The Node server sends push requests and records Expo acceptance (not guaranteed device delivery).

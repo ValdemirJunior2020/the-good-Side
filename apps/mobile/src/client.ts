@@ -1,24 +1,25 @@
-import {initializeApp,getApps,getApp} from "firebase/app";
-import {initializeAuth,getAuth,getReactNativePersistence,type User} from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-const config={apiKey:process.env.EXPO_PUBLIC_FIREBASE_API_KEY||"",authDomain:process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN||"",projectId:process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID||"",appId:process.env.EXPO_PUBLIC_FIREBASE_APP_ID||""};
-const fb=getApps().length?getApp():initializeApp(config);
-export const auth=(()=>{try{return initializeAuth(fb,{persistence:getReactNativePersistence(AsyncStorage)})}catch{return getAuth(fb)}})();
-const apiUrl=process.env.EXPO_PUBLIC_API_URL||"";
+import {Platform} from "react-native";
+import * as SecureStore from "expo-secure-store";
+const API_URL=process.env.EXPO_PUBLIC_API_URL||"";
+const KEY="goodside_google_session";
+export type Session={token:string;email:string;displayName:string};
+let current:Session|null=null;
+let loaded=false;
+const listeners=new Set<(session:Session|null)=>void>();
+function emit(){for(const listener of listeners)listener(current)}
+export const auth={
+ get currentUser(){return current},
+ subscribe(fn:(s:Session|null)=>void){listeners.add(fn);fn(current);return()=>{listeners.delete(fn)}},
+ async restore(){if(loaded)return;loaded=true;try{if(Platform.OS!=="web"){const value=await SecureStore.getItemAsync(KEY);if(value)current=JSON.parse(value)}}catch{current=null}emit()},
+ async signIn(token:string,user:{email:string;displayName:string}){current={token,email:user.email,displayName:user.displayName};if(Platform.OS!=="web")await SecureStore.setItemAsync(KEY,JSON.stringify(current));emit()},
+ async signOut(){current=null;if(Platform.OS!=="web")await SecureStore.deleteItemAsync(KEY);emit()}
+};
 export type News={news_id:string;title:string;summary:string;full_summary:string;category:string;publisher:string;original_url:string;image_url:string;source_published_at:string;country:string;language:string};
 export async function api<T>(path:string,options:RequestInit={},authenticated=false):Promise<T>{
- if(!apiUrl)throw Error("API URL not configured");
- const user=auth.currentUser;
- if(authenticated&&!user)throw Error("Sign in required");
- const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),15000);
- try {
-  const token=authenticated?await user!.getIdToken():null;
-  const res=await fetch(apiUrl+path,{...options,headers:{"Content-Type":"application/json",...(token?{Authorization:"Bearer "+token}:{}),...(options.headers||{})},signal:controller.signal});
-  const body=await res.json();
-  if(!res.ok||!body.ok)throw Error(body.error||"Something went wrong");
-  return body.data as T;
- }finally{clearTimeout(timeout);}
+ if(!API_URL)throw Error("Set EXPO_PUBLIC_API_URL to the HTTPS Node API gateway. Do not use Apps Script directly.");
+ const session=auth.currentUser;if(authenticated&&!session)throw Error("Sign in with Google first");
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+ try{const result=await fetch(API_URL+path,{...options,headers:{"Content-Type":"application/json",...(authenticated&&session?{Authorization:"Bearer "+session.token}:{}),...(options.headers||{})},signal:controller.signal});const response=await result.json();if(!result.ok||!response.ok)throw Error(response.error||"Request failed");return response.data as T}finally{clearTimeout(timer)}
 }
 export const json=(value:unknown)=>({method:"POST",body:JSON.stringify(value)});
 export const put=(value:unknown)=>({method:"PUT",body:JSON.stringify(value)});
-export const signedIn=(u:User|null)=>Boolean(u);
