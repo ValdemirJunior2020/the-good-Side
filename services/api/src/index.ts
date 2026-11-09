@@ -55,6 +55,8 @@ const send=(res:Response,p:unknown)=>res.json({ok:true,data:p});
 app.get("/health",(_req,res)=>res.json({status:"ok"}));
 app.get("/news",asyncRoute(async(req,res)=>send(res,await sheet("listNews",newsQuery.parse(req.query)))));
 app.get("/news/:id",asyncRoute(async(req,res)=>send(res,await sheet("getNews",{news_id:req.params.id}))));
+app.get("/recipes",asyncRoute(async(req,res)=>send(res,await sheet("listRecipes"))));
+app.get("/recipes/:id",asyncRoute(async(req,res)=>send(res,await sheet("getRecipe",{recipe_id:req.params.id}))));
 app.use("/me",identity);
 app.get("/me",asyncRoute(async(req,res)=>send(res,await sheet("getUser",{user_id:req.uid}))));
 app.post("/me",asyncRoute(async(req,res)=>send(res,await sheet("syncUser",{user_id:req.uid,email:req.email||"",...profile.parse(req.body)}))));
@@ -64,10 +66,25 @@ app.put("/me/preferences",asyncRoute(async(req,res)=>send(res,await sheet("setPr
 app.get("/me/saved",asyncRoute(async(req,res)=>send(res,await sheet("listSaved",{user_id:req.uid}))));
 app.post("/me/saved/:id",asyncRoute(async(req,res)=>send(res,await sheet("saveNews",{user_id:req.uid,news_id:req.params.id}))));
 app.delete("/me/saved/:id",asyncRoute(async(req,res)=>send(res,await sheet("unsaveNews",{user_id:req.uid,news_id:req.params.id}))));
+app.get("/me/recipes",asyncRoute(async(req,res)=>send(res,await sheet("listSavedRecipes",{user_id:req.uid}))));
+app.post("/me/recipes/:id",asyncRoute(async(req,res)=>send(res,await sheet("saveRecipe",{user_id:req.uid,recipe_id:req.params.id}))));
+app.delete("/me/recipes/:id",asyncRoute(async(req,res)=>send(res,await sheet("unsaveRecipe",{user_id:req.uid,recipe_id:req.params.id}))));
 app.get("/me/notifications",asyncRoute(async(req,res)=>send(res,await sheet("listNotifications",{user_id:req.uid}))));
 app.post("/me/device",asyncRoute(async(req,res)=>{const body=z.object({device_id:z.string().max(128),platform:z.enum(["ios","android"]),token:z.string().startsWith("ExponentPushToken[").max(250)}).parse(req.body);send(res,await sheet("registerDevice",{...body,user_id:req.uid,push_token_reference:encrypt(body.token),token:undefined}));}));
 app.delete("/me",asyncRoute(async(req,res)=>{await sheet("deleteUser",{user_id:req.uid});send(res,{deleted:true,google_account_unchanged:true})}));
 app.use("/admin",identity,(req:Authed,res,next)=>req.admin?next():res.status(403).json({error:"Admin only"}));
+const recipePayload=z.object({
+ recipe_id:z.string().max(128).optional(),title:z.string().min(3).max(200),
+ description:z.string().max(1200).default(""),prep_minutes:z.number().int().min(0).max(1440),
+ cook_minutes:z.number().int().min(0).max(1440),servings:z.number().int().min(1).max(100),
+ ingredients:z.array(z.string().min(1).max(500)).min(1).max(80),
+ instructions:z.array(z.string().min(1).max(500)).min(1).max(80),
+ dietary_tags:z.string().max(200).default(""),source_name:z.string().min(2).max(150),
+ source_url:z.string().url().startsWith("https://"),image_url:z.string().url().optional(),
+ image_license:z.string().max(150).default(""),language:z.enum(["en","pt","es"]).default("en"),
+ approval_status:z.enum(["pending","approved"]).default("pending")
+});
+app.post("/admin/recipes",asyncRoute(async(req,res)=>send(res,await sheet("upsertRecipe",{...recipePayload.parse(req.body),actor_id:req.uid}))));
 app.get("/admin/stats",asyncRoute(async(req,res)=>send(res,await sheet("stats"))));
 app.get("/admin/pending",asyncRoute(async(req,res)=>send(res,await sheet("listPending"))));
 app.post("/admin/news",asyncRoute(async(req,res)=>send(res,await sheet("addNews",{...req.body,actor_id:req.uid}))));
