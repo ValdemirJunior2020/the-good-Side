@@ -101,7 +101,38 @@ app.post("/admin/broadcast/send",asyncRoute(async(req,res)=>{
 app.get("/admin/broadcast/history",asyncRoute(async(req,res)=>send(res,await sheet("broadcastHistory",{limit:100}))));
 app.get("/admin/sources",asyncRoute(async(req,res)=>send(res,await sheet("listSources"))));
 app.post("/admin/sources",asyncRoute(async(req,res)=>send(res,await sheet("upsertSource",{...req.body,actor_id:req.uid}))));
-app.post("/worker/candidates",asyncRoute(async(req,res)=>{const key=req.get("x-worker-key")||"";if(!process.env.RESEARCH_WORKER_KEY||!safeEqual(key,process.env.RESEARCH_WORKER_KEY))return res.status(403).json({error:"Unauthorized"});const story=z.object({news_id:z.string(),title:z.string().max(300),summary:z.string().max(1200),full_summary:z.string().max(5000),category:z.string(),publisher:z.string(),original_url:z.string().url(),source_published_at:z.string(),content_hash:z.string(),confidence_score:z.number().min(0).max(100),positivity_score:z.number().min(0).max(100),language:z.string().default("en"),country:z.string().default(""),image_url:z.string().default("")}).parse(req.body);send(res,await sheet("addNews",{...story,approval_status:"pending",actor_id:"research-worker"}));}));
+// Only authenticated research-worker submissions from the trusted pilot source may auto-publish.
+// Stories failing provenance, language or scoring checks never enter the public feed.
+app.post("/worker/candidates",asyncRoute(async(req,res)=>{
+ const key=req.get("x-worker-key")||"";
+ if(!process.env.RESEARCH_WORKER_KEY||!safeEqual(key,process.env.RESEARCH_WORKER_KEY))return res.status(403).json({error:"Unauthorized"});
+ const story=z.object({
+  news_id:z.string().min(1).max(128),title:z.string().trim().min(15).max(300),
+  summary:z.string().trim().min(30).max(1200),full_summary:z.string().trim().min(30).max(5000),
+  category:z.string().min(1).max(80),publisher:z.string().min(1).max(100),
+  original_url:z.string().url(),source_published_at:z.string(),
+  content_hash:z.string().min(1).max(128),
+  confidence_score:z.number().min(0).max(100),positivity_score:z.number().min(0).max(100),
+  language:z.string().default("en"),country:z.string().default(""),image_url:z.string().default("")
+ }).parse(req.body);
+ const url=new URL(story.original_url);
+ const trusted=(url.hostname==="positive.news"||url.hostname==="www.positive.news")
+  &&url.protocol==="https:"&&!url.username&&!url.password
+  &&story.publisher.trim().toLowerCase()==="positive news";
+ const quality=story.language==="en" && !/[\u3400-\u9fff]/u.test(story.title+" "+story.summary)
+  &&story.confidence_score>=80 && story.positivity_score>=80
+  &&Number.isFinite(Date.parse(story.source_published_at));
+ if(!trusted||!quality)return res.status(422).json({error:"Story does not meet automatic-publication requirements"});
+ const record=await sheet("addNews",{...story,approval_status:"pending",actor_id:"research-worker"});
+ // Respect existing approved/rejected rows; don't reverse explicit editorial decisions.
+ if(record?.duplicate){
+  const existing=await sheet("adminGetNews",{news_id:record.news_id});
+  if(existing?.approval_status==="rejected")return send(res,{...record,approval:"rejected"});
+  if(existing?.approval_status==="approved")return send(res,{...record,approval:"approved"});
+ }
+ const published=await sheet("setNewsStatus",{news_id:record.news_id,status:"approved",actor_id:"ollama-auto-editor"});
+ send(res,{...record,approval:published.status});
+}));
 async function digestTick(){
  if(process.env.ENABLE_PUSH_SCHEDULER!=="true")return;
  const users=await sheet("digestUsers"),news=await sheet("listNews",{limit:50,page:1});const now=new Date();
