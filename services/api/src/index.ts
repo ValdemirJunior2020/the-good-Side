@@ -108,7 +108,7 @@ app.post("/worker/candidates",asyncRoute(async(req,res)=>{
  if(!process.env.RESEARCH_WORKER_KEY||!safeEqual(key,process.env.RESEARCH_WORKER_KEY))return res.status(403).json({error:"Unauthorized"});
  const story=z.object({
   news_id:z.string().min(1).max(128),title:z.string().trim().min(15).max(300),
-  summary:z.string().trim().min(30).max(1200),full_summary:z.string().trim().min(30).max(5000),
+  summary:z.string().trim().min(25).max(1200),full_summary:z.string().trim().min(25).max(5000),
   category:z.string().min(1).max(80),publisher:z.string().min(1).max(100),
   original_url:z.string().url(),source_published_at:z.string(),
   content_hash:z.string().min(1).max(128),
