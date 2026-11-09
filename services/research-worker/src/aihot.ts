@@ -117,6 +117,18 @@ export async function runAihotBridge(){
  for(const item of feed.items.slice(0,maximum)){
   if(!item.selected||!item.summary||!item.publishedAt||!isPublicArticleUrl(item.links?.original)||
    item.score!==null&&item.score<minScore){rejected++;continue}
+  // The Good Side pilot accepts only the verified Positive News RSS publisher.
+  // Disabling upstream feeds does not delete already published AIHOT items.
+  // Reject old AI feed content before spending local Ollama resources.
+  let trustedPositiveNews = false;
+  try {
+   const hostname = new URL(item.links.original).hostname.toLowerCase();
+   trustedPositiveNews = (hostname === "positive.news" || hostname === "www.positive.news") &&
+    item.source.name.trim().toLowerCase() === "positive news";
+  } catch {}
+  // No Chinese headline/summary text is allowed through to the English app.
+  const isEnglishOutput = !/[\\u3400-\\u9fff]/u.test(item.title + " " + (item.summary || ""));
+  if(!trustedPositiveNews || !isEnglishOutput){rejected++;continue}
   try{
    const decision=await screenWithOllama(item);
    screened++;
