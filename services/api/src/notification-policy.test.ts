@@ -1,5 +1,5 @@
 import test from "node:test";import assert from "node:assert/strict";
-import{scheduleDecision,inQuietHours,parseTimes,isOn,deliveryKey}from "./notification-policy.js";
+import{scheduleDecision,inQuietHours,parseTimes,isOn,deliveryKey,nextDigestAt}from "./notification-policy.js";
 const at=new Date("2026-11-09T17:00:00Z"); // 12 PM in New York (EST)
 test("does not accidentally treat string false as enabled",()=>{assert.equal(isOn("false"),false);assert.equal(scheduleDecision(at,{notification_enabled:"false",daily_digest_enabled:true,timezone:"America/New_York"}).due,false)});
 test("noon in user's timezone",()=>{assert.equal(scheduleDecision(at,{notification_enabled:true,daily_digest_enabled:true,notification_local_time:"12:00",timezone:"America/New_York"}).due,true)});
@@ -24,4 +24,14 @@ test("breaking alerts require explicit opt-in and obey quiet hours",()=>{
  const opts={notification_enabled:true,breaking_alerts_enabled:false,timezone:"America/New_York"};
  assert.equal(scheduleDecision(at,opts,"breaking").due,false);
  assert.equal(scheduleDecision(at,{...opts,breaking_alerts_enabled:true,quiet_hours_start:"11:00",quiet_hours_end:"13:00"},"breaking").due,false);
+});
+
+test("next notification preview follows timezone and DST",()=>{
+ const p={notification_enabled:true,daily_digest_enabled:true,notification_timezone:"America/New_York",notification_times:["12:00"]};
+ assert.equal(nextDigestAt(new Date("2027-03-14T14:00:00Z"),p)?.toISOString(),"2027-03-14T16:00:00.000Z");
+});
+test("next notification honors weekends and quiet hours",()=>{
+ const p={notification_enabled:true,daily_digest_enabled:true,notification_timezone:"America/New_York",notification_times:["12:00"],weekend_enabled:false};
+ assert.equal(nextDigestAt(new Date("2026-11-07T16:00:00Z"),p)?.toISOString(),"2026-11-09T17:00:00.000Z");
+ assert.equal(nextDigestAt(new Date("2026-11-09T14:00:00Z"),{...p,quiet_hours_start:"11:00",quiet_hours_end:"13:00"}),null);
 });
