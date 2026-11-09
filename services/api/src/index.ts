@@ -197,23 +197,6 @@ async function digestTick(){
   }
  }finally{digestRunning=false;}
 }
-if(process.env.ENABLE_PUSH_SCHEDULER!=="true")return;
- const users=await sheet("digestUsers"),news=await sheet("listNews",{limit:50,page:1});const now=new Date();
- for(const user of (users||[]) as any[]){try{
-  if(!isOn(user.notification_enabled)||!isOn(user.daily_digest_enabled)||!isValidTimezone(user.timezone))continue;
-  const local=localClock(now,user.timezone);if(local.time!==user.notification_local_time)continue;
-  const key=user.user_id+":"+local.date;const sent=await sheet("digestSeen",{user_id:user.user_id,date:local.date});
-  if(sent?.already_sent)continue;
-  const chosen=chooseDigest(news.items||[],String(user.selected_categories||"").split(",").filter(Boolean),new Set(sent?.news_ids||[]));
-  if(!chosen)continue;
-  const devices=await sheet("listDevices",{user_id:user.user_id});let attempted=false;
-  for(const d of devices||[]){if(!d.enabled)continue;attempted=true;const token=decrypt(d.push_token_reference);
-   const resp=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"The Good Side",body:chosen.title,data:{news_id:chosen.news_id},sound:"default"})});
-   const result=await resp.json() as any;const ticket=result?.data;await sheet("logNotification",{notification_id:crypto.randomUUID(),user_id:user.user_id,news_id:chosen.news_id,scheduled_at:now.toISOString(),sent_at:now.toISOString(),delivery_status:ticket?.status==="ok"?"accepted":"error",error_code:ticket?.details?.error||"",idempotency_key:key+":"+d.device_id});
-   if(ticket?.details?.error==="DeviceNotRegistered")await sheet("disableDevice",{device_id:d.device_id,user_id:user.user_id});
-  }
- }catch(e){console.error("Digest user failure",user.user_id,e instanceof Error?e.message:"unknown")}}
-}
 if(process.env.ENABLE_PUSH_SCHEDULER==="true"){setInterval(()=>digestTick().catch(console.error),60000);digestTick().catch(console.error);}
 app.use((error:unknown,_req:Request,res:Response,_next:NextFunction)=>{if(error instanceof z.ZodError)return res.status(400).json({error:"Invalid input",details:error.flatten()});console.error(error);res.status(503).json({error:"Request could not be completed"})});
 app.listen(Number(process.env.PORT||8788),()=>console.log("The Good Side API listening"));
