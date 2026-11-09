@@ -23,8 +23,9 @@ const freq:[string,Frequency][]=[["Once daily","daily"],["Twice daily","twice_da
 const weekdays=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const initial:Pref={selected_categories:"",notification_enabled:false,daily_digest_enabled:true,notification_local_time:"12:00",content_language:"en",notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/New_York",notification_frequency:"daily",notification_times:["12:00"],notification_weekdays:[],quiet_hours_start:"22:00",quiet_hours_end:"07:00",weekend_enabled:true,food_notifications_enabled:false,breaking_alerts_enabled:false,notification_sound_enabled:true};
 export default function Preferences(){
- const[p,setP]=useState<Pref>(initial),[busy,setBusy]=useState(false),[error,setError]=useState("");
- useEffect(()=>{api<Partial<Pref>>("/me/preferences",{},true).then(v=>setP({...initial,...v,notification_timezone:v.notification_timezone||initial.notification_timezone,notification_times:parse(v.notification_times,[v.notification_local_time||"12:00"]),notification_weekdays:parse(v.notification_weekdays,[])})).catch(e=>setError(String(e)))},[]);
+ const[p,setP]=useState<Pref>(initial),[busy,setBusy]=useState(false),[error,setError]=useState(""),[preview,setPreview]=useState("");
+ const refreshPreview=()=>api<{next_at:string|null;timezone:string}>("/me/next-notification",{},true).then(v=>setPreview(v.next_at?new Date(v.next_at).toLocaleString(undefined,{timeZone:v.timezone,dateStyle:"medium",timeStyle:"short"})+" ("+v.timezone+")":"No digest currently scheduled")).catch(()=>setPreview("Preview unavailable"));
+ useEffect(()=>{api<Partial<Pref>>("/me/preferences",{},true).then(v=>setP({...initial,...v,notification_timezone:v.notification_timezone||initial.notification_timezone,notification_times:parse(v.notification_times,[v.notification_local_time||"12:00"]),notification_weekdays:parse(v.notification_weekdays,[])})).catch(e=>setError(String(e)));void refreshPreview()},[]);
  const set=(key:keyof Pref,value:any)=>setP(prev=>({...prev,[key]:value}));
  const selected=String(p.selected_categories||"").split(",").filter(Boolean);
  const times=parse<string[]>(p.notification_times,["12:00"]);
@@ -62,6 +63,7 @@ export default function Preferences(){
     breaking_alerts_enabled:enabled(p.breaking_alerts_enabled),notification_sound_enabled:enabled(p.notification_sound_enabled),content_language:p.content_language};
    const saved=await api<Pref>("/me/preferences",put(body),true);
    setP({...p,...saved,notification_enabled:allow});
+   await refreshPreview();
    Alert.alert("Saved","Your good news schedule has been updated.");
   }catch(e){Alert.alert("Unable to save",String(e))}finally{setBusy(false)}
  };
@@ -82,6 +84,7 @@ export default function Preferences(){
   <Surface style={{marginBottom:14}}><Text style={styles.label}>Extra good things</Text>{switchRow("Food & Recipes alerts","food_notifications_enabled")}{switchRow("Breaking positive news","breaking_alerts_enabled")}{switchRow("Play notification sound","notification_sound_enabled")}<Text style={styles.muted}>Custom iOS sound requires an EAS development build; iPhone silent mode and Focus settings are respected.</Text></Surface>
   <Surface style={{marginBottom:14}}><Text style={styles.label}>Your interests</Text><View style={{flexDirection:"row",flexWrap:"wrap"}}>{categories.map(([label,id,emoji])=><React.Fragment key={id}>{choice(emoji+" "+label,selected.includes(id),()=>toggleInterest(id))}</React.Fragment>)}</View></Surface>
   <Surface style={{marginBottom:18}}><Text style={styles.label}>Language</Text><View style={{flexDirection:"row",flexWrap:"wrap"}}>{([["English","en"],["Português","pt"],["Español","es"]]as const).map(([label,id])=><React.Fragment key={id}>{choice(label,p.content_language===id,()=>set("content_language",id))}</React.Fragment>)}</View></Surface>
+  <Surface style={{marginBottom:16}}><Text style={styles.label}>Next expected notification</Text><Text style={styles.subtitle}>{preview||"Loading..."}</Text><Text style={[styles.muted,{marginTop:6}]}>This preview reflects saved settings. Delivery can be delayed by your device or Apple.</Text></Surface>
   <Pill title={busy?"Saving…":"Save my settings"} disabled={busy} onPress={save}/>
  </ScrollView></Background>
 }
