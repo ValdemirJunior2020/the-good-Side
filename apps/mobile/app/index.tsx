@@ -1,3 +1,4 @@
+import TabBar from "../src/TabBar";
 import React,{useEffect,useState} from "react";
 import {ScrollView,View,Text,TouchableOpacity,ActivityIndicator,RefreshControl,Linking} from "react-native";
 import {router} from "expo-router";
@@ -21,5 +22,5 @@ export default function Home(){
   {!news.length&&!error?<Surface><Text style={styles.subtitle}>No approved stories yet. Every article is checked before publication.</Text></Surface>:null}
   {news.map(item=><TouchableOpacity key={item.news_id} onPress={()=>router.push({pathname:"/article/[id]",params:{id:item.news_id}} as any)}><Surface style={{marginBottom:13}}><Text style={{color:colors.orange,fontWeight:"700",fontSize:12,textTransform:"uppercase"}}>{item.category||"Good news"}</Text><Text style={{color:colors.ink,fontSize:20,fontWeight:"700",marginTop:8,lineHeight:27}}>{item.title}</Text><Text numberOfLines={3} style={[styles.subtitle,{marginTop:8}]}>{item.summary}</Text><Text style={[styles.muted,{marginTop:14}]}>{item.publisher} · {item.source_published_at?new Date(item.source_published_at).toLocaleDateString():""}</Text></Surface></TouchableOpacity>)}
   <View style={{flexDirection:"row",gap:10,marginTop:14}}><View style={{flex:1}}><Pill title="♡ Saved" secondary onPress={()=>router.push((logged?"/saved":"/auth") as any)}/></View><View style={{flex:1}}><Pill title="⚙ Preferences" secondary onPress={()=>router.push((logged?"/preferences":"/auth") as any)}/></View></View>
- </ScrollView></Background>
+ </ScrollView><TabBar/></Background>
 }
