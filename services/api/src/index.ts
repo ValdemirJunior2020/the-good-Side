@@ -182,7 +182,7 @@ async function digestTick(){
     const selected=String(user.selected_categories||"").split(",").filter(Boolean);
     const foodEnabled=isOn(user.food_notifications_enabled);
     // Recipes share the user's existing delivery slots, never creating an extra alert.
-    const recipePool=foodEnabled&&selected.includes("food")?await sheet("listRecipes"):[] as any[];
+    const recipePool=foodEnabled?await sheet("listRecipes"):[] as any[];
     const recipe=(recipePool||[]).find((r:any)=>!already.has("recipe:"+r.recipe_id));
     const article=recipe?null:chooseDigest(news.items||[],selected,already);
     const chosen=recipe?{news_id:"recipe:"+recipe.recipe_id,title:recipe.title,original_url:recipe.source_url}:article;
