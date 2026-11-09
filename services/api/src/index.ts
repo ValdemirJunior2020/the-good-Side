@@ -6,6 +6,7 @@ import {OAuth2Client} from "google-auth-library";
 import {createCipheriv,createDecipheriv,randomBytes,createHash,timingSafeEqual} from "node:crypto";
 import {z} from "zod";
 import {chooseDigest,localClock,isValidTimezone} from "./schedule.js";
+import {isOn} from "./notification-policy.js";
 
 const required=["GOOGLE_CLIENT_IDS","APPS_SCRIPT_URL","APPS_SCRIPT_SHARED_SECRET"];
 for(const key of required) if(!process.env[key]) throw new Error("Missing configuration: "+key);
@@ -137,7 +138,7 @@ async function digestTick(){
  if(process.env.ENABLE_PUSH_SCHEDULER!=="true")return;
  const users=await sheet("digestUsers"),news=await sheet("listNews",{limit:50,page:1});const now=new Date();
  for(const user of (users||[]) as any[]){try{
-  if(!user.notification_enabled||!user.daily_digest_enabled||!isValidTimezone(user.timezone))continue;
+  if(!isOn(user.notification_enabled)||!isOn(user.daily_digest_enabled)||!isValidTimezone(user.timezone))continue;
   const local=localClock(now,user.timezone);if(local.time!==user.notification_local_time)continue;
   const key=user.user_id+":"+local.date;const sent=await sheet("digestSeen",{user_id:user.user_id,date:local.date});
   if(sent?.already_sent)continue;
