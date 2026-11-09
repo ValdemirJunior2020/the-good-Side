@@ -6,7 +6,7 @@ import {OAuth2Client} from "google-auth-library";
 import {createCipheriv,createDecipheriv,randomBytes,createHash,timingSafeEqual} from "node:crypto";
 import {z} from "zod";
 import {chooseDigest,localClock,isValidTimezone} from "./schedule.js";
-import {isOn} from "./notification-policy.js";
+import {isOn,scheduleDecision,deliveryKey} from "./notification-policy.js";
 
 const required=["GOOGLE_CLIENT_IDS","APPS_SCRIPT_URL","APPS_SCRIPT_SHARED_SECRET"];
 for(const key of required) if(!process.env[key]) throw new Error("Missing configuration: "+key);
@@ -40,7 +40,16 @@ async function sheet(action:string,payload:Record<string,unknown>={}){
  try{const reply=await fetch(process.env.APPS_SCRIPT_URL!,{method:"POST",headers:{"content-type":"text/plain;charset=utf-8"},body:JSON.stringify({secret:process.env.APPS_SCRIPT_SHARED_SECRET,action,payload}),signal:controller.signal,redirect:"follow"});if(!reply.ok)throw Error("Database unavailable");const out=await reply.json() as {ok:boolean;data?:any;error?:string};if(!out.ok)throw Error(out.error||"Database error");return out.data;}finally{clearTimeout(timer);}
 }
 const profile=z.object({display_name:z.string().trim().min(1).max(80).optional(),preferred_language:z.enum(["en","pt","es"]).optional(),timezone:z.string().refine(isValidTimezone).optional()});
-const prefs=z.object({selected_categories:z.array(z.string().min(1).max(80)).max(30).optional(),preferred_countries:z.array(z.string().max(2)).max(30).optional(),notification_enabled:z.boolean().optional(),notification_local_time:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),daily_digest_enabled:z.boolean().optional(),content_language:z.enum(["en","pt","es"]).optional()});
+const hhmm=z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/);
+const prefs=z.object({
+ notification_frequency:z.enum(["daily","twice_daily","three_daily","selected_weekdays","breaking_only","digest_plus_alerts"]).optional(),
+ notification_times:z.array(hhmm).min(1).max(3).refine(v=>new Set(v).size===v.length).optional(),
+ notification_timezone:z.string().refine(isValidTimezone).optional(),
+ notification_weekdays:z.array(z.number().int().min(0).max(6)).max(7).optional(),
+ quiet_hours_start:hhmm.optional(),quiet_hours_end:hhmm.optional(),
+ weekend_enabled:z.boolean().optional(),food_notifications_enabled:z.boolean().optional(),
+ breaking_alerts_enabled:z.boolean().optional(),notification_sound_enabled:z.boolean().optional(),
+ selected_categories:z.array(z.string().min(1).max(80)).max(30).optional(),preferred_countries:z.array(z.string().max(2)).max(30).optional(),notification_enabled:z.boolean().optional(),notification_local_time:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),daily_digest_enabled:z.boolean().optional(),content_language:z.enum(["en","pt","es"]).optional()});
 const newsQuery=z.object({category:z.string().max(80).optional(),q:z.string().max(120).optional(),language:z.string().max(5).optional(),country:z.string().max(2).optional(),page:z.coerce.number().int().min(1).max(10000).default(1),limit:z.coerce.number().int().min(1).max(50).default(20)});
 const send=(res:Response,p:unknown)=>res.json({ok:true,data:p});
 app.get("/health",(_req,res)=>res.json({status:"ok"}));
@@ -134,8 +143,44 @@ app.post("/worker/candidates",asyncRoute(async(req,res)=>{
  const published=await sheet("setNewsStatus",{news_id:record.news_id,status:"approved",actor_id:"ollama-auto-editor"});
  send(res,{...record,approval:published.status});
 }));
+let digestRunning=false;
 async function digestTick(){
- if(process.env.ENABLE_PUSH_SCHEDULER!=="true")return;
+ if(process.env.ENABLE_PUSH_SCHEDULER!=="true"||digestRunning)return;
+ digestRunning=true;
+ try {
+  const users=await sheet("digestUsers");const now=new Date();
+  // A fresh eligibility decision is made for each user and each due slot.
+  for(const user of (users||[]) as any[]){
+   try {
+    const decision=scheduleDecision(now,user,"digest");
+    if(!decision.due)continue;
+    const devices=await sheet("listDevices",{user_id:user.user_id});
+    if(!devices?.length)continue;
+    const news=await sheet("listNews",{limit:50,page:1});
+    const seen=await sheet("digestSeen",{user_id:user.user_id,date:decision.date});
+    const chosen=chooseDigest(news.items||[],String(user.selected_categories||"").split(",").filter(Boolean),new Set(seen?.news_ids||[]));
+    if(!chosen)continue;
+    for(const d of devices) {
+     if(!isOn(d.enabled))continue;
+     const key=deliveryKey(user.user_id,decision.date,decision.time,d.device_id);
+     const claim=await sheet("claimNotification",{notification_id:crypto.randomUUID(),user_id:user.user_id,news_id:chosen.news_id,scheduled_at:now.toISOString(),delivery_status:"pending",idempotency_key:key});
+     if(claim?.duplicate)continue;
+     try {
+      const token=decrypt(d.push_token_reference);
+      const resp=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"The Good Side",body:chosen.title,data:{news_id:chosen.news_id},sound:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined?"default":null})});
+      const result=await resp.json() as any;const ticket=Array.isArray(result?.data)?result.data[0]:result?.data;
+      await sheet("updateNotificationByKey",{idempotency_key:key,delivery_status:resp.ok&&ticket?.status==="ok"?"accepted":"error",sent_at:new Date().toISOString(),error_code:ticket?.details?.error||(!resp.ok?"push_http_"+resp.status:"")});
+      if(ticket?.details?.error==="DeviceNotRegistered")await sheet("disableDevice",{device_id:d.device_id,user_id:user.user_id});
+     }catch(error){
+      console.error("Push send failed",error instanceof Error?error.message:"unknown");
+      await sheet("updateNotificationByKey",{idempotency_key:key,delivery_status:"error",error_code:"push_request_failed"}).catch(()=>{});
+     }
+    }
+   }catch(error){console.error("Digest user failed",error instanceof Error?error.message:"unknown");}
+  }
+ }finally{digestRunning=false;}
+}
+if(process.env.ENABLE_PUSH_SCHEDULER!=="true")return;
  const users=await sheet("digestUsers"),news=await sheet("listNews",{limit:50,page:1});const now=new Date();
  for(const user of (users||[]) as any[]){try{
   if(!isOn(user.notification_enabled)||!isOn(user.daily_digest_enabled)||!isValidTimezone(user.timezone))continue;
