@@ -28,7 +28,8 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo-blur": "~15.0.0",
     "expo-auth-session": "~7.0.0",
-    "expo-web-browser": "~15.0.0"
+    "expo-web-browser": "~15.0.0",
+    "expo-dev-client": "~6.0.21"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
