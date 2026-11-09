@@ -47,7 +47,7 @@ export function toDraft(item:AihotItem,decision:Screening,minScore=60):Draft|nul
  }
  const url=originalUrl.toString();
  const summary=decision.summary.trim().slice(0,400);
- if(summary.length<30||!isEnglishHeadlineAndSummary(title,summary))return null;
+ if(summary.length<25||!isEnglishHeadlineAndSummary(title,summary))return null;
  const category=decision.category.trim().slice(0,80)||"world-progress";
  return{
   news_id:hash(url).slice(0,24),title,summary,full_summary:summary,category,
