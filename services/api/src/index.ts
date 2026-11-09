@@ -16,6 +16,8 @@ const adminEmails=new Set((process.env.ADMIN_GOOGLE_EMAILS||"").split(",").map(s
 const app=express();app.disable("x-powered-by");app.use(express.json({limit:"64kb"}));
 app.use(cors({origin:process.env.ALLOWED_ORIGIN?.split(",").filter(Boolean)||false}));
 app.use(rateLimit({windowMs:60000,limit:90,standardHeaders:"draft-7",legacyHeaders:false}));
+const configuredSound=String(process.env.PUSH_SOUND_NAME||"");
+const pushSound=/^[a-z0-9_-]+\\.(wav|caf|aiff)$/i.test(configuredSound)?configuredSound:"default";
 const encryptionKey=process.env.PUSH_TOKEN_ENCRYPTION_KEY_BASE64?Buffer.from(process.env.PUSH_TOKEN_ENCRYPTION_KEY_BASE64,"base64"):null;
 type Authed=Request & {uid?:string;email?:string;admin?:boolean};
 const asyncRoute=(fn:(req:Authed,res:Response)=>Promise<unknown>)=>(req:Request,res:Response,next:NextFunction)=>Promise.resolve(fn(req as Authed,res)).catch(next);
@@ -112,7 +114,7 @@ app.post("/admin/broadcast/send",asyncRoute(async(req,res)=>{
   attempted++;
   try{
    const token=decrypt(d.push_token_reference);
-   const push=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"☀️ The Good Side",body:story.title.slice(0,150),data:{news_id:story.news_id,original_url:story.original_url},sound:"default"})});
+   const push=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"☀️ The Good Side",body:story.title.slice(0,150),data:{news_id:story.news_id,original_url:story.original_url},sound:pushSound})});
    const result=await push.json() as any;
    const ticket=result?.data;
    const ok=push.ok&&ticket?.status==="ok";
@@ -192,7 +194,7 @@ async function digestTick(){
      if(claim?.duplicate)continue;
      try {
       const token=decrypt(d.push_token_reference);
-      const resp=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"The Good Side",body:chosen.title,data:recipe?{recipe_id:recipe.recipe_id}:{news_id:chosen.news_id},sound:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined?"default":null})});
+      const resp=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"The Good Side",body:chosen.title,data:recipe?{recipe_id:recipe.recipe_id}:{news_id:chosen.news_id},sound:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined?pushSound:null})});
       const result=await resp.json() as any;const ticket=Array.isArray(result?.data)?result.data[0]:result?.data;
       await sheet("updateNotificationByKey",{idempotency_key:key,delivery_status:resp.ok&&ticket?.status==="ok"?"accepted":"error",sent_at:new Date().toISOString(),error_code:ticket?.details?.error||(!resp.ok?"push_http_"+resp.status:"")});
       if(ticket?.details?.error==="DeviceNotRegistered")await sheet("disableDevice",{device_id:d.device_id,user_id:user.user_id});
