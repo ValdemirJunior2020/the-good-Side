@@ -24,14 +24,14 @@ export const isOn=(value:unknown)=>value===true||value===1||value==="true"||valu
 export const validTime=(time:unknown):time is string=>typeof time==="string"&&CLOCK.test(time);
 export function parseTimes(raw:NotificationOptions["notification_times"],fallback="12:00"):string[]{
  let value:unknown=raw;
- if(typeof value==="string"){try{value=JSON.parse(value)}catch{value=value.split(",")}}
+ if(typeof value==="string"){const raw=value;try{value=JSON.parse(raw)}catch{value=raw.split(",")}}
  const items=Array.isArray(value)?value:[];
  const times=[...new Set(items.filter(validTime))].sort();
  return times.length?times:validTime(fallback)?[fallback]:["12:00"];
 }
 export function parseWeekdays(raw:NotificationOptions["notification_weekdays"]):number[]{
  let value:unknown=raw;
- if(typeof value==="string"){try{value=JSON.parse(value)}catch{value=value.split(",")}}
+ if(typeof value==="string"){const raw=value;try{value=JSON.parse(raw)}catch{value=raw.split(",")}}
  return [...new Set((Array.isArray(value)?value:[]).map(Number).filter(n=>Number.isInteger(n)&&n>=0&&n<=6))].sort();
 }
 export function inQuietHours(time:string,start?:string,end?:string):boolean{
