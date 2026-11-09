@@ -90,14 +90,31 @@ function upsertSource_(p){required_(p,"feed_url");if(!isHttps_(p.feed_url))throw
 
 /* Manual editorial push: this service is available only through the admin-verified Node gateway. */
 function adminGetNews_(p){required_(p,"news_id");return find_("NEWS","news_id",p.news_id)||null;}
+function manualAlertEligible_(pref,user){
+ if(String(pref.notification_enabled)!=="true"||String(pref.breaking_alerts_enabled)!=="true")return false;
+ const tz=String(pref.notification_timezone||user.timezone||"UTC");
+ let clock,weekday;
+ try{clock=Utilities.formatDate(new Date(),tz,"HH:mm");weekday=Utilities.formatDate(new Date(),tz,"EEE");}catch{return false;}
+ const day=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(weekday);
+ if(day<0)return false;
+ if(String(pref.weekend_enabled)==="false"&&(day===0||day===6))return false;
+ let days=[];try{days=JSON.parse(String(pref.notification_weekdays||"[]"));}catch{}
+ if(Array.isArray(days)&&days.length&&!days.map(Number).includes(day))return false;
+ const start=String(pref.quiet_hours_start||""),end=String(pref.quiet_hours_end||"");
+ if(/^([01]\\d|2[0-3]):[0-5]\\d$/.test(start)&&/^([01]\\d|2[0-3]):[0-5]\\d$/.test(end)&&start!==end){
+  if(start<end&&clock>=start&&clock<end)return false;
+  if(start>end&&(clock>=start||clock<end))return false;
+ }
+ return true;
+}
 function broadcastDevicePool_(p){
  const approved=find_("NEWS","news_id",p.news_id);
  if(!approved||approved.approval_status!=="approved"||!isHttps_(String(approved.original_url||"")))throw Error("Approved sourced article required");
  const prefs=new Map(records_("USER_PREFERENCES").map(x=>[String(x.user_id),x]));
- const users=new Set(records_("USERS").filter(x=>x.account_status==="active").map(x=>String(x.user_id)));
+ const users=new Map(records_("USERS").filter(x=>x.account_status==="active").map(x=>[String(x.user_id),x]));
  return records_("PUSH_DEVICES").filter(d=>{
   const pref=prefs.get(String(d.user_id));
-  if(!users.has(String(d.user_id))||!pref||String(pref.notification_enabled)!=="true"||String(d.enabled)!=="true")return false;
+  if(!users.has(String(d.user_id))||!pref||!manualAlertEligible_(pref,users.get(String(d.user_id)))||String(d.enabled)!=="true")return false;
   if(p.audience==="matching"){const interests=String(pref.selected_categories||"").split(",").map(s=>s.trim());if(!interests.includes(String(approved.category)))return false;}
   return true;
  });
