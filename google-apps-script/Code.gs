@@ -47,7 +47,15 @@ function append_(name,data){const s=sheet_(name);s.appendRow(headers_(name).map(
 function patch_(name,record,data){const h=headers_(name),s=sheet_(name);const row=h.map(k=>data[k]===undefined?record[k]:(typeof data[k]==="object"?JSON.stringify(data[k]):data[k]));s.getRange(record.__row,1,1,h.length).setValues([row]);return Object.fromEntries(h.map((k,i)=>[k,row[i]]));}
 function find_(name,key,value){return records_(name).find(x=>String(x[key])===String(value));}
 function required_(p,key){if(typeof p[key]!=="string"||!p[key].trim())throw Error("Missing "+key);}
-function isHttps_(value){try{const u=new URL(value);return u.protocol==="https:" && !["localhost","127.0.0.1"].includes(u.hostname);}catch{return false;}}
+function isHttps_(value){
+ // Apps Script V8 does not provide the browser/Node URL constructor.
+ // Accept HTTPS public DNS hostnames only; reject credentials, local hosts and HTTP.
+ if(typeof value!=="string")return false;
+ const match=/^https:\/\/([a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+)(?::443)?(?:[/?#]|$)/i.exec(value);
+ if(!match)return false;
+ const host=match[1].toLowerCase();
+ return host!=="localhost" && !host.endsWith(".localhost") && !host.endsWith(".local");
+}
 function audit_(actor,action,type,id){append_("AUDIT_LOG",{audit_id:Utilities.getUuid(),actor_id:actor||"system",action,object_type:type,object_id:id,details:"",created_at:now_()});}
 function publicNews_(a){const h=headers_("NEWS");return Object.fromEntries(h.filter(k=>k!=="content_hash").map(k=>[k,a[k]]));}
 function listNews_(p){let all=records_("NEWS").filter(x=>x.approval_status==="approved");if(p.category)all=all.filter(x=>x.category===p.category);if(p.country)all=all.filter(x=>x.country===p.country);if(p.language)all=all.filter(x=>x.language===p.language);if(p.q){const q=String(p.q).toLowerCase();all=all.filter(x=>String(x.title+" "+x.summary).toLowerCase().includes(q));}all.sort((a,b)=>String(b.source_published_at).localeCompare(String(a.source_published_at)));const page=Math.max(1,Math.min(10000,Number(p.page)||1)),limit=Math.max(1,Math.min(50,Number(p.limit)||20));return {items:all.slice((page-1)*limit,page*limit).map(publicNews_),page,limit,total:all.length};}
