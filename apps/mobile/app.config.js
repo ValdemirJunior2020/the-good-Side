@@ -7,6 +7,7 @@ const sounds=fs.existsSync(path.join(__dirname,"assets","ding.wav"))?[soundPath]
 module.exports={expo:{
  ...base,
  userInterfaceStyle:"automatic",
+ extra:{...(base.extra||{}),hasSignatureSound:sounds.length>0},
  plugins:base.plugins.map(plugin=>Array.isArray(plugin)&&plugin[0]==="expo-notifications"
   ?["expo-notifications",{...plugin[1],...(sounds.length?{sounds}:{})}]
   :plugin)
