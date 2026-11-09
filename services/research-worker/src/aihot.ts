@@ -29,6 +29,9 @@ export function isPublicArticleUrl(value:unknown):value is string{
  }catch{return false}
 }
 const hash=(v:string)=>createHash("sha256").update(v).digest("hex");
+export function isEnglishHeadlineAndSummary(title:string,summary:string|null):boolean{
+ return !/[\u3400-\u9fff]/u.test(title+" "+(summary||""));
+}
 export function toDraft(item:AihotItem,decision:Screening,minScore=60):Draft|null{
  if(!item.selected||!item.title?.trim()||!item.summary?.trim()||!item.source?.name?.trim()||
   !isPublicArticleUrl(item.links?.original)||!item.publishedAt||
@@ -127,7 +130,7 @@ export async function runAihotBridge(){
     item.source.name.trim().toLowerCase() === "positive news";
   } catch {}
   // No Chinese headline/summary text is allowed through to the English app.
-  const isEnglishOutput = !/[\u3400-\u9fff]/u.test(item.title + " " + (item.summary || ""));
+  const isEnglishOutput = isEnglishHeadlineAndSummary(item.title,item.summary);
   if(!trustedPositiveNews || !isEnglishOutput){rejected++;continue}
   try{
    const decision=await screenWithOllama(item);
