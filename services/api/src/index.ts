@@ -6,7 +6,7 @@ import {OAuth2Client} from "google-auth-library";
 import {createCipheriv,createDecipheriv,randomBytes,createHash,timingSafeEqual} from "node:crypto";
 import {z} from "zod";
 import {chooseDigest,localClock,isValidTimezone} from "./schedule.js";
-import {isOn,scheduleDecision,deliveryKey} from "./notification-policy.js";
+import {isOn,scheduleDecision,deliveryKey,nextDigestAt} from "./notification-policy.js";
 
 const required=["GOOGLE_CLIENT_IDS","APPS_SCRIPT_URL","APPS_SCRIPT_SHARED_SECRET"];
 for(const key of required) if(!process.env[key]) throw new Error("Missing configuration: "+key);
@@ -62,6 +62,7 @@ app.get("/me",asyncRoute(async(req,res)=>send(res,await sheet("getUser",{user_id
 app.post("/me",asyncRoute(async(req,res)=>send(res,await sheet("syncUser",{user_id:req.uid,email:req.email||"",...profile.parse(req.body)}))));
 app.put("/me",asyncRoute(async(req,res)=>send(res,await sheet("updateUser",{user_id:req.uid,...profile.parse(req.body)}))));
 app.get("/me/preferences",asyncRoute(async(req,res)=>send(res,await sheet("getPreferences",{user_id:req.uid}))));
+app.get("/me/next-notification",asyncRoute(async(req,res)=>{const pref=await sheet("getPreferences",{user_id:req.uid});const user=await sheet("getUser",{user_id:req.uid});const zone=pref.notification_timezone||user?.timezone||"UTC";const at=nextDigestAt(new Date(),{...pref,timezone:zone});send(res,{next_at:at?at.toISOString():null,timezone:zone});}));
 app.put("/me/preferences",asyncRoute(async(req,res)=>send(res,await sheet("setPreferences",{user_id:req.uid,...prefs.parse(req.body)}))));
 app.get("/me/saved",asyncRoute(async(req,res)=>send(res,await sheet("listSaved",{user_id:req.uid}))));
 app.post("/me/saved/:id",asyncRoute(async(req,res)=>send(res,await sheet("saveNews",{user_id:req.uid,news_id:req.params.id}))));
