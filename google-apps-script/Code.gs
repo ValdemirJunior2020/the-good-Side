@@ -13,6 +13,8 @@ const TAB_NAMES = {
  SAVED_NEWS:"user_id,news_id,saved_at",
  NEWS_SOURCES:"source_id,publisher,feed_url,homepage_url,category,country,language,reliability,terms_reviewed,active,last_fetched_at,created_at",
  SYSTEM_SETTINGS:"key,value,description,updated_at",
+ RECIPES:"recipe_id,title,description,prep_minutes,cook_minutes,servings,ingredients,instructions,dietary_tags,source_name,source_url,image_url,image_license,language,approval_status,created_at,updated_at",
+ SAVED_RECIPES:"user_id,recipe_id,saved_at",
  AUDIT_LOG:"audit_id,actor_id,action,object_type,object_id,details,created_at"
 };
 const SHEET_ID = "1VsZXyPxvOuOSG-6Mc9I3snRFRgwkdGOsr1agAeTwtyc";
@@ -32,6 +34,7 @@ function doPost(e){
    deleteUser:deleteUser_,stats:stats_,listPending:listPending_,addNews:addNews_,editNews:editNews_,
    setNewsStatus:setNewsStatus_,listSources:listSources_,upsertSource:upsertSource_,
    adminGetNews:adminGetNews_,broadcastPreview:broadcastPreview_,broadcastRecipients:broadcastRecipients_,claimNotification:claimNotification_,updateNotificationByKey:updateNotificationByKey_,broadcastHistory:broadcastHistory_,
+   listRecipes:listRecipes_,getRecipe:getRecipe_,upsertRecipe:upsertRecipe_,listSavedRecipes:listSavedRecipes_,saveRecipe:saveRecipe_,unsaveRecipe:unsaveRecipe_,
    digestUsers:digestUsers_,digestSeen:digestSeen_,listDevices:listDevices_,logNotification:logNotification_,disableDevice:disableDevice_
   };
   if(!Object.prototype.hasOwnProperty.call(allowed,body.action))return json_({ok:false,error:"Unknown action"});
@@ -75,7 +78,7 @@ function listNotifications_(p){return records_("NOTIFICATION_LOGS").filter(x=>x.
 function logNotification_(p){required_(p,"idempotency_key");if(records_("NOTIFICATION_LOGS").some(x=>x.idempotency_key===p.idempotency_key))return {duplicate:true};return append_("NOTIFICATION_LOGS",p);}
 function digestSeen_(p){const all=records_("NOTIFICATION_LOGS").filter(x=>x.user_id===p.user_id);return {already_sent:all.some(x=>String(x.idempotency_key).startsWith(p.user_id+":"+p.date+":")),news_ids:all.map(x=>x.news_id)};}
 function digestUsers_(){const prefs=records_("USER_PREFERENCES"),users=records_("USERS");return prefs.map(p=>{const u=users.find(x=>x.user_id===p.user_id);return u?{...p,timezone:p.notification_timezone||u.timezone}:null;}).filter(Boolean);}
-function deleteUser_(p){required_(p,"user_id");for(const name of ["USERS","USER_PREFERENCES","PUSH_DEVICES","NOTIFICATION_LOGS","SAVED_NEWS"]){const rows=records_(name).filter(x=>x.user_id===p.user_id).sort((a,b)=>b.__row-a.__row);for(const r of rows)sheet_(name).deleteRow(r.__row);}audit_(p.user_id,"delete_account","user","deleted");return {deleted:true};}
+function deleteUser_(p){required_(p,"user_id");for(const name of ["USERS","USER_PREFERENCES","PUSH_DEVICES","NOTIFICATION_LOGS","SAVED_NEWS","SAVED_RECIPES"]){const rows=records_(name).filter(x=>x.user_id===p.user_id).sort((a,b)=>b.__row-a.__row);for(const r of rows)sheet_(name).deleteRow(r.__row);}audit_(p.user_id,"delete_account","user","deleted");return {deleted:true};}
 function listPending_(){return records_("NEWS").filter(x=>x.approval_status==="pending").slice(-100).reverse();}
 function stats_(){return {users:records_("USERS").length,approved:records_("NEWS").filter(x=>x.approval_status==="approved").length,pending:records_("NEWS").filter(x=>x.approval_status==="pending").length,notifications:records_("NOTIFICATION_LOGS").length,sources:records_("NEWS_SOURCES").length};}
 function addNews_(p){required_(p,"title");required_(p,"original_url");if(!isHttps_(p.original_url))throw Error("Invalid source URL");const duplicate=records_("NEWS").find(x=>x.original_url===p.original_url||(p.content_hash&&x.content_hash===p.content_hash));if(duplicate)return {news_id:duplicate.news_id,duplicate:true};const stamp=now_(),news_id=p.news_id||Utilities.getUuid();const record={...p,news_id,approval_status:p.approval_status==="pending"?"pending":"pending",discovered_at:stamp,verified_at:"",featured:false,created_at:stamp,updated_at:stamp};append_("NEWS",record);audit_(p.actor_id,"add","news",news_id);return {news_id,duplicate:false};}
@@ -120,3 +123,31 @@ function updateNotificationByKey_(p){
  patch_("NOTIFICATION_LOGS",record,allowed);return {updated:true};
 }
 function broadcastHistory_(p){return records_("NOTIFICATION_LOGS").filter(x=>String(x.idempotency_key).indexOf("manual:")===0).slice(-Math.min(100,Number(p.limit)||100)).reverse().map(x=>({news_id:x.news_id,sent_at:x.sent_at,delivery_status:x.delivery_status,error_code:x.error_code,idempotency_key:x.idempotency_key}));}
+
+
+/* Recipes are distinct from news and must be sourced and editorially approved. */
+function publicRecipe_(r){return Object.fromEntries(headers_("RECIPES").filter(k=>k!=="approval_status").map(k=>[k,r[k]]));}
+function listRecipes_(){return records_("RECIPES").filter(r=>r.approval_status==="approved"&&isHttps_(String(r.source_url||""))).slice(-100).reverse().map(publicRecipe_);}
+function getRecipe_(p){required_(p,"recipe_id");const r=find_("RECIPES","recipe_id",p.recipe_id);return r&&r.approval_status==="approved"&&isHttps_(String(r.source_url||""))?publicRecipe_(r):null;}
+function upsertRecipe_(p){
+ required_(p,"title");required_(p,"source_url");
+ if(!isHttps_(p.source_url))throw Error("Recipe must credit an HTTPS source");
+ if(!Array.isArray(p.ingredients)||!p.ingredients.length||p.ingredients.length>80)throw Error("Ingredients required");
+ if(!Array.isArray(p.instructions)||!p.instructions.length||p.instructions.length>80)throw Error("Instructions required");
+ const clean=v=>v.map(x=>String(x).slice(0,500));
+ const old=p.recipe_id?find_("RECIPES","recipe_id",p.recipe_id):null;
+ const data={recipe_id:old?old.recipe_id:Utilities.getUuid(),title:String(p.title).slice(0,200),description:String(p.description||"").slice(0,1200),
+ prep_minutes:Math.max(0,Math.min(1440,Number(p.prep_minutes)||0)),cook_minutes:Math.max(0,Math.min(1440,Number(p.cook_minutes)||0)),
+ servings:Math.max(1,Math.min(100,Number(p.servings)||1)),ingredients:JSON.stringify(clean(p.ingredients)),
+ instructions:JSON.stringify(clean(p.instructions)),dietary_tags:String(p.dietary_tags||"").slice(0,200),
+ source_name:String(p.source_name||"").slice(0,150),source_url:p.source_url,image_url:p.image_url||"",
+ image_license:String(p.image_license||"").slice(0,150),language:p.language||"en",
+ approval_status:p.approval_status==="approved"?"approved":"pending",
+ created_at:old?old.created_at:now_(),updated_at:now_()};
+ if(old)patch_("RECIPES",old,data);else append_("RECIPES",data);
+ audit_(p.actor_id,old?"edit":"add","recipe",data.recipe_id);
+ return {recipe_id:data.recipe_id,status:data.approval_status};
+}
+function listSavedRecipes_(p){required_(p,"user_id");return records_("SAVED_RECIPES").filter(x=>x.user_id===p.user_id).map(x=>getRecipe_({recipe_id:x.recipe_id})).filter(Boolean);}
+function saveRecipe_(p){required_(p,"user_id");required_(p,"recipe_id");if(!getRecipe_(p))throw Error("Recipe unavailable");if(!records_("SAVED_RECIPES").some(x=>x.user_id===p.user_id&&x.recipe_id===p.recipe_id))append_("SAVED_RECIPES",{user_id:p.user_id,recipe_id:p.recipe_id,saved_at:now_()});return {saved:true};}
+function unsaveRecipe_(p){required_(p,"user_id");required_(p,"recipe_id");const x=records_("SAVED_RECIPES").find(x=>x.user_id===p.user_id&&x.recipe_id===p.recipe_id);if(x)sheet_("SAVED_RECIPES").deleteRow(x.__row);return {saved:false};}
