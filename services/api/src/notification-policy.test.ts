@@ -8,3 +8,20 @@ test("food is always blocked by quiet hours",()=>{assert.equal(scheduleDecision(
 test("parse multiple times and remove duplicates",()=>{assert.deepEqual(parseTimes('["12:00","08:00","12:00"]'),["08:00","12:00"])});
 test("weekends disabled",()=>{assert.equal(scheduleDecision(new Date("2026-11-08T17:00:00Z"),{notification_enabled:true,daily_digest_enabled:true,notification_local_time:"12:00",timezone:"America/New_York",weekend_enabled:false}).due,false)});
 test("stable unique delivery keys per device/time",()=>{assert.notEqual(deliveryKey("u","2026-11-09","12:00","a"),deliveryKey("u","2026-11-09","15:00","a"))});
+
+test("two daily deliveries fire separately",()=>{
+ const base={notification_enabled:true,daily_digest_enabled:true,timezone:"America/New_York",notification_frequency:"twice_daily",notification_times:["08:00","12:00"]};
+ assert.equal(scheduleDecision(new Date("2026-11-09T13:00:00Z"),base).due,true);
+ assert.equal(scheduleDecision(new Date("2026-11-09T17:00:00Z"),base).due,true);
+ assert.equal(scheduleDecision(new Date("2026-11-09T18:00:00Z"),base).due,false);
+});
+test("respects spring DST transition in New York",()=>{
+ const opts={notification_enabled:true,daily_digest_enabled:true,timezone:"America/New_York",notification_times:["12:00"]};
+ assert.equal(scheduleDecision(new Date("2027-03-13T17:00:00Z"),opts).due,true);
+ assert.equal(scheduleDecision(new Date("2027-03-14T16:00:00Z"),opts).due,true);
+});
+test("breaking alerts require explicit opt-in and obey quiet hours",()=>{
+ const opts={notification_enabled:true,breaking_alerts_enabled:false,timezone:"America/New_York"};
+ assert.equal(scheduleDecision(at,opts,"breaking").due,false);
+ assert.equal(scheduleDecision(at,{...opts,breaking_alerts_enabled:true,quiet_hours_start:"11:00",quiet_hours_end:"13:00"},"breaking").due,false);
+});
