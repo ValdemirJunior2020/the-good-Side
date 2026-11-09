@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {isPublicArticleUrl,toDraft,validateAihotFeed,type AihotItem} from "./aihot.js";
+import {isPublicArticleUrl,isEnglishHeadlineAndSummary,toDraft,validateAihotFeed,type AihotItem} from "./aihot.js";
 const sample:AihotItem={id:"item1",title:"Community planted 100 trees",summary:"A local community planted trees.",
  source:{name:"Local News"},links:{original:"https://example.com/trees?utm_source=feed#top",aihot:"http://localhost:3000/item/1"},
  publishedAt:"2026-11-07T12:00:00Z",discoveredAt:"2026-11-07T13:00:00Z",category:"other",score:87,selected:true};
@@ -24,4 +24,11 @@ test("rejects nonpositive and unverified submissions",()=>{
 test("API schema change fails closed",()=>{
  assert.throws(()=>validateAihotFeed({items:[]}));
  assert.equal(validateAihotFeed({schemaVersion:1,items:[sample]}).items.length,1);
+});
+
+test("English guard allows English positive news and blocks Chinese output",()=>{
+ assert.equal(isEnglishHeadlineAndSummary("A student makes chocolate from British cocoa","Six bars created in England."),true);
+ assert.equal(isEnglishHeadlineAndSummary("Community conservation efforts","A conservation project helps the Amazon。"),true);
+ assert.equal(isEnglishHeadlineAndSummary("NVIDIA 发布新产品","AI news"),false);
+ assert.equal(isEnglishHeadlineAndSummary("A good headline","这是中文摘要"),false);
 });
