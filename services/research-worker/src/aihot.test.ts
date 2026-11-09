@@ -32,3 +32,10 @@ test("English guard allows English positive news and blocks Chinese output",()=>
  assert.equal(isEnglishHeadlineAndSummary("NVIDIA 发布新产品","AI news"),false);
  assert.equal(isEnglishHeadlineAndSummary("A good headline","这是中文摘要"),false);
 });
+
+test("automatic publication screening withholds low-confidence or weakly positive stories",()=>{
+ assert.equal(toDraft(sample,{...positive,confidence:79}),null);
+ assert.equal(toDraft(sample,{...positive,positivity:79}),null);
+ assert.equal(toDraft(sample,{...positive,summary:"Short"}),null);
+ assert.ok(toDraft(sample,{...positive,confidence:80,positivity:80}));
+});
