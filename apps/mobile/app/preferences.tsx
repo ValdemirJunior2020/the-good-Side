@@ -1,2 +1,84 @@
-import React,{useEffect,useState} from "react";import{ScrollView,Text,View,Switch,TouchableOpacity,Alert,TextInput,Platform}from"react-native";import{router}from"expo-router";import * as Notifications from "expo-notifications";import Constants from "expo-constants";import{api,put}from"../src/client";import{Background,Pill,Surface,styles}from"../src/components";import{colors,categories}from"../src/theme";
-type Pref={selected_categories:string;notification_enabled:boolean|string;daily_digest_enabled:boolean|string;notification_local_time:string;content_language:string};export default function Preferences(){const [p,setP]=useState<Pref>({selected_categories:"",notification_enabled:false,daily_digest_enabled:true,notification_local_time:"12:00",content_language:"en"}),[time,setTime]=useState("12:00"),[busy,setBusy]=useState(false),[error,setError]=useState("");useEffect(()=>{api<Pref>("/me/preferences",{},true).then(v=>{setP(v);setTime(v.notification_local_time||"12:00")}).catch(e=>setError(String(e)))},[]);const selected=String(p.selected_categories||"").split(",").filter(Boolean);const toggle=(c:string)=>setP({...p,selected_categories:(selected.includes(c)?selected.filter(x=>x!==c):[...selected,c]).join(",")});const save=async()=>{if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))return Alert.alert("Invalid time","Use HH:MM");setBusy(true);try{let enabled=p.notification_enabled===true||p.notification_enabled==="true";if(enabled){const perms=await Notifications.requestPermissionsAsync();if(perms.status!=="granted"){enabled=false;Alert.alert("Notifications disabled","Permission not granted")}else if(Platform.OS!=="web"){const projectId=process.env.EXPO_PUBLIC_EXPO_PROJECT_ID||Constants.expoConfig?.extra?.eas?.projectId;if(!projectId)throw Error("Expo EAS project ID not configured");const token=(await Notifications.getExpoPushTokenAsync({projectId})).data;await api("/me/device",{method:"POST",body:JSON.stringify({device_id:Constants.sessionId||"device-"+Platform.OS,platform:Platform.OS,token})},true)}}await api("/me/preferences",put({selected_categories:selected,notification_enabled:enabled,daily_digest_enabled:p.daily_digest_enabled===true||p.daily_digest_enabled==="true",notification_local_time:time,content_language:p.content_language}),true);Alert.alert("Saved","Preferences updated");router.replace("/")}catch(e){Alert.alert("Error",String(e))}finally{setBusy(false)}};return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:65,paddingBottom:75}}><TouchableOpacity onPress={()=>router.back()}><Text>← Back</Text></TouchableOpacity><Text style={[styles.title,{marginTop:35,marginBottom:12}]}>Your good side.</Text><Text style={[styles.subtitle,{marginBottom:25}]}>Make your daily dose of good news your own.</Text>{error?<Text>{error}</Text>:null}<Surface><Text style={styles.label}>Daily good news</Text><View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><Text style={styles.subtitle}>Lunchtime notifications</Text><Switch value={p.notification_enabled===true||p.notification_enabled==="true"} onValueChange={x=>setP({...p,notification_enabled:x})} trackColor={{true:colors.orange}}/></View><Text style={styles.muted}>Local time (HH:MM, 24 hour)</Text><TextInput style={[styles.input,{marginTop:8}]} value={time} onChangeText={setTime} maxLength={5}/></Surface><Surface style={{marginTop:15}}><Text style={styles.label}>Content language</Text><View style={{flexDirection:"row",gap:8}}>{[["English","en"],["Português","pt"],["Español","es"]].map(x=><TouchableOpacity key={x[1]} onPress={()=>setP({...p,content_language:x[1]})} style={{padding:9,borderRadius:12,backgroundColor:p.content_language===x[1]?colors.peach:"white"}}><Text>{x[0]}</Text></TouchableOpacity>)}</View></Surface><Surface style={{marginTop:15,marginBottom:20}}><Text style={styles.label}>My interests</Text><View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>{categories.map(c=><TouchableOpacity key={c[1]} onPress={()=>toggle(c[1])} style={{padding:10,borderRadius:12,backgroundColor:selected.includes(c[1])?colors.peach:"white"}}><Text>{c[2]} {c[0]}</Text></TouchableOpacity>)}</View></Surface><Pill title={busy?"Saving…":"Save preferences"} disabled={busy} onPress={save}/></ScrollView></Background>}
+import React,{useEffect,useState} from "react";
+import{ScrollView,Text,View,Switch,TouchableOpacity,Alert,TextInput,Platform}from"react-native";
+import{router}from"expo-router";
+import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
+import{api,put}from"../src/client";
+import{Background,Pill,Surface,styles}from"../src/components";
+import{colors,categories}from"../src/theme";
+type Frequency="daily"|"twice_daily"|"three_daily"|"selected_weekdays"|"breaking_only"|"digest_plus_alerts";
+type Pref={
+ selected_categories:string;notification_enabled:boolean|string;daily_digest_enabled:boolean|string;
+ notification_local_time:string;content_language:"en"|"pt"|"es";notification_timezone:string;
+ notification_frequency:Frequency;notification_times:string[]|string;notification_weekdays:number[]|string;
+ quiet_hours_start:string;quiet_hours_end:string;weekend_enabled:boolean|string;
+ food_notifications_enabled:boolean|string;breaking_alerts_enabled:boolean|string;
+ notification_sound_enabled:boolean|string;
+};
+const enabled=(v:unknown)=>v===true||v==="true"||v==="TRUE";
+const parse=<T,>(v:unknown,fallback:T):T=>{if(Array.isArray(v))return v as T;try{return typeof v==="string"?JSON.parse(v) as T:fallback}catch{return fallback}};
+const clock=/^([01]\d|2[0-3]):[0-5]\d$/;
+const freq:[string,Frequency][]=[["Once daily","daily"],["Twice daily","twice_daily"],["Three times daily","three_daily"],["Selected weekdays","selected_weekdays"],["Breaking only","breaking_only"],["Daily digest + alerts","digest_plus_alerts"]];
+const weekdays=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const initial:Pref={selected_categories:"",notification_enabled:false,daily_digest_enabled:true,notification_local_time:"12:00",content_language:"en",notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/New_York",notification_frequency:"daily",notification_times:["12:00"],notification_weekdays:[],quiet_hours_start:"22:00",quiet_hours_end:"07:00",weekend_enabled:true,food_notifications_enabled:false,breaking_alerts_enabled:false,notification_sound_enabled:true};
+export default function Preferences(){
+ const[p,setP]=useState<Pref>(initial),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ useEffect(()=>{api<Partial<Pref>>("/me/preferences",{},true).then(v=>setP({...initial,...v,notification_timezone:v.notification_timezone||initial.notification_timezone,notification_times:parse(v.notification_times,[v.notification_local_time||"12:00"]),notification_weekdays:parse(v.notification_weekdays,[])})).catch(e=>setError(String(e)))},[]);
+ const set=(key:keyof Pref,value:any)=>setP(prev=>({...prev,[key]:value}));
+ const selected=String(p.selected_categories||"").split(",").filter(Boolean);
+ const times=parse<string[]>(p.notification_times,["12:00"]);
+ const days=parse<number[]>(p.notification_weekdays,[]);
+ const slots=p.notification_frequency==="twice_daily"?2:p.notification_frequency==="three_daily"?3:1;
+ const addTime=()=>set("notification_times",[...times,"18:00"].slice(0,3));
+ const toggleInterest=(c:string)=>set("selected_categories",(selected.includes(c)?selected.filter(x=>x!==c):[...selected,c]).join(","));
+ const switchRow=(label:string,key:keyof Pref)=> <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",minHeight:49,gap:10}}><Text style={[styles.subtitle,{flex:1,color:colors.ink}]}>{label}</Text><Switch accessibilityLabel={label} value={enabled(p[key])} onValueChange={v=>set(key,v)} trackColor={{true:colors.orange}}/></View>;
+ const validZone=()=>{try{new Intl.DateTimeFormat("en-US",{timeZone:p.notification_timezone});return true}catch{return false}};
+ const save=async()=>{
+  const deliveryTimes=times.slice(0,slots).map(v=>v.trim());
+  if(!validZone())return Alert.alert("Invalid timezone","Enter an IANA timezone such as America/New_York.");
+  if(deliveryTimes.some(t=>!clock.test(t))||new Set(deliveryTimes).size!==deliveryTimes.length)return Alert.alert("Invalid times","Enter unique delivery times in HH:MM format.");
+  if((p.quiet_hours_start&&!clock.test(p.quiet_hours_start))||(p.quiet_hours_end&&!clock.test(p.quiet_hours_end)))return Alert.alert("Invalid quiet hours","Use HH:MM for both times.");
+  if(p.notification_frequency==="selected_weekdays"&&days.length===0)return Alert.alert("Choose weekdays","Select the days on which you want good news.");
+  setBusy(true);
+  try{
+   let allow=enabled(p.notification_enabled);
+   if(allow){
+    const permission=await Notifications.requestPermissionsAsync();
+    if(!permission.granted){allow=false;Alert.alert("Permission required","Enable notifications in your iPhone settings when you're ready.");}
+    else if(Platform.OS!=="web"){
+     const projectId=process.env.EXPO_PUBLIC_EXPO_PROJECT_ID||Constants.expoConfig?.extra?.eas?.projectId;
+     if(!projectId)throw Error("EAS project ID is not configured.");
+     const token=(await Notifications.getExpoPushTokenAsync({projectId})).data;
+     await api("/me/device",{method:"POST",body:JSON.stringify({device_id:Constants.sessionId||"device-"+Platform.OS,platform:Platform.OS,token})},true);
+    }
+   }
+   const body={selected_categories:selected,notification_enabled:allow,daily_digest_enabled:enabled(p.daily_digest_enabled),notification_local_time:deliveryTimes[0]||"12:00",
+    notification_times:deliveryTimes,notification_timezone:p.notification_timezone,notification_frequency:p.notification_frequency,
+    notification_weekdays:days,quiet_hours_start:p.quiet_hours_start,quiet_hours_end:p.quiet_hours_end,
+    weekend_enabled:enabled(p.weekend_enabled),food_notifications_enabled:enabled(p.food_notifications_enabled),
+    breaking_alerts_enabled:enabled(p.breaking_alerts_enabled),notification_sound_enabled:enabled(p.notification_sound_enabled),content_language:p.content_language};
+   const saved=await api<Pref>("/me/preferences",put(body),true);
+   setP({...p,...saved,notification_enabled:allow});
+   Alert.alert("Saved","Your good news schedule has been updated.");
+  }catch(e){Alert.alert("Unable to save",String(e))}finally{setBusy(false)}
+ };
+ const choice=(label:string,active:boolean,action:()=>void)=> <TouchableOpacity accessibilityRole="button" accessibilityState={{selected:active}} onPress={action} style={{paddingHorizontal:13,paddingVertical:11,margin:3,borderRadius:16,backgroundColor:active?colors.peach:"rgba(255,255,255,.9)",borderWidth:1,borderColor:active?colors.orange:colors.stroke}}><Text style={{color:colors.ink,fontWeight:active?"800":"500"}}>{label}</Text></TouchableOpacity>;
+ return <Background><ScrollView contentContainerStyle={{padding:22,paddingTop:58,paddingBottom:110}}>
+  <TouchableOpacity onPress={()=>router.back()}><Text style={styles.muted}>← Back</Text></TouchableOpacity>
+  <Text style={[styles.title,{marginTop:24}]}>Make good news yours.</Text>
+  <Text style={[styles.subtitle,{marginVertical:13}]}>Your interests, your schedule, your peace.</Text>
+  {error?<Text style={{color:"#AD3535"}}>{error}</Text>:null}
+  <Surface style={{marginBottom:14}}><Text style={styles.label}>Notifications</Text>{switchRow("Send me uplifting news","notification_enabled")}{switchRow("Daily digest","daily_digest_enabled")}
+   <Text style={[styles.muted,{marginTop:12}]}>Delivery frequency</Text><View style={{flexDirection:"row",flexWrap:"wrap",marginTop:8}}>{freq.map(([label,id])=><React.Fragment key={id}>{choice(label,p.notification_frequency===id,()=>set("notification_frequency",id))}</React.Fragment>)}</View>
+   {p.notification_frequency!=="breaking_only"?<><Text style={[styles.muted,{marginTop:16}]}>Delivery times · 24-hour clock</Text>{times.slice(0,slots).map((t,i)=><TextInput key={i} accessibilityLabel={"Delivery time "+(i+1)} placeholder="12:00" keyboardType="numbers-and-punctuation" maxLength={5} style={[styles.input,{marginTop:8}]} value={t} onChangeText={v=>set("notification_times",times.map((x,j)=>j===i?v:x))}/>)}{times.length<slots&&choice("+ Add delivery time",false,addTime)}</>:null}
+   <Text style={styles.muted}>Timezone (IANA)</Text><TextInput autoCapitalize="none" style={[styles.input,{marginTop:8}]} value={p.notification_timezone} onChangeText={v=>set("notification_timezone",v)} placeholder="America/New_York"/>
+  </Surface>
+  <Surface style={{marginBottom:14}}><Text style={styles.label}>Your quiet time</Text><Text style={styles.muted}>No alerts during these hours, including food and special news.</Text><View style={{flexDirection:"row",gap:10,marginTop:14}}>{(["quiet_hours_start","quiet_hours_end"]as const).map((key,i)=><View key={key} style={{flex:1}}><Text style={styles.muted}>{i===0?"From":"Until"}</Text><TextInput accessibilityLabel={i===0?"Quiet hours start":"Quiet hours end"} maxLength={5} style={styles.input} value={p[key]} onChangeText={v=>set(key,v)}/></View>)}</View>
+   {switchRow("Include weekends","weekend_enabled")}<Text style={[styles.muted,{marginTop:10}]}>Selected weekdays</Text><View style={{flexDirection:"row",flexWrap:"wrap",marginTop:8}}>{weekdays.map((d,i)=><React.Fragment key={d}>{choice(d,days.includes(i),()=>set("notification_weekdays",days.includes(i)?days.filter(x=>x!==i):[...days,i]))}</React.Fragment>)}</View>
+  </Surface>
+  <Surface style={{marginBottom:14}}><Text style={styles.label}>Extra good things</Text>{switchRow("Food & Recipes alerts","food_notifications_enabled")}{switchRow("Breaking positive news","breaking_alerts_enabled")}{switchRow("Play notification sound","notification_sound_enabled")}<Text style={styles.muted}>Custom iOS sound requires an EAS development build; iPhone silent mode and Focus settings are respected.</Text></Surface>
+  <Surface style={{marginBottom:14}}><Text style={styles.label}>Your interests</Text><View style={{flexDirection:"row",flexWrap:"wrap"}}>{categories.map(([label,id,emoji])=><React.Fragment key={id}>{choice(emoji+" "+label,selected.includes(id),()=>toggleInterest(id))}</React.Fragment>)}</View></Surface>
+  <Surface style={{marginBottom:18}}><Text style={styles.label}>Language</Text><View style={{flexDirection:"row",flexWrap:"wrap"}}>{([["English","en"],["Português","pt"],["Español","es"]]as const).map(([label,id])=><React.Fragment key={id}>{choice(label,p.content_language===id,()=>set("content_language",id))}</React.Fragment>)}</View></Surface>
+  <Pill title={busy?"Saving…":"Save my settings"} disabled={busy} onPress={save}/>
+ </ScrollView></Background>
+}
