@@ -124,7 +124,8 @@ function broadcastRecipients_(p){
  required_(p,"request_id");const max=Math.min(75,Math.max(1,Number(p.limit)||75));
  const keys=new Set(records_("NOTIFICATION_LOGS").map(x=>String(x.idempotency_key)));
  const all=broadcastDevicePool_(p).filter(d=>!keys.has("manual:"+p.request_id+":"+d.device_id));
- const devices=all.slice(0,max).map(x=>({device_id:x.device_id,user_id:x.user_id,push_token_reference:x.push_token_reference}));
+ const settings=new Map(records_("USER_PREFERENCES").map(x=>[String(x.user_id),x]));
+ const devices=all.slice(0,max).map(x=>({device_id:x.device_id,user_id:x.user_id,push_token_reference:x.push_token_reference,sound_enabled:String((settings.get(String(x.user_id))||{}).notification_sound_enabled)!=="false"}));
  return {devices,remaining_eligible:Math.max(0,all.length-devices.length)};
 }
 function claimNotification_(p){
@@ -149,6 +150,7 @@ function getRecipe_(p){required_(p,"recipe_id");const r=find_("RECIPES","recipe_
 function upsertRecipe_(p){
  required_(p,"title");required_(p,"source_url");
  if(!isHttps_(p.source_url))throw Error("Recipe must credit an HTTPS source");
+ if(p.image_url&&(!isHttps_(p.image_url)||!String(p.image_license||"").trim()))throw Error("Recipe images require a licensed HTTPS source");
  if(!Array.isArray(p.ingredients)||!p.ingredients.length||p.ingredients.length>80)throw Error("Ingredients required");
  if(!Array.isArray(p.instructions)||!p.instructions.length||p.instructions.length>80)throw Error("Instructions required");
  const clean=v=>v.map(x=>String(x).slice(0,500));
