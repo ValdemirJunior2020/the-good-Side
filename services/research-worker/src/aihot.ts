@@ -127,7 +127,7 @@ export async function runAihotBridge(){
     item.source.name.trim().toLowerCase() === "positive news";
   } catch {}
   // No Chinese headline/summary text is allowed through to the English app.
-  const isEnglishOutput = !/[\\u3400-\\u9fff]/u.test(item.title + " " + (item.summary || ""));
+  const isEnglishOutput = !/[\u3400-\u9fff]/u.test(item.title + " " + (item.summary || ""));
   if(!trustedPositiveNews || !isEnglishOutput){rejected++;continue}
   try{
    const decision=await screenWithOllama(item);
