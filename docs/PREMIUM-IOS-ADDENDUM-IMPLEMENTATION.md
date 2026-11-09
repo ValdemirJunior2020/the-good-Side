@@ -22,8 +22,8 @@
 - Automatic remote push delivery while the home PC is asleep or offline cannot be guaranteed. Move the scheduler to an always-on service for a strict daily reliability commitment.
 - Expo's push ticket `accepted` is not proof the handset displayed it; use Expo push receipts for final delivery diagnostics.
 - The owner-supplied WAV is available as a ChatGPT download; its **binary has not yet been committed into GitHub**. Place it at the asset path before EAS build.
-- Sound preview inside Settings is not implemented. The switch controls server-side notification sounds; test signature playback after the native asset is available.
-- Dark mode and native-device Liquid Glass polish need physical-iPhone accessibility and visual QA.
+- Settings now offers a local notification sound preview. It plays the default sound until the signature WAV is bundled in an EAS build; real-device playback still needs verification.
+- Dark-mode contrast, Dynamic Type/reduced-motion coverage and native-device Liquid Glass polish need physical-iPhone accessibility and visual QA.
 - Structured recipes require licensed/attributed content and explicit admin approval. An empty RECIPES sheet is intentional, not fabricated seed content.
 - No live Apps Script deployment, production API restart, or TestFlight installation was performed from ChatGPT.
 
