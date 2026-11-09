@@ -67,3 +67,35 @@ export function scheduleDecision(at:Date,p:NotificationOptions,kind:"digest"|"fo
 }
 export const deliveryKey=(userId:string,date:string,time:string,deviceId:string,kind="digest")=>
  [userId,date,time,kind,deviceId].join(":");
+
+/** Find the next eligible digest slot without relying on the server timezone.
+ * Invalid or nonexistent local DST times are skipped rather than sending at the wrong hour.
+ */
+export function nextDigestAt(now:Date,p:NotificationOptions,daysAhead=15):Date|null{
+ if(!isOn(p.notification_enabled)||!isOn(p.daily_digest_enabled)||p.notification_frequency==="breaking_only")return null;
+ const zone=p.notification_timezone||p.timezone||"UTC";
+ let date:string;
+ try{date=localParts(now,zone).date}catch{return null}
+ const[y,m,d]=date.split("-").map(Number);
+ const times=parseTimes(p.notification_times,p.notification_local_time||"12:00");
+ const count=p.notification_frequency==="twice_daily"?2:p.notification_frequency==="three_daily"?3:1;
+ let best:Date|null=null;
+ for(let day=0;day<daysAhead;day++){
+  for(const hhmm of times.slice(0,count)){
+   const[hh,mm]=hhmm.split(":").map(Number);
+   const target=Date.UTC(y,m-1,d+day,hh,mm);
+   let candidate=new Date(target);
+   for(let j=0;j<4;j++){
+    const observed=localParts(candidate,zone);
+    const[yy,mo,dd]=observed.date.split("-").map(Number);
+    const[hr,mi]=observed.time.split(":").map(Number);
+    const offset=target-Date.UTC(yy,mo-1,dd,hr,mi);
+    if(offset===0)break;
+    candidate=new Date(candidate.getTime()+offset);
+   }
+   if(candidate>now&&scheduleDecision(candidate,p).due&&(!best||candidate<best))best=candidate;
+  }
+  if(best)return best;
+ }
+ return null;
+}
