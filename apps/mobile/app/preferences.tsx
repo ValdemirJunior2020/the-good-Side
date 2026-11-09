@@ -3,6 +3,7 @@ import{ScrollView,Text,View,Switch,TouchableOpacity,Alert,TextInput,Platform}fro
 import{router}from"expo-router";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
+import * as SecureStore from "expo-secure-store";
 import{api,put}from"../src/client";
 import{Background,Pill,Surface,styles}from"../src/components";
 import{colors,categories}from"../src/theme";
@@ -49,7 +50,9 @@ export default function Preferences(){
      const projectId=process.env.EXPO_PUBLIC_EXPO_PROJECT_ID||Constants.expoConfig?.extra?.eas?.projectId;
      if(!projectId)throw Error("EAS project ID is not configured.");
      const token=(await Notifications.getExpoPushTokenAsync({projectId})).data;
-     await api("/me/device",{method:"POST",body:JSON.stringify({device_id:Constants.sessionId||"device-"+Platform.OS,platform:Platform.OS,token})},true);
+     let deviceId=await SecureStore.getItemAsync("goodside_device_id");
+     if(!deviceId){deviceId="device-"+Platform.OS+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2);await SecureStore.setItemAsync("goodside_device_id",deviceId)}
+     await api("/me/device",{method:"POST",body:JSON.stringify({device_id:deviceId,platform:Platform.OS,token})},true);
     }
    }
    const body={selected_categories:selected,notification_enabled:allow,daily_digest_enabled:enabled(p.daily_digest_enabled),notification_local_time:deliveryTimes[0]||"12:00",
