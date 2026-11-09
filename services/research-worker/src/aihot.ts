@@ -4,8 +4,9 @@ import {pathToFileURL} from "node:url";
 
 /**
  * The AIHOT bridge consumes its documented public v1 selected-items API.
- * It does not scrape the UI, bypass content restrictions, or publish automatically.
- * Source evidence and human editorial approval remain mandatory.
+ * It does not scrape the UI or bypass publisher content restrictions.
+ * Strongly screened stories from the restricted trusted source can publish automatically.
+ * Lower-confidence articles are withheld; this does not certify factual accuracy.
  */
 export interface AihotItem{
  id:string;title:string;summary:string|null;source:{name:string};
@@ -36,7 +37,7 @@ export function toDraft(item:AihotItem,decision:Screening,minScore=60):Draft|nul
  if(!item.selected||!item.title?.trim()||!item.summary?.trim()||!item.source?.name?.trim()||
   !isPublicArticleUrl(item.links?.original)||!item.publishedAt||
   !Number.isFinite(Date.parse(item.publishedAt))||!decision.positive||
-  decision.confidence<70||decision.positivity<65||
+  decision.confidence<80||decision.positivity<80||
   (item.score!==null&&item.score<minScore))return null;
  const title=item.title.trim().slice(0,300);
  const originalUrl=new URL(item.links.original);originalUrl.hash="";
@@ -46,7 +47,7 @@ export function toDraft(item:AihotItem,decision:Screening,minScore=60):Draft|nul
  }
  const url=originalUrl.toString();
  const summary=decision.summary.trim().slice(0,400);
- if(!summary)return null;
+ if(summary.length<30||!isEnglishHeadlineAndSummary(title,summary))return null;
  const category=decision.category.trim().slice(0,80)||"world-progress";
  return{
   news_id:hash(url).slice(0,24),title,summary,full_summary:summary,category,
@@ -116,7 +117,7 @@ export async function runAihotBridge(){
  const feedResponse=await fetchWithTimeout(endpoint.toString(),{headers:{accept:"application/json"}});
  if(!feedResponse.ok)throw Error("AIHOT API unavailable: HTTP "+feedResponse.status);
  const feed=validateAihotFeed(await feedResponse.json());
- let screened=0,submitted=0,duplicates=0,rejected=0,failed=0;
+ let screened=0,submitted=0,duplicates=0,rejected=0,failed=0,autoApproved=0;
  for(const item of feed.items.slice(0,maximum)){
   if(!item.selected||!item.summary||!item.publishedAt||!isPublicArticleUrl(item.links?.original)||
    item.score!==null&&item.score<minScore){rejected++;continue}
@@ -142,11 +143,12 @@ export async function runAihotBridge(){
     body:JSON.stringify(candidate)
    });
    if(!response.ok){failed++;console.error("Candidate submission failed",response.status);continue}
-   const result=await response.json() as {data?:{duplicate?:boolean}};
+   const result=await response.json() as {data?:{duplicate?:boolean;approval?:string}};
    if(result.data?.duplicate)duplicates++;else submitted++;
+   if(result.data?.approval==="approved")autoApproved++;
   }catch(error){failed++;console.error("AIHOT candidate error",item.id,error instanceof Error?error.message:String(error))}
  }
- const stats={source:"aihot",fetched:feed.items.length,screened,submitted,duplicates,rejected,failed,approval:"pending"};
+ const stats={source:"aihot",fetched:feed.items.length,screened,submitted,autoApproved,duplicates,rejected,failed,approval:"automatic for qualifying stories"};
  console.log(JSON.stringify(stats));
  if(failed>0)process.exitCode=1;
  return stats;
