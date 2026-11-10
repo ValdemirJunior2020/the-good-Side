@@ -6,15 +6,18 @@ import {OAuth2Client} from "google-auth-library";
 import {createCipheriv,createDecipheriv,randomBytes,createHash,timingSafeEqual} from "node:crypto";
 import {z} from "zod";
 import {chooseDigest,localClock,isValidTimezone} from "./schedule.js";
+import {isOn,scheduleDecision,deliveryKey,nextDigestAt} from "./notification-policy.js";
 
 const required=["GOOGLE_CLIENT_IDS","APPS_SCRIPT_URL","APPS_SCRIPT_SHARED_SECRET"];
 for(const key of required) if(!process.env[key]) throw new Error("Missing configuration: "+key);
 const oauthClient=new OAuth2Client();
 const allowedClients=(process.env.GOOGLE_CLIENT_IDS||"").split(",").map(s=>s.trim()).filter(Boolean);
 const adminEmails=new Set((process.env.ADMIN_GOOGLE_EMAILS||"").split(",").map(s=>s.trim().toLowerCase()).filter(Boolean));
-const app=express();app.disable("x-powered-by");app.use(express.json({limit:"64kb"}));
+const app=express();app.disable("x-powered-by");app.set("trust proxy","loopback");app.use(express.json({limit:"64kb"}));
 app.use(cors({origin:process.env.ALLOWED_ORIGIN?.split(",").filter(Boolean)||false}));
 app.use(rateLimit({windowMs:60000,limit:90,standardHeaders:"draft-7",legacyHeaders:false}));
+const configuredSound=String(process.env.PUSH_SOUND_NAME||"");
+const pushSound=/^[a-z0-9_-]+\\.(wav|caf|aiff)$/i.test(configuredSound)?configuredSound:"default";
 const encryptionKey=process.env.PUSH_TOKEN_ENCRYPTION_KEY_BASE64?Buffer.from(process.env.PUSH_TOKEN_ENCRYPTION_KEY_BASE64,"base64"):null;
 type Authed=Request & {uid?:string;email?:string;admin?:boolean};
 const asyncRoute=(fn:(req:Authed,res:Response)=>Promise<unknown>)=>(req:Request,res:Response,next:NextFunction)=>Promise.resolve(fn(req as Authed,res)).catch(next);
@@ -39,25 +42,52 @@ async function sheet(action:string,payload:Record<string,unknown>={}){
  try{const reply=await fetch(process.env.APPS_SCRIPT_URL!,{method:"POST",headers:{"content-type":"text/plain;charset=utf-8"},body:JSON.stringify({secret:process.env.APPS_SCRIPT_SHARED_SECRET,action,payload}),signal:controller.signal,redirect:"follow"});if(!reply.ok)throw Error("Database unavailable");const out=await reply.json() as {ok:boolean;data?:any;error?:string};if(!out.ok)throw Error(out.error||"Database error");return out.data;}finally{clearTimeout(timer);}
 }
 const profile=z.object({display_name:z.string().trim().min(1).max(80).optional(),preferred_language:z.enum(["en","pt","es"]).optional(),timezone:z.string().refine(isValidTimezone).optional()});
-const prefs=z.object({selected_categories:z.array(z.string().min(1).max(80)).max(30).optional(),preferred_countries:z.array(z.string().max(2)).max(30).optional(),notification_enabled:z.boolean().optional(),notification_local_time:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),daily_digest_enabled:z.boolean().optional(),content_language:z.enum(["en","pt","es"]).optional()});
+const hhmm=z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/);
+const prefs=z.object({
+ notification_frequency:z.enum(["daily","twice_daily","three_daily","selected_weekdays","breaking_only","digest_plus_alerts"]).optional(),
+ notification_times:z.array(hhmm).min(1).max(3).refine(v=>new Set(v).size===v.length).optional(),
+ notification_timezone:z.string().refine(isValidTimezone).optional(),
+ notification_weekdays:z.array(z.number().int().min(0).max(6)).max(7).optional(),
+ quiet_hours_start:hhmm.optional(),quiet_hours_end:hhmm.optional(),
+ weekend_enabled:z.boolean().optional(),food_notifications_enabled:z.boolean().optional(),
+ breaking_alerts_enabled:z.boolean().optional(),notification_sound_enabled:z.boolean().optional(),
+ selected_categories:z.array(z.string().min(1).max(80)).max(30).optional(),preferred_countries:z.array(z.string().max(2)).max(30).optional(),notification_enabled:z.boolean().optional(),notification_local_time:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),daily_digest_enabled:z.boolean().optional(),content_language:z.enum(["en","pt","es"]).optional()});
 const newsQuery=z.object({category:z.string().max(80).optional(),q:z.string().max(120).optional(),language:z.string().max(5).optional(),country:z.string().max(2).optional(),page:z.coerce.number().int().min(1).max(10000).default(1),limit:z.coerce.number().int().min(1).max(50).default(20)});
 const send=(res:Response,p:unknown)=>res.json({ok:true,data:p});
 app.get("/health",(_req,res)=>res.json({status:"ok"}));
 app.get("/news",asyncRoute(async(req,res)=>send(res,await sheet("listNews",newsQuery.parse(req.query)))));
 app.get("/news/:id",asyncRoute(async(req,res)=>send(res,await sheet("getNews",{news_id:req.params.id}))));
+app.get("/recipes",asyncRoute(async(req,res)=>send(res,await sheet("listRecipes"))));
+app.get("/recipes/:id",asyncRoute(async(req,res)=>send(res,await sheet("getRecipe",{recipe_id:req.params.id}))));
 app.use("/me",identity);
 app.get("/me",asyncRoute(async(req,res)=>send(res,await sheet("getUser",{user_id:req.uid}))));
 app.post("/me",asyncRoute(async(req,res)=>send(res,await sheet("syncUser",{user_id:req.uid,email:req.email||"",...profile.parse(req.body)}))));
 app.put("/me",asyncRoute(async(req,res)=>send(res,await sheet("updateUser",{user_id:req.uid,...profile.parse(req.body)}))));
 app.get("/me/preferences",asyncRoute(async(req,res)=>send(res,await sheet("getPreferences",{user_id:req.uid}))));
+app.get("/me/next-notification",asyncRoute(async(req,res)=>{const pref=await sheet("getPreferences",{user_id:req.uid});const user=await sheet("getUser",{user_id:req.uid});const zone=pref.notification_timezone||user?.timezone||"UTC";const at=nextDigestAt(new Date(),{...pref,timezone:zone});send(res,{next_at:at?at.toISOString():null,timezone:zone});}));
 app.put("/me/preferences",asyncRoute(async(req,res)=>send(res,await sheet("setPreferences",{user_id:req.uid,...prefs.parse(req.body)}))));
 app.get("/me/saved",asyncRoute(async(req,res)=>send(res,await sheet("listSaved",{user_id:req.uid}))));
 app.post("/me/saved/:id",asyncRoute(async(req,res)=>send(res,await sheet("saveNews",{user_id:req.uid,news_id:req.params.id}))));
 app.delete("/me/saved/:id",asyncRoute(async(req,res)=>send(res,await sheet("unsaveNews",{user_id:req.uid,news_id:req.params.id}))));
+app.get("/me/recipes",asyncRoute(async(req,res)=>send(res,await sheet("listSavedRecipes",{user_id:req.uid}))));
+app.post("/me/recipes/:id",asyncRoute(async(req,res)=>send(res,await sheet("saveRecipe",{user_id:req.uid,recipe_id:req.params.id}))));
+app.delete("/me/recipes/:id",asyncRoute(async(req,res)=>send(res,await sheet("unsaveRecipe",{user_id:req.uid,recipe_id:req.params.id}))));
 app.get("/me/notifications",asyncRoute(async(req,res)=>send(res,await sheet("listNotifications",{user_id:req.uid}))));
 app.post("/me/device",asyncRoute(async(req,res)=>{const body=z.object({device_id:z.string().max(128),platform:z.enum(["ios","android"]),token:z.string().startsWith("ExponentPushToken[").max(250)}).parse(req.body);send(res,await sheet("registerDevice",{...body,user_id:req.uid,push_token_reference:encrypt(body.token),token:undefined}));}));
 app.delete("/me",asyncRoute(async(req,res)=>{await sheet("deleteUser",{user_id:req.uid});send(res,{deleted:true,google_account_unchanged:true})}));
 app.use("/admin",identity,(req:Authed,res,next)=>req.admin?next():res.status(403).json({error:"Admin only"}));
+const recipePayload=z.object({
+ recipe_id:z.string().max(128).optional(),title:z.string().min(3).max(200),
+ description:z.string().max(1200).default(""),prep_minutes:z.number().int().min(0).max(1440),
+ cook_minutes:z.number().int().min(0).max(1440),servings:z.number().int().min(1).max(100),
+ ingredients:z.array(z.string().min(1).max(500)).min(1).max(80),
+ instructions:z.array(z.string().min(1).max(500)).min(1).max(80),
+ dietary_tags:z.string().max(200).default(""),source_name:z.string().min(2).max(150),
+ source_url:z.string().url().startsWith("https://"),image_url:z.string().url().optional(),
+ image_license:z.string().max(150).default(""),language:z.enum(["en","pt","es"]).default("en"),
+ approval_status:z.enum(["pending","approved"]).default("pending")
+});
+app.post("/admin/recipes",asyncRoute(async(req,res)=>send(res,await sheet("upsertRecipe",{...recipePayload.parse(req.body),actor_id:req.uid}))));
 app.get("/admin/stats",asyncRoute(async(req,res)=>send(res,await sheet("stats"))));
 app.get("/admin/pending",asyncRoute(async(req,res)=>send(res,await sheet("listPending"))));
 app.post("/admin/news",asyncRoute(async(req,res)=>send(res,await sheet("addNews",{...req.body,actor_id:req.uid}))));
@@ -84,7 +114,7 @@ app.post("/admin/broadcast/send",asyncRoute(async(req,res)=>{
   attempted++;
   try{
    const token=decrypt(d.push_token_reference);
-   const push=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"☀️ The Good Side",body:story.title.slice(0,150),data:{news_id:story.news_id,original_url:story.original_url},sound:"default"})});
+   const push=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"â˜€ï¸ The Good Side",body:story.title.slice(0,150),data:{news_id:story.news_id,original_url:story.original_url,sound_enabled:d.sound_enabled},sound:d.sound_enabled?pushSound:null})});
    const result=await push.json() as any;
    const ticket=result?.data;
    const ok=push.ok&&ticket?.status==="ok";
@@ -120,7 +150,7 @@ app.post("/worker/candidates",asyncRoute(async(req,res)=>{
   &&url.protocol==="https:"&&!url.username&&!url.password
   &&story.publisher.trim().toLowerCase()==="positive news";
  const quality=story.language==="en" && !/[\u3400-\u9fff]/u.test(story.title+" "+story.summary)
-  &&story.confidence_score>=80 && story.positivity_score>=80
+  &&story.confidence_score>=60 && story.positivity_score>=70
   &&Number.isFinite(Date.parse(story.source_published_at));
  if(!trusted||!quality)return res.status(422).json({error:"Story does not meet automatic-publication requirements"});
  const record=await sheet("addNews",{...story,approval_status:"pending",actor_id:"research-worker"});
@@ -133,23 +163,49 @@ app.post("/worker/candidates",asyncRoute(async(req,res)=>{
  const published=await sheet("setNewsStatus",{news_id:record.news_id,status:"approved",actor_id:"ollama-auto-editor"});
  send(res,{...record,approval:published.status});
 }));
+let digestRunning=false;
 async function digestTick(){
- if(process.env.ENABLE_PUSH_SCHEDULER!=="true")return;
- const users=await sheet("digestUsers"),news=await sheet("listNews",{limit:50,page:1});const now=new Date();
- for(const user of (users||[]) as any[]){try{
-  if(!user.notification_enabled||!user.daily_digest_enabled||!isValidTimezone(user.timezone))continue;
-  const local=localClock(now,user.timezone);if(local.time!==user.notification_local_time)continue;
-  const key=user.user_id+":"+local.date;const sent=await sheet("digestSeen",{user_id:user.user_id,date:local.date});
-  if(sent?.already_sent)continue;
-  const chosen=chooseDigest(news.items||[],String(user.selected_categories||"").split(",").filter(Boolean),new Set(sent?.news_ids||[]));
-  if(!chosen)continue;
-  const devices=await sheet("listDevices",{user_id:user.user_id});let attempted=false;
-  for(const d of devices||[]){if(!d.enabled)continue;attempted=true;const token=decrypt(d.push_token_reference);
-   const resp=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"The Good Side",body:chosen.title,data:{news_id:chosen.news_id},sound:"default"})});
-   const result=await resp.json() as any;const ticket=result?.data;await sheet("logNotification",{notification_id:crypto.randomUUID(),user_id:user.user_id,news_id:chosen.news_id,scheduled_at:now.toISOString(),sent_at:now.toISOString(),delivery_status:ticket?.status==="ok"?"accepted":"error",error_code:ticket?.details?.error||"",idempotency_key:key+":"+d.device_id});
-   if(ticket?.details?.error==="DeviceNotRegistered")await sheet("disableDevice",{device_id:d.device_id,user_id:user.user_id});
+ if(process.env.ENABLE_PUSH_SCHEDULER!=="true"||digestRunning)return;
+ digestRunning=true;
+ try {
+  const users=await sheet("digestUsers");const now=new Date();
+  // A fresh eligibility decision is made for each user and each due slot.
+  for(const user of (users||[]) as any[]){
+   try {
+    const decision=scheduleDecision(now,user,"digest");
+    if(!decision.due)continue;
+    const devices=await sheet("listDevices",{user_id:user.user_id});
+    if(!devices?.length)continue;
+    const news=await sheet("listNews",{limit:50,page:1});
+    const seen=await sheet("digestSeen",{user_id:user.user_id,date:decision.date});
+    const already=new Set<string>(seen?.news_ids||[]);
+    const selected=String(user.selected_categories||"").split(",").filter(Boolean);
+    const foodEnabled=isOn(user.food_notifications_enabled);
+    // Recipes share the user's existing delivery slots, never creating an extra alert.
+    const recipePool=foodEnabled?await sheet("listRecipes"):[] as any[];
+    const recipe=(recipePool||[]).find((r:any)=>!already.has("recipe:"+r.recipe_id));
+    const article=recipe?null:chooseDigest(news.items||[],selected,already);
+    const chosen=recipe?{news_id:"recipe:"+recipe.recipe_id,title:recipe.title,original_url:recipe.source_url}:article;
+    if(!chosen)continue;
+    for(const d of devices) {
+     if(!isOn(d.enabled))continue;
+     const key=deliveryKey(user.user_id,decision.date,decision.time,d.device_id);
+     const claim=await sheet("claimNotification",{notification_id:crypto.randomUUID(),user_id:user.user_id,news_id:chosen.news_id,scheduled_at:now.toISOString(),delivery_status:"pending",idempotency_key:key});
+     if(claim?.duplicate)continue;
+     try {
+      const token=decrypt(d.push_token_reference);
+      const resp=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"The Good Side",body:chosen.title,data:recipe?{recipe_id:recipe.recipe_id,sound_enabled:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined}:{news_id:chosen.news_id,sound_enabled:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined},sound:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined?pushSound:null})});
+      const result=await resp.json() as any;const ticket=Array.isArray(result?.data)?result.data[0]:result?.data;
+      await sheet("updateNotificationByKey",{idempotency_key:key,delivery_status:resp.ok&&ticket?.status==="ok"?"accepted":"error",sent_at:new Date().toISOString(),error_code:ticket?.details?.error||(!resp.ok?"push_http_"+resp.status:"")});
+      if(ticket?.details?.error==="DeviceNotRegistered")await sheet("disableDevice",{device_id:d.device_id,user_id:user.user_id});
+     }catch(error){
+      console.error("Push send failed",error instanceof Error?error.message:"unknown");
+      await sheet("updateNotificationByKey",{idempotency_key:key,delivery_status:"error",error_code:"push_request_failed"}).catch(()=>{});
+     }
+    }
+   }catch(error){console.error("Digest user failed",error instanceof Error?error.message:"unknown");}
   }
- }catch(e){console.error("Digest user failure",user.user_id,e instanceof Error?e.message:"unknown")}}
+ }finally{digestRunning=false;}
 }
 if(process.env.ENABLE_PUSH_SCHEDULER==="true"){setInterval(()=>digestTick().catch(console.error),60000);digestTick().catch(console.error);}
 app.use((error:unknown,_req:Request,res:Response,_next:NextFunction)=>{if(error instanceof z.ZodError)return res.status(400).json({error:"Invalid input",details:error.flatten()});console.error(error);res.status(503).json({error:"Request could not be completed"})});

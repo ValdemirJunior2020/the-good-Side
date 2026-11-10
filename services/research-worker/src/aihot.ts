@@ -37,7 +37,7 @@ export function toDraft(item:AihotItem,decision:Screening,minScore=60):Draft|nul
  if(!item.selected||!item.title?.trim()||!item.summary?.trim()||!item.source?.name?.trim()||
   !isPublicArticleUrl(item.links?.original)||!item.publishedAt||
   !Number.isFinite(Date.parse(item.publishedAt))||!decision.positive||
-  decision.confidence<80||decision.positivity<80||
+  decision.confidence<60||decision.positivity<70||
   (item.score!==null&&item.score<minScore))return null;
  const title=item.title.trim().slice(0,300);
  const originalUrl=new URL(item.links.original);originalUrl.hash="";
@@ -137,12 +137,12 @@ export async function runAihotBridge(){
    const decision=await screenWithOllama(item);
    screened++;
    const candidate=toDraft(item,decision,minScore);
-   if(!candidate){rejected++;continue}
+   if(!candidate){console.log("EDITORIAL REJECTION:",JSON.stringify({title:item.title,decision}));rejected++;continue}
    const response=await fetchWithTimeout(apiBase+"/worker/candidates",{
     method:"POST",headers:{"content-type":"application/json","x-worker-key":key},
     body:JSON.stringify(candidate)
    });
-   if(!response.ok){failed++;console.error("Candidate submission failed",response.status);continue}
+   if(!response.ok){failed++;console.error("Candidate submission failed",response.status,await response.text());continue}
    const result=await response.json() as {data?:{duplicate?:boolean;approval?:string}};
    if(result.data?.duplicate)duplicates++;else submitted++;
    if(result.data?.approval==="approved")autoApproved++;
