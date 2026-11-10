@@ -13,7 +13,7 @@ for(const key of required) if(!process.env[key]) throw new Error("Missing config
 const oauthClient=new OAuth2Client();
 const allowedClients=(process.env.GOOGLE_CLIENT_IDS||"").split(",").map(s=>s.trim()).filter(Boolean);
 const adminEmails=new Set((process.env.ADMIN_GOOGLE_EMAILS||"").split(",").map(s=>s.trim().toLowerCase()).filter(Boolean));
-const app=express();app.disable("x-powered-by");app.use(express.json({limit:"64kb"}));
+const app=express();app.disable("x-powered-by");app.set("trust proxy","loopback");app.use(express.json({limit:"64kb"}));
 app.use(cors({origin:process.env.ALLOWED_ORIGIN?.split(",").filter(Boolean)||false}));
 app.use(rateLimit({windowMs:60000,limit:90,standardHeaders:"draft-7",legacyHeaders:false}));
 const configuredSound=String(process.env.PUSH_SOUND_NAME||"");
@@ -114,7 +114,7 @@ app.post("/admin/broadcast/send",asyncRoute(async(req,res)=>{
   attempted++;
   try{
    const token=decrypt(d.push_token_reference);
-   const push=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"☀️ The Good Side",body:story.title.slice(0,150),data:{news_id:story.news_id,original_url:story.original_url,sound_enabled:d.sound_enabled},sound:d.sound_enabled?pushSound:null})});
+   const push=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"â˜€ï¸ The Good Side",body:story.title.slice(0,150),data:{news_id:story.news_id,original_url:story.original_url,sound_enabled:d.sound_enabled},sound:d.sound_enabled?pushSound:null})});
    const result=await push.json() as any;
    const ticket=result?.data;
    const ok=push.ok&&ticket?.status==="ok";
@@ -150,7 +150,7 @@ app.post("/worker/candidates",asyncRoute(async(req,res)=>{
   &&url.protocol==="https:"&&!url.username&&!url.password
   &&story.publisher.trim().toLowerCase()==="positive news";
  const quality=story.language==="en" && !/[\u3400-\u9fff]/u.test(story.title+" "+story.summary)
-  &&story.confidence_score>=80 && story.positivity_score>=80
+  &&story.confidence_score>=60 && story.positivity_score>=70
   &&Number.isFinite(Date.parse(story.source_published_at));
  if(!trusted||!quality)return res.status(422).json({error:"Story does not meet automatic-publication requirements"});
  const record=await sheet("addNews",{...story,approval_status:"pending",actor_id:"research-worker"});

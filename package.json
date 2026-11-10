@@ -13,5 +13,9 @@
     "api": "npm run dev -w @goodside/api",
     "research": "npm run research -w @goodside/research",
     "aihot:import": "npm run aihot:import -w @goodside/research"
+  },
+  "overrides": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }
