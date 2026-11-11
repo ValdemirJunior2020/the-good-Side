@@ -1,7 +1,12 @@
+"$schema" = "https://open-api.netlify.com/netlify.schema.json"
+
+# Monorepo: leave Netlify Base directory at the repository root.
+# In Netlify UI, set Package directory to apps/admin.
 [build]
- command = "npm run build"
- publish = "dist"
+  command = "npm ci --include=dev --no-audit --no-fund && node scripts/check-netlify-admin-env.mjs && npm run build -w @goodside/admin"
+  publish = "apps/admin/dist"
+
 [[redirects]]
- from = "/*"
- to = "/index.html"
- status = 200
+  from = "/*"
+  to = "/index.html"
+  status = 200
