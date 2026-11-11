@@ -34,8 +34,8 @@ test("English guard allows English positive news and blocks Chinese output",()=>
 });
 
 test("automatic publication screening withholds low-confidence or weakly positive stories",()=>{
- assert.equal(toDraft(sample,{...positive,confidence:79}),null);
- assert.equal(toDraft(sample,{...positive,positivity:79}),null);
+ assert.equal(toDraft(sample,{...positive,confidence:59}),null);
+ assert.equal(toDraft(sample,{...positive,positivity:69}),null);
  assert.equal(toDraft(sample,{...positive,summary:"Short"}),null);
- assert.ok(toDraft(sample,{...positive,confidence:80,positivity:80}));
+ assert.ok(toDraft(sample,{...positive,confidence:60,positivity:70}));
 });
