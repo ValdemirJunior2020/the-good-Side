@@ -1,0 +1,39 @@
+name: Windows startup scripts
+on:
+  push:
+    paths:
+      - "START-GOOD-SIDE.bat"
+      - "scripts/*.ps1"
+      - ".github/workflows/windows-launcher-check.yml"
+  pull_request:
+    paths:
+      - "START-GOOD-SIDE.bat"
+      - "scripts/*.ps1"
+      - ".github/workflows/windows-launcher-check.yml"
+
+jobs:
+  parse-powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse local startup PowerShell scripts without executing them
+        shell: powershell
+        run: |
+          $files = @(
+            "scripts/start-goodside.ps1",
+            "scripts/run-local-api.ps1",
+            "scripts/run-local-admin.ps1",
+            "scripts/run-goodside-import.ps1",
+            "scripts/check-hybrid.ps1"
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $syntaxErrors = $null
+            $path = (Resolve-Path $file).Path
+            [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$syntaxErrors) | Out-Null
+            if ($syntaxErrors.Count -gt 0) {
+              foreach ($problem in $syntaxErrors) { Write-Error ($file + ": " + $problem.Message) }
+              throw ("PowerShell syntax validation failed: " + $file)
+            }
+            Write-Host ("PASS " + $file)
+          }
