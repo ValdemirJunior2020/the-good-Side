@@ -123,3 +123,38 @@ be unavailable when Docker/AIHOT/Ollama are not running, even if the PC is on.
 A Render user-profile URL `dashboard.render.com/u/...` is **not** a
 workspace identifier. Always explicitly confirm the intended workspace before
 creating a hosted service. The code/Blueprint can be prepared independently.
+
+## 6. One-click Windows startup (new)
+
+After pulling the feature branch on your Windows computer, double-click
+`START-GOOD-SIDE.bat` at the repository root or run:
+
+```powershell
+cd "C:\Users\nobody\Desktop\the-good-Side"
+.\START-GOOD-SIDE.bat
+```
+
+The BAT runs `scripts/start-goodside.ps1`, which:
+
+- Starts the Ollama HTTP server if it is not responding.
+- Starts Docker Desktop if the Docker engine is not running.
+- Checks and starts **only** the already-created `aihot-db-1`, `aihot-api-1`, `aihot-worker-1`, and `aihot-web-1` containers without rebuilding them or touching unrelated projects.
+- Opens the local Node API (port 8788) and Netlify/Vite Admin development UI (port 5173) in separate hidden runner processes when their local `.env` files exist and the corresponding service isn't responding.
+- Confirms the existing `TheGoodSide-AutoNews` Scheduled Task and asks it to import once when local AI is healthy. The original 30-minute recurring trigger remains unchanged and the importer mutex prevents overlapping jobs.
+
+The BAT does **not** start the Render cloud service (Render is hosted separately)
+and does **not** start a Cloudflare tunnel whose exact task/config hasn't been
+verified. Before the Render migration, your existing public mobile API domain
+may still depend on its Cloudflare tunnel.
+
+Logs for hidden Node runner windows are in `logs/goodside-local-api.log`
+and `logs/goodside-local-admin.log`. The already-existing importer log is
+`goodside-import.log` in the repository root. No login secrets are
+embedded in the BAT.
+
+The launcher relies on pre-existing Docker containers. If the AIHOT
+containers do not exist, the script stops short of recreating/rebuilding
+them; follow `docs/AIHOT.md` to set them up first.
+
+Note: PowerShell/BAT startup must still be smoke-tested on Windows; CI
+tests TypeScript/Node code, not the actual Docker Desktop/Ollama runtime.
