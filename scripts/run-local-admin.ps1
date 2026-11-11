@@ -10,7 +10,8 @@ try {
     catch [System.Threading.AbandonedMutexException] { $held = $true }
     if (-not $held) { exit 0 }
     Set-Location -LiteralPath $root
-    & npm.cmd run dev -w @goodside/admin *>> (Join-Path $logs "goodside-local-admin.log")
+    # Use an explicit port and host; do not silently jump to port 5174.
+    & npm.cmd run dev -w @goodside/admin -- --host 127.0.0.1 --port 5173 --strictPort *>> (Join-Path $logs "goodside-local-admin.log")
 } catch {
     Add-Content -LiteralPath (Join-Path $logs "goodside-local-admin.log") -Value ("Startup error: " + $_.Exception.Message)
 } finally {
