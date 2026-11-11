@@ -1,4 +1,7 @@
 import "dotenv/config";
+import {config as loadDotenv} from "dotenv";
+import {existsSync} from "node:fs";
+import {fileURLToPath} from "node:url";
 import express,{type Request,type Response,type NextFunction} from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
@@ -8,13 +11,21 @@ import {z} from "zod";
 import {chooseDigest,localClock,isValidTimezone} from "./schedule.js";
 import {isOn,scheduleDecision,deliveryKey,nextDigestAt} from "./notification-policy.js";
 
+// Local npm-workspace dev runs can inherit stale root-level env vars.
+// Prefer the API's own .env for local development. Render/production remains env-driven.
+const localEnvPath=fileURLToPath(new URL("../.env",import.meta.url));
+if(process.env.NODE_ENV!=="production"&&existsSync(localEnvPath)){
+ loadDotenv({path:localEnvPath,override:true});
+}
 const required=["GOOGLE_CLIENT_IDS","APPS_SCRIPT_URL","APPS_SCRIPT_SHARED_SECRET"];
 for(const key of required) if(!process.env[key]) throw new Error("Missing configuration: "+key);
 const oauthClient=new OAuth2Client();
 const allowedClients=(process.env.GOOGLE_CLIENT_IDS||"").split(",").map(s=>s.trim()).filter(Boolean);
 const adminEmails=new Set((process.env.ADMIN_GOOGLE_EMAILS||"").split(",").map(s=>s.trim().toLowerCase()).filter(Boolean));
 const app=express();app.disable("x-powered-by");app.set("trust proxy","loopback");app.use(express.json({limit:"64kb"}));
-app.use(cors({origin:process.env.ALLOWED_ORIGIN?.split(",").filter(Boolean)||false}));
+const allowedOrigins=(process.env.ALLOWED_ORIGIN||"").split(",").map(s=>s.trim()).filter(Boolean);
+app.use(cors({origin:allowedOrigins.length?allowedOrigins:false}));
+console.log("Good Side API CORS configured for",allowedOrigins.length,"origin(s)");
 app.use(rateLimit({windowMs:60000,limit:90,standardHeaders:"draft-7",legacyHeaders:false}));
 const configuredSound=String(process.env.PUSH_SOUND_NAME||"");
 const pushSound=/^[a-z0-9_-]+\\.(wav|caf|aiff)$/i.test(configuredSound)?configuredSound:"default";
