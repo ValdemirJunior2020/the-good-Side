@@ -16,6 +16,10 @@ function Is-HttpHealthy([string]$url) {
         return ($r.StatusCode -ge 200 -and $r.StatusCode -lt 300)
     } catch { return $false }
 }
+# Vite defaults to localhost and may listen on IPv6 rather than 127.0.0.1.
+function Is-AdminHealthy {
+    return ((Is-HttpHealthy "http://localhost:5173/") -or (Is-HttpHealthy "http://127.0.0.1:5173/"))
+}
 function Wait-For([scriptblock]$check,[int]$seconds) {
     $until = (Get-Date).AddSeconds($seconds)
     do {
@@ -111,7 +115,7 @@ if (Is-HttpHealthy "http://127.0.0.1:8788/health") {
     } else { Warn "Local API not ready; check logs\goodside-local-api.log."; $errors++ }
 }
 
-if (Is-HttpHealthy "http://127.0.0.1:5173/") {
+if (Is-AdminHealthy) {
     OK "Local Admin already running."
 } elseif (-not (Test-Path -LiteralPath (Join-Path $root "apps\admin\.env"))) {
     Warn "Admin .env missing; skipping optional local Admin."
@@ -120,9 +124,17 @@ if (Is-HttpHealthy "http://127.0.0.1:5173/") {
     $errors++
 } else {
     Start-Runner "local Admin" "scripts\run-local-admin.ps1"
-    if (Wait-For { Is-HttpHealthy "http://127.0.0.1:5173/" } 35) {
+    if (Wait-For { Is-AdminHealthy } 35) {
         OK "Admin ready at http://localhost:5173."
-    } else { Warn "Admin not ready; check logs\goodside-local-admin.log."; $errors++ }
+     } else {
+        Warn "Admin not ready; check logs\goodside-local-admin.log."
+        $adminLog = Join-Path $logs "goodside-local-admin.log"
+        if (Test-Path -LiteralPath $adminLog) {
+            Warn "Recent Admin startup log:"
+            Get-Content -LiteralPath $adminLog -Tail 12 | ForEach-Object { Write-Host ("    " + $_) }
+        }
+        $errors++
+    }
 }
 
 # Keep the existing 30-minute Task Scheduler registration. Never duplicate it.
