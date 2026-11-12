@@ -34,16 +34,33 @@ type Authed=Request & {uid?:string;email?:string;admin?:boolean};
 const asyncRoute=(fn:(req:Authed,res:Response)=>Promise<unknown>)=>(req:Request,res:Response,next:NextFunction)=>Promise.resolve(fn(req as Authed,res)).catch(next);
 function safeEqual(a:string,b:string){const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);}
 async function identity(req:Authed,res:Response,next:NextFunction){
+ const token=req.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
+ if(!token)return void res.status(401).json({error:"Sign in required"});
  try{
-  const token=req.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
-  if(!token)return void res.status(401).json({error:"Google sign-in required"});
+  // Supabase access tokens are verified against the Auth server, never decoded/trusted locally.
+  // Admin access is deliberately Google-only regardless of the account email.
+  if(token.startsWith("eyJ")&&process.env.SUPABASE_AUTH_URL&&process.env.SUPABASE_PUBLISHABLE_KEY){
+   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+   try{
+    const response=await fetch(process.env.SUPABASE_AUTH_URL+"/auth/v1/user",{
+     headers:{apikey:process.env.SUPABASE_PUBLISHABLE_KEY,Authorization:"Bearer "+token},signal:controller.signal
+    });
+    if(response.ok){
+     const user=await response.json() as {id?:string;email?:string;email_confirmed_at?:string;confirmed_at?:string};
+     if(user.id&&user.email&&(user.email_confirmed_at||user.confirmed_at)){
+      req.uid="supabase:"+user.id;req.email=user.email;req.admin=false;
+      return next();
+     }
+    }
+   }finally{clearTimeout(timer)}
+  }
   const ticket=await oauthClient.verifyIdToken({idToken:token,audience:allowedClients});
   const user=ticket.getPayload();
   if(!user?.sub||!user.email||!user.email_verified)return void res.status(401).json({error:"Verified Google account required"});
   req.uid="google:"+user.sub;req.email=user.email;
   req.admin=adminEmails.has(user.email.toLowerCase());
   next();
- }catch{res.status(401).json({error:"Google session expired or invalid. Sign in again."});}
+ }catch{res.status(401).json({error:"Sign-in session expired or invalid. Sign in again."});}
 }
 
 function encrypt(value:string){if(!encryptionKey||encryptionKey.length!==32)throw Error("Push encryption key not configured");const iv=randomBytes(12);const cipher=createCipheriv("aes-256-gcm",encryptionKey,iv);const result=Buffer.concat([cipher.update(value,"utf8"),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),result]).toString("base64");}
@@ -86,7 +103,7 @@ app.post("/me/recipes/:id",asyncRoute(async(req,res)=>send(res,await sheet("save
 app.delete("/me/recipes/:id",asyncRoute(async(req,res)=>send(res,await sheet("unsaveRecipe",{user_id:req.uid,recipe_id:req.params.id}))));
 app.get("/me/notifications",asyncRoute(async(req,res)=>send(res,await sheet("listNotifications",{user_id:req.uid}))));
 app.post("/me/device",asyncRoute(async(req,res)=>{const body=z.object({device_id:z.string().max(128),platform:z.enum(["ios","android"]),token:z.string().startsWith("ExponentPushToken[").max(250)}).parse(req.body);send(res,await sheet("registerDevice",{...body,user_id:req.uid,push_token_reference:encrypt(body.token),token:undefined}));}));
-app.delete("/me",asyncRoute(async(req,res)=>{await sheet("deleteUser",{user_id:req.uid});send(res,{deleted:true,google_account_unchanged:true})}));
+app.delete("/me",asyncRoute(async(req,res)=>{if(req.uid?.startsWith("supabase:"))return res.status(501).json({error:"Email account deletion must be completed by support until automatic Auth deletion is configured."});await sheet("deleteUser",{user_id:req.uid});send(res,{deleted:true,google_account_unchanged:true})}));
 app.use("/admin",identity,(req:Authed,res,next)=>req.admin?next():res.status(403).json({error:"Admin only"}));
 const recipePayload=z.object({
  recipe_id:z.string().max(128).optional(),title:z.string().min(3).max(200),
