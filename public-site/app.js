@@ -81,6 +81,21 @@ byId("email-interest-form").addEventListener("submit",ev=>{
 });
 fetchStories();
 
+function openRSSReader(item){
+ const dialog=byId("rss-reader");
+ if(!dialog||typeof dialog.showModal!=="function")return;
+ const link=allowedLink(item.url);
+ if(!link||new URL(link).hostname.replace(/^www\\./,"")!=="goodnewsnetwork.org")return;
+ byId("rss-reader-title").textContent=item.title||"Good news";
+ const date=item.published?new Date(item.published):null;
+ byId("rss-reader-byline").textContent="Good News Network"+(date&&!Number.isNaN(+date)?" · "+date.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}):"");
+ byId("rss-reader-source").href=link;
+ dialog.showModal();
+}
+byId("rss-reader-close")?.addEventListener("click",()=>byId("rss-reader").close());
+byId("rss-reader-done")?.addEventListener("click",()=>byId("rss-reader").close());
+byId("rss-reader")?.addEventListener("click",event=>{if(event.target===event.currentTarget)event.currentTarget.close()});
+
 /* Live RSS is link discovery only; it does not bypass the approved article pipeline. */
 async function loadGoodNewsNetwork(){
  const box=byId("rss-headlines"),refresh=byId("rss-refresh");
@@ -95,8 +110,9 @@ async function loadGoodNewsNetwork(){
   const cards=data.headlines.map(item=>{
    const link=allowedLink(item.url);
    if(!link||new URL(link).hostname.replace(/^www\./,"")!=="goodnewsnetwork.org")return null;
-   const card=make("article","rss-item"),title=make("a","rss-title",item.title);
-   title.href=link;title.target="_blank";title.rel="noopener noreferrer";
+   const card=make("article","rss-item"),title=make("button","rss-title rss-story-open",item.title);
+   title.type="button";
+   title.addEventListener("click",()=>openRSSReader(item));
    const details=make("div","rss-item-meta","GOOD NEWS NETWORK");
    if(item.published){
     const date=new Date(item.published);
