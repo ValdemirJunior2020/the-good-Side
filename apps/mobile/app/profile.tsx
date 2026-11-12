@@ -121,9 +121,8 @@ export default function Profile(){
     </View>
     <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose profile picture" activeOpacity={.75} onPress={()=>void openAvatars()} style={ui.avatarCamera}><Camera size={20} color={ink}/></TouchableOpacity>
     <View style={ui.nameRow}><Text style={ui.personName}>{signedIn?firstName:"Your corner"}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Edit profile" onPress={()=>signedIn?setEditing(v=>!v):go("/auth")}><Pencil size={20} color={ink}/></TouchableOpacity></View>
-    {!signedIn?<Text style={ui.heroHint}>Create an account to personalize your good news</Text>:null}
+    {!signedIn?<Text style={ui.heroHint}>Log in to personalize your profile</Text>:null}
    </View>
-   {!signedIn?<Glass style={{padding:16,marginBottom:18}}><Text style={ui.authHeading}>Make your corner yours ✨</Text><Text style={ui.authHelper}>Save favorite stories, select an avatar, and personalize notifications.</Text><View style={ui.authRow}><TouchableOpacity accessibilityRole="button" style={ui.authLight} onPress={()=>go("/auth")}><Text style={ui.authText}>Log in</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" style={ui.authGold} onPress={()=>go("/auth")}><LinearGradient pointerEvents="none" colors={["#FFE3BB","#F2AE67"]} style={StyleSheet.absoluteFill}/><Text style={ui.authText}>Sign up free</Text></TouchableOpacity></View></Glass>:null}
    {editing&&signedIn?<Glass style={{padding:16,marginBottom:18}}>
     <Text style={ui.fieldLabel}>Display name</Text>
     <TextInput accessibilityLabel="Display name" value={name} onChangeText={setName} style={ui.nameInput} maxLength={80}/>
