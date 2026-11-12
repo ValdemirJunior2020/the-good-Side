@@ -8,13 +8,18 @@ import {colors} from "../src/theme";
 import LuxuryIcon from "../src/LuxuryIcon";
 import {ArrowLeft,Camera,UserSquare2,Link2,Crown,Bell,SlidersHorizontal,Sparkles,Layers3,ShieldCheck,Bookmark,BookOpen,Lock,Download,LogOut,Headphones,Trash2,ChevronRight,House,Compass,ChefHat,Heart,UserRound,Pencil,Sun} from "lucide-react-native";
 
-const SUNRISE="https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1100&q=85";
+const SUNRISE="https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1400&q=90";
 const gold="#B96117";
 const ink="#301E2C";
 type Avatar={avatar_id:string;label:string;image_url:string;credit:string};
 
 function Glass({children,style}:{children:React.ReactNode;style?:object}){
- return <View style={[ui.glass,style]}><BlurView tint="light" intensity={62} pointerEvents="none" style={StyleSheet.absoluteFill}/><LinearGradient pointerEvents="none" colors={["rgba(255,255,255,.54)","rgba(255,237,230,.30)","rgba(255,222,241,.42)"]} style={StyleSheet.absoluteFill}/>{children}</View>;
+ return <View style={[ui.glass,style]}>
+  <BlurView tint="light" intensity={65} pointerEvents="none" style={StyleSheet.absoluteFill}/>
+  <LinearGradient pointerEvents="none" colors={["rgba(255,255,255,.60)","rgba(255,229,220,.36)","rgba(248,209,231,.48)"]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
+  <LinearGradient pointerEvents="none" colors={["rgba(255,255,255,.78)","rgba(255,255,255,0)"]} style={{position:"absolute",top:0,left:18,right:18,height:14,borderTopLeftRadius:18,borderTopRightRadius:18}}/>
+  {children}
+ </View>;
 }
 function Section({symbol,title,children}:{symbol:React.ReactNode;title:string;children:React.ReactNode}){
  return <View style={{marginTop:17}}>
@@ -107,7 +112,7 @@ export default function Profile(){
  const avatarUrl=currentAvatar?.image_url||SUNRISE;
  return <LinearGradient colors={["#FFF1E3","#F7D1C7","#DED0E5"]} style={{flex:1}}>
   <ImageBackground source={{uri:SUNRISE}} resizeMode="cover" style={ui.sunrise} imageStyle={{opacity:.87}} pointerEvents="none">
-   <LinearGradient colors={["rgba(255,241,233,.56)","rgba(255,225,200,.12)","rgba(246,210,207,.38)","rgba(221,203,227,.88)"]} locations={[0,.28,.62,1]} style={StyleSheet.absoluteFill} pointerEvents="none"/>
+   <LinearGradient colors={["rgba(255,230,221,.35)","rgba(255,208,178,.14)","rgba(246,199,207,.42)","rgba(232,192,216,.88)"]} locations={[0,.30,.66,1]} style={StyleSheet.absoluteFill} pointerEvents="none"/>
   </ImageBackground>
   <ScrollView contentContainerStyle={ui.page} showsVerticalScrollIndicator={false}>
    <View style={ui.topRow}><TouchableOpacity accessibilityRole="button" onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={ui.back}><ArrowLeft size={23} color={ink}/><Text style={ui.backText}>Back</Text></TouchableOpacity></View>
@@ -134,7 +139,8 @@ export default function Profile(){
      [<Link2 size={25} color="#A45B2A"/>,"Connected Apps",()=>Alert.alert("Connected account",signedIn?"Your Google account is used for secure sign-in. No additional connected apps are configured.":"Sign in with Google to connect your account.")],
      [<Crown size={25} color="#A45B2A"/>,"Subscription",()=>Alert.alert("Free account","The Good Side currently has free access. No paid subscription is configured.")]
     ] as const).map(([icon,label,onPress])=><TouchableOpacity key={label} accessibilityRole="button" onPress={onPress} activeOpacity={.78} style={ui.quickCard}>
-      <LinearGradient colors={["rgba(255,255,255,.78)","rgba(253,214,199,.62)","rgba(237,203,232,.72)"]} style={StyleSheet.absoluteFill}/>
+      <LinearGradient colors={["rgba(255,255,255,.80)","rgba(255,225,217,.58)","rgba(247,214,236,.65)"]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
+      <View pointerEvents="none" style={ui.quickShine}/>
       <LuxuryIcon size={38} tone={label==="Profile Info"?"peach":label==="Connected Apps"?"violet":"sun"}>{icon}</LuxuryIcon><Text style={ui.quickText}>{label}</Text>
     </TouchableOpacity>)}
    </View>
@@ -187,34 +193,35 @@ export default function Profile(){
 }
 const ui=StyleSheet.create({
  sunrise:{position:"absolute",top:0,left:0,right:0,bottom:0},
- page:{paddingHorizontal:18,paddingTop:66,paddingBottom:168,width:"100%",maxWidth:550,alignSelf:"center"},
+ page:{paddingHorizontal:16,paddingTop:72,paddingBottom:180,width:"100%",maxWidth:550,alignSelf:"center"},
  topRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
- back:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:8,paddingVertical:7,paddingRight:16},backText:{fontSize:17,color:ink,fontWeight:"600"},
- brand:{marginTop:4,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8},brandSunBadge:{width:46,height:46,borderRadius:25,overflow:"hidden",justifyContent:"center",alignItems:"center",shadowColor:"#EC952A",shadowRadius:14,shadowOpacity:.33},
- brandSun:{fontSize:37},brandName:{fontSize:31,fontWeight:"900",color:ink,letterSpacing:-1.4},
+ back:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:8,paddingVertical:8,paddingHorizontal:14,borderRadius:30,borderWidth:1.5,borderColor:"rgba(255,255,255,.95)",backgroundColor:"rgba(255,245,240,.46)",shadowColor:"#fff",shadowOpacity:.75,shadowRadius:8},backText:{fontSize:16,color:ink,fontWeight:"650"},
+ brand:{marginTop:0,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8},brandSunBadge:{width:49,height:49,borderRadius:25,overflow:"hidden",justifyContent:"center",alignItems:"center",shadowColor:"#EC952A",shadowRadius:14,shadowOpacity:.33},
+ brandSun:{fontSize:37},brandName:{fontSize:30,fontWeight:"900",color:ink,letterSpacing:-1.25},
  brandSubtitle:{fontSize:14,color:"#594450",marginTop:1},
- hero:{alignItems:"center",marginTop:15,marginBottom:13},
- avatarRim:{width:142,height:142,borderRadius:90,padding:6,borderWidth:2,borderColor:"#FFF9E9",overflow:"hidden",backgroundColor:"#ECA76D",shadowColor:"#B45D52",shadowOpacity:.34,shadowRadius:19,shadowOffset:{width:0,height:9}},
+ hero:{alignItems:"center",marginTop:16,marginBottom:13},
+ avatarRim:{width:152,height:152,borderRadius:90,padding:6,borderWidth:2,borderColor:"#FFF9E9",overflow:"hidden",backgroundColor:"#ECA76D",shadowColor:"#B45D52",shadowOpacity:.34,shadowRadius:21,shadowOffset:{width:0,height:9}},
  avatar:{width:"100%",height:"100%",borderRadius:90,overflow:"hidden",backgroundColor:"#FFCC91"},
- avatarCamera:{position:"absolute",top:104,left:"64%",width:43,height:43,borderRadius:24,backgroundColor:"#FFFAEF",borderWidth:2,borderColor:"#FFF",alignItems:"center",justifyContent:"center",shadowColor:"#A55747",shadowOpacity:.22,shadowRadius:10,shadowOffset:{width:0,height:4},elevation:5},
+ avatarCamera:{position:"absolute",top:111,left:"61%",width:45,height:45,borderRadius:24,backgroundColor:"#FFFAEF",borderWidth:2,borderColor:"#FFF",alignItems:"center",justifyContent:"center",shadowColor:"#A55747",shadowOpacity:.22,shadowRadius:10,shadowOffset:{width:0,height:4},elevation:5},
  nameRow:{flexDirection:"row",alignItems:"center",gap:12,marginTop:10},personName:{fontSize:32,color:ink,fontWeight:"900",letterSpacing:-.6},
  heroHint:{fontSize:12,color:"#58434E",marginTop:3},
- glass:{borderWidth:1.5,borderColor:"rgba(255,255,255,.94)",backgroundColor:"rgba(255,255,255,.34)",borderRadius:25,overflow:"hidden",shadowColor:"#79505E",shadowOpacity:.19,shadowRadius:19,shadowOffset:{width:0,height:8},elevation:4},
- quickGrid:{flexDirection:"row",gap:7},
- quickCard:{flex:1,borderRadius:23,minHeight:83,borderWidth:1.5,borderColor:"rgba(255,255,255,.97)",alignItems:"center",justifyContent:"center",overflow:"hidden",paddingHorizontal:3,paddingVertical:8,shadowColor:"#71403B",shadowOpacity:.18,shadowRadius:20,shadowOffset:{width:0,height:9}},
+ glass:{borderWidth:1.7,borderColor:"rgba(255,255,255,.98)",backgroundColor:"rgba(255,255,255,.32)",borderRadius:27,overflow:"hidden",shadowColor:"#995F68",shadowOpacity:.22,shadowRadius:22,shadowOffset:{width:0,height:9},elevation:5},
+ quickGrid:{flexDirection:"row",gap:7,marginTop:2},
+ quickCard:{flex:1,borderRadius:25,minHeight:94,borderWidth:1.8,borderColor:"rgba(255,255,255,.98)",alignItems:"center",justifyContent:"center",overflow:"hidden",paddingHorizontal:3,paddingVertical:9,shadowColor:"#A56C68",shadowOpacity:.20,shadowRadius:21,shadowOffset:{width:0,height:8}},
+ quickShine:{position:"absolute",height:17,top:2,left:8,right:8,borderTopLeftRadius:28,borderTopRightRadius:28,backgroundColor:"rgba(255,255,255,.40)"},
  quickIconBadge:{height:45,width:45,borderRadius:15,backgroundColor:"rgba(255,226,171,.74)",borderColor:"rgba(255,255,255,.87)",borderWidth:1,alignItems:"center",justifyContent:"center",marginBottom:10,shadowColor:"#BC6F41",shadowOpacity:.2,shadowRadius:12,shadowOffset:{width:0,height:5}},
  quickIcon:{alignItems:"center",justifyContent:"center"},
  quickText:{fontSize:11.5,fontWeight:"800",color:ink,textAlign:"center",marginTop:5,lineHeight:14},
- sectionHeader:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:5},
+ sectionHeader:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:7},
  sectionIcon:{width:27,height:30,justifyContent:"center",alignItems:"center"},sectionTitle:{fontSize:22,fontWeight:"900",color:ink,letterSpacing:-.7},
- menuRow:{flexDirection:"row",alignItems:"center",minHeight:55,gap:12},
+ menuRow:{flexDirection:"row",alignItems:"center",minHeight:60,gap:12},
  rowBorder:{borderBottomWidth:1,borderBottomColor:"rgba(163,117,120,.2)"},
  menuIconBadge:{width:39,height:39,backgroundColor:"rgba(255,213,178,.65)",borderRadius:20,alignItems:"center",justifyContent:"center",borderColor:"rgba(255,255,255,.7)",borderWidth:1},
  menuIcon:{alignItems:"center",justifyContent:"center"},
  menuLabel:{flex:1,fontSize:15.5,fontWeight:"600",color:ink},
  arrow:{fontSize:30,color:ink,fontWeight:"300",marginRight:2},
  footer:{alignItems:"center",marginTop:16,gap:9},
- pill:{minHeight:43,minWidth:"61%",paddingHorizontal:23,paddingVertical:10,borderRadius:50,backgroundColor:"rgba(255,255,255,.52)",borderWidth:1.4,borderColor:"rgba(255,255,255,.95)",flexDirection:"row",gap:10,alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.2,shadowRadius:14,shadowOffset:{width:0,height:6}},
+ pill:{minHeight:44,minWidth:"61%",paddingHorizontal:23,paddingVertical:10,borderRadius:50,backgroundColor:"rgba(255,255,255,.56)",borderWidth:1.6,borderColor:"rgba(255,255,255,.98)",flexDirection:"row",gap:10,alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.20,shadowRadius:16,shadowOffset:{width:0,height:7}},
  dangerPill:{backgroundColor:"rgba(255,232,232,.68)"},
  pillText:{fontSize:15.5,fontWeight:"800",color:ink},
  fieldLabel:{color:ink,fontWeight:"700",marginBottom:9},nameInput:{padding:12,backgroundColor:"#fff",borderRadius:15,borderWidth:1,borderColor:"#F3D2BD",marginBottom:10,color:ink},
