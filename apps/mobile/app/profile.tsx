@@ -22,7 +22,7 @@ function Section({symbol,title,children}:{symbol:string;title:string;children:Re
 }
 function MenuRow({icon,label,onPress,last=false,disabled=false}:{icon:string;label:string;onPress:()=>void;last?:boolean;disabled?:boolean}){
  return <TouchableOpacity accessibilityRole="button" accessibilityLabel={label} disabled={disabled} activeOpacity={.75} onPress={onPress} style={[ui.menuRow,!last&&ui.rowBorder,disabled&&{opacity:.45}]}>
-  <Text style={ui.menuIcon}>{icon}</Text><Text style={ui.menuLabel}>{label}</Text><Text style={ui.arrow}>›</Text>
+  <View style={ui.menuIconBadge}><Text style={ui.menuIcon}>{icon}</Text></View><Text style={ui.menuLabel}>{label}</Text><Text style={ui.arrow}>›</Text>
  </TouchableOpacity>;
 }
 function Action({label,onPress,danger=false,disabled=false}:{label:string;onPress:()=>void;danger?:boolean;disabled?:boolean}){
@@ -132,7 +132,7 @@ export default function Profile(){
      ["👑","Subscription",()=>Alert.alert("Free account","The Good Side currently has free access. No paid subscription is configured.")]
     ] as const).map(([icon,label,onPress])=><TouchableOpacity key={label} accessibilityRole="button" onPress={onPress} activeOpacity={.78} style={ui.quickCard}>
       <LinearGradient colors={["rgba(255,255,255,.78)","rgba(253,214,199,.62)","rgba(237,203,232,.72)"]} style={StyleSheet.absoluteFill}/>
-      <Text style={ui.quickIcon}>{icon}</Text><Text style={ui.quickText}>{label}</Text>
+      <View style={ui.quickIconBadge}><Text style={ui.quickIcon}>{icon}</Text></View><Text style={ui.quickText}>{label}</Text>
     </TouchableOpacity>)}
    </View>
    <Section symbol="✨" title="Personalization">
@@ -192,19 +192,21 @@ const ui=StyleSheet.create({
  hero:{alignItems:"center",marginTop:22,marginBottom:16},
  avatarRim:{width:142,height:142,borderRadius:90,padding:5,borderWidth:2,borderColor:"#FFF9E9",backgroundColor:"rgba(245,163,84,.83)",shadowColor:"#B45D52",shadowOpacity:.34,shadowRadius:19,shadowOffset:{width:0,height:9}},
  avatar:{width:"100%",height:"100%",borderRadius:90,overflow:"hidden",backgroundColor:"#FFCC91"},
- avatarCamera:{position:"absolute",top:104,left:"64%",width:43,height:43,borderRadius:24,backgroundColor:"#FFFAEF",borderWidth:2,borderColor:"#FFF",alignItems:"center",justifyContent:"center",shadowColor:"#A55747",shadowOpacity:.22,shadowRadius:10},
+ avatarCamera:{position:"absolute",top:104,left:"64%",width:43,height:43,borderRadius:24,backgroundColor:"#FFFAEF",borderWidth:2,borderColor:"#FFF",alignItems:"center",justifyContent:"center",shadowColor:"#A55747",shadowOpacity:.22,shadowRadius:10,shadowOffset:{width:0,height:4},elevation:5},
  nameRow:{flexDirection:"row",alignItems:"center",gap:12,marginTop:12},personName:{fontSize:33,color:ink,fontWeight:"900",letterSpacing:-.6},
  heroHint:{fontSize:12,color:"#58434E",marginTop:3},
  glass:{borderWidth:1.5,borderColor:"rgba(255,255,255,.96)",backgroundColor:"rgba(255,244,240,.65)",borderRadius:25,overflow:"hidden",shadowColor:"#96514C",shadowOpacity:.11,shadowRadius:15,shadowOffset:{width:0,height:8},elevation:2},
  quickGrid:{flexDirection:"row",gap:9},
  quickCard:{flex:1,borderRadius:23,minHeight:105,borderWidth:1.6,borderColor:"rgba(255,255,255,.93)",alignItems:"center",justifyContent:"center",overflow:"hidden",paddingHorizontal:5,paddingVertical:12,shadowColor:"#A76E65",shadowOpacity:.14,shadowRadius:12,shadowOffset:{width:0,height:7}},
- quickIcon:{fontSize:28,marginBottom:7,textShadowColor:"rgba(193,118,72,.3)",textShadowRadius:7},
+ quickIconBadge:{height:48,width:48,borderRadius:19,backgroundColor:"rgba(255,246,235,.6)",borderColor:"rgba(255,255,255,.9)",borderWidth:1,alignItems:"center",justifyContent:"center",marginBottom:8,shadowColor:"#DA8746",shadowOpacity:.3,shadowRadius:10},
+ quickIcon:{fontSize:28,textShadowColor:"rgba(193,118,72,.3)",textShadowRadius:7},
  quickText:{fontSize:12.5,fontWeight:"800",color:ink,textAlign:"center"},
  sectionHeader:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:7},
  sectionIcon:{fontSize:25},sectionTitle:{fontSize:23,fontWeight:"900",color:ink,letterSpacing:-.7},
  menuRow:{flexDirection:"row",alignItems:"center",minHeight:61,gap:12},
  rowBorder:{borderBottomWidth:1,borderBottomColor:"rgba(163,117,120,.2)"},
- menuIcon:{fontSize:24,color:gold,width:34,textAlign:"center"},
+ menuIconBadge:{width:39,height:39,backgroundColor:"rgba(255,213,178,.65)",borderRadius:20,alignItems:"center",justifyContent:"center",borderColor:"rgba(255,255,255,.7)",borderWidth:1},
+ menuIcon:{fontSize:23,color:gold,textAlign:"center"},
  menuLabel:{flex:1,fontSize:15.5,fontWeight:"600",color:ink},
  arrow:{fontSize:30,color:ink,fontWeight:"300",marginRight:2},
  footer:{alignItems:"center",marginTop:23,gap:10},
