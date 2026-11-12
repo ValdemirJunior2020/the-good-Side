@@ -179,10 +179,30 @@ function storyCard(story,opts={}){
  }
  return card
 }
+function readList(value){
+ if(Array.isArray(value))return value;
+ if(typeof value==="string"){try{const result=JSON.parse(value);return Array.isArray(result)?result:[]}catch{return value.split("\\n").map(x=>x.trim()).filter(Boolean)}}
+ return []
+}
+async function openRecipe(id){
+ try{
+  const recipe=await request("/recipes/"+encodeURIComponent(id));
+  setText("recipe-title",recipe.title||"Recipe");
+  setText("recipe-description",recipe.description||"");
+  $("recipe-ingredients").replaceChildren(...readList(recipe.ingredients).map(x=>element("li","",x)));
+  $("recipe-steps").replaceChildren(...readList(recipe.instructions).map(x=>element("li","",x)));
+  const link=validUrl(recipe.source_url||recipe.original_url);
+  show($("recipe-source"),Boolean(link));
+  if(link)$("recipe-source").href=link;
+  $("recipe-dialog").showModal();
+ }catch(e){displayError(e)}
+}
+$("recipe-close").addEventListener("click",()=>$("recipe-dialog").close());
 function recipeCard(recipe,opts={}){
  const id=String(recipe.recipe_id||"");
  const card=element("article","story-card");
  card.append(element("span","tag","Food"),element("h3","",recipe.title||recipe.name||"Recipe"),element("p","",recipe.summary||recipe.description||"A little good for your table"));
+ if(id)card.append(commonButton("View recipe ↗",()=>void openRecipe(id),true));
  const link=validUrl(recipe.original_url||recipe.source_url);
  if(link){const a=element("a","source-link","View original recipe ↗");a.href=link;a.target="_blank";a.rel="noopener noreferrer";card.append(a)}
  if(id)card.append(commonButton(opts.saved?"Remove saved ♡":"Save recipe ♡",async()=>{
