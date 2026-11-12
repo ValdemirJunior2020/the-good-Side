@@ -1,16 +1,17 @@
 import React,{useEffect,useState} from "react";
-import {Text,ScrollView,TouchableOpacity,Platform,View} from "react-native";
+import {Text,ScrollView,TouchableOpacity,Platform,View,TextInput,ActivityIndicator,StyleSheet} from "react-native";
 import Constants from "expo-constants";
 import {router} from "expo-router";
 import * as Google from "expo-auth-session/providers/google";
-import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
-
-WebBrowser.maybeCompleteAuthSession();
 import {api,auth,json} from "../src/client";
+import {emailAuth} from "../src/emailAuth";
 import {Background,Brand,Pill,Surface,styles} from "../src/components";
 import {colors} from "../src/theme";
-function GoogleSignIn(){
+
+WebBrowser.maybeCompleteAuthSession();
+const ink="#301E2C";
+function GoogleButton(){
  const [error,setError]=useState(""),[busy,setBusy]=useState(false);
  const [request,response,promptAsync]=Google.useIdTokenAuthRequest({
   clientId:process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID||"",
@@ -18,29 +19,95 @@ function GoogleSignIn(){
   androidClientId:process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID||"",
   webClientId:process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID||""
  },{scheme:"thegoodside",path:"auth"});
- useEffect(()=>{if(response?.type!=="success")return;const token=response.params?.id_token;if(!token){setError("Google did not return an ID token");return}
+ useEffect(()=>{
+  if(response?.type!=="success")return;
+  const token=response.params?.id_token;
+  if(!token){setError("Google did not return an ID token");return}
   setBusy(true);
-  // The server verifies the signed Google token before any profile is accepted.
   (async()=>{
-   const info=JSON.parse(atobCompat(token.split(".")[1]||"")) as {email?:string;name?:string};
-   await auth.signIn(token,{email:info.email||"",displayName:info.name||""});
-   await api("/me",json({display_name:info.name||"",timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC",preferred_language:"en"}),true);
+   const payload=JSON.parse(decodeJwtPayload(token)) as {email?:string;name?:string};
+   // The API independently verifies Google's signature and audience.
+   await auth.signIn(token,{email:payload.email||"",displayName:payload.name||""});
+   await api("/me",json({display_name:payload.name||payload.email?.split("@")[0]||"Friend",timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC",preferred_language:"en"}),true);
    router.replace("/categories");
-  })().catch(e=>{auth.signOut();setError(String(e))}).finally(()=>setBusy(false));
+  })().catch(async e=>{await auth.signOut();setError(String(e))}).finally(()=>setBusy(false));
  },[response]);
- return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><TouchableOpacity onPress={()=>router.back()}><Text style={{color:colors.ink}}>← Back</Text></TouchableOpacity></View><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:14}]}>Your bright side starts here.</Text><Text style={[styles.subtitle,{marginBottom:25}]}>Log in or create your free account with Google. Your profile is created automatically the first time you sign in. We do not store passwords.</Text><Surface><Pill title={busy?"Signing in…":"Log in / Create account with Google"} onPress={()=>{setError("");if(!request){setError("Configure the Google OAuth client IDs first");return}void promptAsync()}} disabled={busy||!request}/>{error?<Text style={{color:"#B54440",marginTop:15}}>{error}</Text>:null}<Text style={[styles.muted,{marginTop:17}]}>Sign in once to save stories and preferences. You can always browse news without an account.</Text>{Platform.OS==="web"?<View style={{marginTop:18,padding:12,backgroundColor:"rgba(255,255,255,.75)",borderRadius:14}}><Text style={{fontWeight:"800",color:colors.ink,marginBottom:6}}>Google Cloud authorized redirect URI</Text><Text selectable style={{fontSize:12,color:colors.ink,lineHeight:19}}>{request?.redirectUri||AuthSession.makeRedirectUri({scheme:"thegoodside",path:"auth"})}</Text><Text style={[styles.muted,{marginTop:8,fontSize:12}]}>Copy this exact URI into Google Cloud → OAuth Web Client → Authorized redirect URIs. Also authorize this browser origin under JavaScript origins. Both values must match the client ID configured for this app.</Text></View>:null}</Surface><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
+ return <View style={{marginTop:14}}>
+  <Pill title={busy?"Signing in…":"Continue with Google"} disabled={busy||!request} onPress={()=>{setError("");if(!request){setError("Google OAuth isn't configured for this device.");return}void promptAsync()}}/>
+  {error?<Text style={sx.error}>{error}</Text>:null}
+ </View>;
 }
-function atobCompat(input:string){
- const p=input.replace(/-/g,"+").replace(/_/g,"/");if(typeof atob==="function")return decodeURIComponent(Array.from(atob(p),c=>"%"+c.charCodeAt(0).toString(16).padStart(2,"0")).join(""));
+function decodeJwtPayload(token:string){
+ try{
+  const p=(token.split(".")[1]||"").replace(/-/g,"+").replace(/_/g,"/");
+  if(typeof atob==="function")return decodeURIComponent(Array.from(atob(p),c=>"%"+c.charCodeAt(0).toString(16).padStart(2,"0")).join(""));
+ }catch{}
  return "{}";
 }
-
 export default function SignIn(){
+ const [mode,setMode]=useState<"register"|"login">("register");
+ const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[name,setName]=useState("");
+ const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  const webId=process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim();
  const iosId=process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
  const androidId=process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
- const configured=Platform.OS==="ios"?Boolean(iosId):Platform.OS==="android"?Boolean(androidId):Boolean(webId);
- const expoGo=Constants.appOwnership==="expo";
- if(configured&&!expoGo)return <GoogleSignIn/>;
- return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><TouchableOpacity onPress={()=>router.back()}><Text style={{color:colors.ink}}>← Back</Text></TouchableOpacity></View><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:12}]}>Set up Google login</Text><Surface><Text style={styles.subtitle}>{expoGo?"Google sign-in cannot finish inside Expo Go, even if the Client IDs are configured. Install an EAS development build to use your app-specific OAuth redirect. You can browse all good news as a guest now.": "Google login needs a valid iOS OAuth client ID. Add EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID for bundle ID com.thegoodside.app to apps/mobile/.env and restart the development build. We do not use Firebase."}</Text></Surface><Pill title="Browse good news as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
+ const googleConfigured=Platform.OS==="ios"?Boolean(iosId):Platform.OS==="android"?Boolean(androidId):Boolean(webId);
+ const googleAvailable=googleConfigured&&Constants.appOwnership!=="expo";
+ const submit=async()=>{
+  setError("");setMessage("");
+  const mail=email.trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail))return setError("Enter a valid email address.");
+  if(password.length<8)return setError("Password must be at least 8 characters.");
+  if(mode==="register"&&!name.trim())return setError("Please enter your name.");
+  setBusy(true);
+  try{
+   const result=mode==="register"?await emailAuth.signUp(mail,password,name):await emailAuth.signIn(mail,password);
+   if(!result.access_token){
+    setMessage("Check your inbox for the confirmation email. After confirming, return here and choose Log in.");
+    setMode("login");setPassword("");
+    return;
+   }
+   await auth.signInWithEmail(result,name.trim(),mail);
+   await api("/me",json({display_name:name.trim()||result.user?.user_metadata?.display_name||mail.split("@")[0],timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC",preferred_language:"en"}),true);
+   router.replace("/categories");
+  }catch(e){
+   const detail=e instanceof Error?e.message:"Sign-in failed.";
+   if(auth.currentUser?.provider==="email")await auth.signOut();
+   setError(detail);
+  }finally{setBusy(false)}
+ };
+ return <Background><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:22,paddingTop:68,paddingBottom:165,width:"100%",maxWidth:540,alignSelf:"center"}}>
+  <TouchableOpacity onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={{alignSelf:"flex-start",paddingVertical:10}}><Text style={{color:ink,fontWeight:"700"}}>← Back</Text></TouchableOpacity>
+  <Brand/><Text style={[styles.title,{marginTop:32,fontSize:31}]}>Your bright side starts here.</Text>
+  <Text style={[styles.subtitle,{marginTop:10,marginBottom:20}]}>Create a free account with any email address. Google sign-in is still available.</Text>
+  <Surface style={{marginBottom:15}}>
+   <View style={{flexDirection:"row",gap:8,marginBottom:18}}>
+    {(["register","login"] as const).map(item=><TouchableOpacity key={item} onPress={()=>{setMode(item);setError("");setMessage("")}} style={[sx.tab,mode===item&&sx.tabActive]}>
+     <Text style={{color:ink,fontWeight:mode===item?"900":"600"}}>{item==="register"?"Create account":"Log in"}</Text>
+    </TouchableOpacity>)}
+   </View>
+   {mode==="register"?<><Text style={sx.label}>Your name</Text><TextInput accessibilityLabel="Your name" autoComplete="name" value={name} onChangeText={setName} placeholder="First name" placeholderTextColor="#887381" style={sx.input} maxLength={80}/></>:null}
+   <Text style={sx.label}>Email address</Text><TextInput accessibilityLabel="Email address" autoCapitalize="none" autoCorrect={false} autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor="#887381" style={sx.input} maxLength={254}/>
+   <Text style={sx.label}>Password</Text><TextInput accessibilityLabel="Password" autoCapitalize="none" autoCorrect={false} autoComplete={mode==="register"?"new-password":"current-password"} secureTextEntry value={password} onChangeText={setPassword} placeholder="At least 8 characters" placeholderTextColor="#887381" style={sx.input}/>
+   <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={()=>void submit()} style={[sx.submit,busy&&{opacity:.55}]}>
+    {busy?<ActivityIndicator color="#fff"/>:<Text style={{color:"#fff",fontWeight:"800",fontSize:16}}>{mode==="register"?"Create free account":"Log in with email"}</Text>}
+   </TouchableOpacity>
+   {message?<Text accessibilityRole="text" style={sx.success}>{message}</Text>:null}
+   {error?<Text accessibilityRole="alert" style={sx.error}>{error}</Text>:null}
+   <Text style={[styles.muted,{marginTop:15,fontSize:12,lineHeight:19}]}>Email accounts use secure Supabase Authentication. A verification email may be required before your first login.</Text>
+  </Surface>
+  <View style={{flexDirection:"row",alignItems:"center",gap:12,marginVertical:6}}><View style={sx.rule}/><Text style={{color:"#6E5865"}}>or</Text><View style={sx.rule}/></View>
+  {googleAvailable?<GoogleButton/>:<Text style={[styles.muted,{marginVertical:12,textAlign:"center"}]}>Google login requires an installed app build on this device. Email sign-up works here, including Expo Go.</Text>}
+  <View style={{marginTop:17}}><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></View>
+ </ScrollView></Background>;
 }
+const sx=StyleSheet.create({
+ tab:{flex:1,paddingVertical:12,alignItems:"center",borderRadius:19,backgroundColor:"rgba(255,255,255,.64)",borderWidth:1,borderColor:"#fff"},
+ tabActive:{backgroundColor:"#F9CAA7",borderColor:"#E7A878"},
+ label:{color:ink,fontSize:14,fontWeight:"800",marginBottom:7},
+ input:{backgroundColor:"#fff",borderWidth:1.4,borderColor:"#EBD1C5",borderRadius:16,minHeight:50,fontSize:16,color:ink,paddingHorizontal:15,marginBottom:15},
+ submit:{minHeight:51,borderRadius:18,alignItems:"center",justifyContent:"center",backgroundColor:"#B96F39"},
+ error:{color:"#AD3535",marginTop:13,fontSize:14,lineHeight:20},
+ success:{color:"#326747",marginTop:13,fontSize:14,lineHeight:20},
+ rule:{flex:1,height:1,backgroundColor:"rgba(139,95,104,.24)"}
+});
