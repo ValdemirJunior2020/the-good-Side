@@ -9,45 +9,28 @@
 <script src="./app.js" defer></script></head>
 <body>
 <a class="skip-link" href="#stories">Skip to good news</a>
-<header class="topbar wrap" id="top">
-<a href="/" class="brand" aria-label="The Good Side home"><span class="sun-mark" aria-hidden="true">☀</span><span>the good side<span class="brand-dot">.</span></span></a>
-<nav class="desktop-links" aria-label="Main navigation"><a href="#stories">Discover</a><a href="#mission">Our mission</a><a href="#app">iOS app</a><a href="/account.html">My account</a></nav>
-<a class="nav-pill" href="/account.html">Log in / Sign up <span aria-hidden="true">↗</span></a>
-</header>
 <main>
-<section class="hero">
- <div class="hero-scenery" aria-hidden="true"></div>
- <div class="wrap hero-content">
-  <span class="eyebrow"><span class="sun-small">✦</span> YOUR CORNER OF GOOD NEWS</span>
-  <h1>There's good in<br>the world. <em>Find it.</em></h1>
-  <p class="hero-desc">Real stories. Brighter perspectives.<br>A little good, every day.</p>
-  <div class="hero-actions"><a class="primary-button" href="#stories">Explore good news <span aria-hidden="true">↗</span></a><a href="#mission" class="secondary-button">What we're about</a></div>
-  <p class="hero-foot">No doomscrolling. Just real reasons to feel hopeful.</p>
+<div class="news-shell">
+ <div class="news-brand-line"><a href="/" class="news-masthead"><span class="sun-mark">☀</span> the good side<span class="brand-dot">.</span></a><span class="masthead-tagline">GOOD NEWS FOR A BRIGHTER WORLD</span><div class="masthead-actions"><a href="#stories" aria-label="Find good news">⌕ <span>Search</span></a><a href="/account.html">♙ <span>My Account</span></a><a class="news-login" href="/account.html">Log in</a><a class="news-signup" href="/account.html">Sign up</a></div></div>
+ <nav class="news-nav" aria-label="News categories"><a href="#stories" data-filter="">Discover</a><a href="#stories" data-filter="science">Science</a><a href="#stories" data-filter="medical">Health</a><a href="#stories" data-filter="kindness">Kindness</a><a href="#stories" data-filter="technology">Technology</a><a href="#stories" data-filter="food">Food</a></nav>
+ <div class="good-news-ticker"><strong>GOOD NEWS TODAY</strong><span>Discover verified stories of progress, kindness and discovery.</span><a href="#stories">Explore stories ↗</a></div>
+ <div class="news-columns">
+ <aside class="news-rail latest-rail" aria-labelledby="latest-heading"><h2 id="latest-heading">LATEST NEWS</h2><div id="latest-feed"><p class="news-loading">Loading approved news…</p></div><a href="#stories" class="rail-link">View all latest news →</a></aside>
+ <div class="news-center">
+  <article class="news-lead" aria-labelledby="feature-title">
+   <figure class="lead-photo"><img src="https://www.goodnewsnetwork.org/wp-content/uploads/2026/11/Juan-Cortez-Estay-Unsplash.jpg" alt="Vast pink wildflower superbloom spreading across Chile's Atacama Desert beneath mountains and blue sky" fetchpriority="high"><figcaption>Atacama Desert superbloom · Photo: Juan Cortez Estay / Unsplash, via Good News Network</figcaption></figure>
+   <h1 id="feature-title">The Atacama Desert blooms in 2025</h1>
+   <p class="lead-deck">Just a few weeks ago it was the driest place on Earth. Now it’s the most colorful.</p>
+   <div class="lead-story-layout"><div><p>Chile’s Atacama Desert has erupted in an extraordinary floral display, with around 200 species blooming after rare rains awakened seeds that had lain dormant for decades.</p><p>The transformation is a remarkable reminder of the resilience of life. Scientists and conservationists are collecting seeds, studying the desert’s biodiversity, and working to protect the ecosystem.</p></div><blockquote>“It’s as if the desert is awakening.”<small>— Ana Sandoval, as quoted in reporting about the superbloom</small></blockquote></div>
+   <div class="lead-meta"><span class="category-label">ENVIRONMENT</span><span>6 min read · Featured story</span><button id="atacama-read" class="story-text-link" type="button">Read the story ↓</button></div>
+   <div id="atacama-detail" class="atacama-detail" hidden><h2>When the driest desert comes alive</h2><p>The rare rains reached seeds and tubers deep beneath the sands of Chile’s Atacama. With roughly 200 flowering species observed, parts of the desert displayed color that residents and scientists had not seen for decades.</p><p>Protected areas such as Llanos de Challe National Park conserve fragile habitats during this short biological window. Researchers at Chile’s Initihuasi Seed Bank are gathering seeds from newly pollinated plants to study and safeguard the region’s biodiversity for the future.</p><p>The phenomenon is both a celebration and a reminder: even an ecosystem that appears dormant can hold extraordinary life waiting for the right conditions.</p><p class="attribution">Based on the Atacama reporting and photo supplied for this featured story. Image attribution: Juan Cortez Estay / Unsplash via Good News Network.</p></div>
+  </article>
+  <section class="more-news" id="stories"><div class="section-rule-heading"><h2>MORE GOOD NEWS</h2><label for="search">Search <input id="search" placeholder="Find something uplifting…" type="search"></label></div><div id="filters" class="newspaper-filters" role="group" aria-label="Filter news"><button class="chip active" data-category="" aria-pressed="true">All</button><button class="chip" data-category="environment" aria-pressed="false">Environment</button><button class="chip" data-category="medical" aria-pressed="false">Health</button><button class="chip" data-category="kindness" aria-pressed="false">Kindness</button><button class="chip" data-category="technology" aria-pressed="false">Technology</button><button class="chip" data-category="science" aria-pressed="false">Science</button><button class="chip" data-category="food" aria-pressed="false">Food</button></div><div id="stories-grid" class="editorial-cards"><p class="news-loading">Finding the good…</p></div><button type="button" id="reload" class="refresh-link">Refresh stories ↻</button></section>
  </div>
- <div class="landscape-haze" aria-hidden="true"></div>
-</section>
-<section class="feature-section wrap" aria-labelledby="feature-title">
- <div class="feature-card glass">
-  <div class="feature-heading"><span class="feature-symbol">☀</span><span class="eyebrow">TODAY'S GOOD SIDE</span></div>
-  <div class="feature-inner"><div><h2 id="feature-title">Something good is happening.</h2><p id="feature-description">We're gathering verified, uplifting stories to brighten your day.</p><div class="feature-actions"><a id="feature-link" href="#stories" class="read-link">Discover today's stories <span aria-hidden="true">↗</span></a></div></div><div class="feature-art" aria-hidden="true"><div class="sun-orbit"><span>✦</span></div></div></div>
+ <aside class="news-rail right-rail"><h2>MOST READ</h2><div id="most-read-feed"><p class="rail-note">Explore our current stories.</p></div><div class="inbox-card"><h3>Get the good in your inbox ✉</h3><p>A weekly round-up of uplifting stories and real progress.</p><form id="email-interest-form"><label class="visually-hidden" for="email-interest">Your email</label><input id="email-interest" type="email" placeholder="Your email address" required><button type="submit">Sign up</button></form><small id="email-interest-message">Create an account to customize your updates.</small></div><div class="app-promo" id="app"><div><h3>Download our iOS app soon</h3><p>The Good Side on the go. Uplifting news anywhere.</p><a href="/account.html">Get ready ↗</a></div><div class="promo-phone" aria-hidden="true"><span>☀</span><small>the good side.</small></div></div></aside>
  </div>
-</section>
-<section class="stories wrap" id="stories">
- <div class="section-top"><div><span class="eyebrow dark">THE BRIGHT SIDE, DAILY</span><h2>Explore good news<span class="brand-dot">.</span></h2><p>Hope is happening everywhere. Here's where to find it.</p></div><div class="search-control"><label class="visually-hidden" for="search">Search approved stories</label><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search good news…" autocomplete="off"></div></div>
- <div class="filters" role="group" aria-label="Filter news by topic" id="filters">
-  <button type="button" class="chip active" data-category="" aria-pressed="true">All stories</button>
-  <button type="button" class="chip" data-category="community" aria-pressed="false">Community</button>
-  <button type="button" class="chip" data-category="environment" aria-pressed="false">Planet</button>
-  <button type="button" class="chip" data-category="science" aria-pressed="false">Science</button>
-  <button type="button" class="chip" data-category="medical" aria-pressed="false">Health</button>
-  <button type="button" class="chip" data-category="kindness" aria-pressed="false">Kindness</button>
-  <button type="button" class="chip" data-category="technology" aria-pressed="false">Technology</button>
- </div>
- <div class="stories-grid" id="stories-grid" aria-live="polite"><div class="loading-card">Finding the good…</div></div>
- <div class="load-row"><button id="reload" class="secondary-button" type="button">Refresh stories <span aria-hidden="true">↻</span></button></div>
-</section>
-<section class="mission-section" id="mission"><div class="wrap mission-grid"><div class="mission-orb" aria-hidden="true"><div class="orb-core">☀</div><span class="orbit-text">A LITTLE GOOD · EVERY DAY</span></div><div><span class="eyebrow">WHY WE EXIST</span><h2>Good news isn't rare.<br>It's just <em>underreported.</em></h2><p>Our mission is simple: help you see genuine progress, kindness and discovery without the overwhelming noise of the news cycle. Every story should have a credible original source you can check.</p><div class="mission-values"><span>✧ Real stories</span><span>✧ Positive perspective</span><span>✧ Your interests</span></div></div></div></section>
-<section class="app-section wrap" id="app"><div class="app-panel glass"><div class="app-copy"><span class="eyebrow">GOOD NEWS IN YOUR POCKET</span><h2>A brighter day is <em>coming to iPhone.</em></h2><p>The Good Side iOS app is in development. Choose the topics you love, save the stories that matter, and personalize your good-news notifications.</p><div class="app-actions"><span class="app-soon"><span class="apple" aria-hidden="true">●</span> iOS App · Coming soon</span><a href="/account.html" class="email-link">Use The Good Side on the web ↗</a></div><p class="fineprint">We won't link to an App Store listing until the app is actually available.</p></div><div class="phone" aria-label="Illustration of The Good Side iPhone app"><div class="phone-top"></div><div class="phone-content"><div class="phone-logo">☀ &nbsp;the good side<span>.</span></div><div class="phone-title">A little good,<br>every day.</div><div class="phone-story"><span>☀ TODAY'S GOOD SIDE</span><strong>There's good in the world.</strong><p>Find something uplifting.</p></div><div class="phone-tabs"><span>⌂</span><span>◎</span><span>♡</span><span>◉</span></div></div></div></div></section>
-</main>
+ <section class="newspaper-about" id="mission"><h2>Good news isn't rare. It's underreported.</h2><p>We spotlight real progress, kindness and discovery, with links to the original reporting. Your interests and saved stories stay accessible through your Good Side account.</p><a href="/account.html">Create your free account ↗</a></section>
+</div>
+
 <footer><div class="wrap footer-inner"><div><a href="/" class="brand footer-brand"><span class="sun-mark">☀</span><span>the good side<span class="brand-dot">.</span></span></a><p>Your corner of good news.</p></div><div class="footer-links"><a href="#stories">News</a><a href="/account.html">Create account</a><a href="#mission">About</a><a href="#app">iOS app</a><a href="mailto:infojr.83@gmail.com">Contact</a></div></div><div class="wrap bottom-line"><span>© <span id="year">2026</span> The Good Side. Built for brighter days.</span><span>Independent editorial summaries link to original publishers. All rights remain with their owners.</span></div></footer>
 </body></html>
