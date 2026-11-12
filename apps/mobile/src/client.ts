@@ -35,10 +35,10 @@ export const auth={
  async signIn(token:string,user:{email:string;displayName:string}){
   current={token,email:user.email,displayName:user.displayName,provider:"google"};await storeSession(current);emit()
  },
- async signInWithEmail(data:EmailTokenResponse,displayName=""){
+ async signInWithEmail(data:EmailTokenResponse,displayName="",email=""){
   if(!data.access_token||!data.refresh_token)throw Error("Confirm your email address before signing in.");
   current={token:data.access_token,refreshToken:data.refresh_token,expiresAt:Date.now()+(data.expires_in||3600)*1000,provider:"email",
-   email:data.user?.email||"",displayName:displayName||data.user?.user_metadata?.display_name||data.user?.user_metadata?.full_name||""};
+   email:data.user?.email||email,displayName:displayName||data.user?.user_metadata?.display_name||data.user?.user_metadata?.full_name||""};
   await storeSession(current);emit()
  },
  async getFreshToken(){return renewSession()},
