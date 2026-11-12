@@ -2,7 +2,7 @@ import React,{useEffect,useState}from"react";
 import{ScrollView,Text,TouchableOpacity,RefreshControl,View}from"react-native";
 import{router}from"expo-router";
 import{api,type News}from"../src/client";
-import{Background,Surface,GoodSideLoader,styles}from"../src/components";
+import{Background,Surface,GoodSideLoader,MenuButton,styles}from"../src/components";
 import TabBar from"../src/TabBar";
 import{colors}from"../src/theme";
 type Recipe={recipe_id:string;title:string;description:string;prep_minutes:number;cook_minutes:number;servings:number;source_url:string;dietary_tags:string};
@@ -16,6 +16,7 @@ export default function Food(){
  }catch(e){setError(String(e))}finally{setLoading(false)}};
  useEffect(()=>{void load()},[]);
  return <Background><ScrollView contentContainerStyle={{padding:22,paddingTop:65,paddingBottom:115}} refreshControl={<RefreshControl refreshing={loading} onRefresh={load}/>}>
+  <View style={{alignItems:"flex-end",marginBottom:10}}><MenuButton/></View>
   <Text style={[styles.title,{marginBottom:8}]}>Good food. Good world.</Text>
   <Text style={[styles.subtitle,{marginBottom:24}]}>Food innovations, community kindness and recipes worth sharing.</Text>
   {loading?<GoodSideLoader label="Finding recipes and news…"/>:null}
