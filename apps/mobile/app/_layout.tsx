@@ -51,7 +51,7 @@ export default function Root(){
 const styles=StyleSheet.create({
  root:{flex:1},
  trigger:{position:"absolute",right:17,zIndex:70,height:48,width:52,borderRadius:17,overflow:"hidden",borderWidth:1.5,borderColor:"rgba(255,255,255,.98)",alignItems:"center",justifyContent:"center",backgroundColor:"#FFE7BF",shadowColor:"#BA764E",shadowOpacity:.25,shadowRadius:12,shadowOffset:{width:0,height:6},elevation:12},
- overlay:{...StyleSheet.absoluteFillObject,zIndex:60,flexDirection:"row",justifyContent:"flex-end"},
- backdrop:{...StyleSheet.absoluteFillObject,backgroundColor:"rgba(37,25,35,.40)"},
+ overlay:{position:"absolute",top:0,left:0,right:0,bottom:0,zIndex:60,flexDirection:"row",justifyContent:"flex-end"},
+ backdrop:{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundColor:"rgba(37,25,35,.40)"},
  drawer:{width:"86%",maxWidth:390,height:"100%",backgroundColor:"#FCE8DF",borderTopLeftRadius:32,borderBottomLeftRadius:32,overflow:"hidden",shadowColor:"#49313D",shadowOpacity:.28,shadowRadius:28,shadowOffset:{width:-8,height:0},elevation:15}
 });
