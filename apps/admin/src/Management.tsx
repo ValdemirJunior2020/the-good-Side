@@ -10,7 +10,7 @@ const defaults:Record<string,string>={welcome_message:"Real stories. Brighter pe
 const explanations:Record<string,string>={
  welcome_message:"Welcome text displayed in the app when remote settings are loaded",
  support_email:"Support email displayed on the Profile screen",
- default_notification_time:"Suggested starting time for new notification preferences (does not override existing preferences)",
+ default_notification_time:"Stored for future onboarding defaults; not yet wired into the notification scheduler. Existing user preferences are never overridden.",
  signup_enabled:"Controls whether the email registration button is shown in the mobile app (not a global Auth-provider shutdown)",
  news_feed_enabled:"Controls whether the mobile Home feed presents articles (does not delete news or interrupt scheduled pushes)"
 };
