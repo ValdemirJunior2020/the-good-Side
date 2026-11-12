@@ -6,6 +6,7 @@ import {router} from "expo-router";
 import {api,auth,put,type Session} from "../src/client";
 import {colors} from "../src/theme";
 import LuxuryIcon from "../src/LuxuryIcon";
+import {avatarCatalog} from "../src/avatarCatalog";
 
 import {ArrowLeft,Camera,UserSquare2,Link2,Crown,Bell,SlidersHorizontal,Sparkles,Layers3,ShieldCheck,Bookmark,BookOpen,Lock,Download,LogOut,Headphones,Trash2,ChevronRight,House,Compass,ChefHat,Heart,UserRound,Pencil,Sun} from "lucide-react-native";
 
@@ -44,7 +45,7 @@ export default function Profile(){
  const[editing,setEditing]=useState(false);
  const[busy,setBusy]=useState(false);
  const[avatarId,setAvatarId]=useState("");
- const[avatars,setAvatars]=useState<Avatar[]>([]);
+ const[avatars,setAvatars]=useState<Avatar[]>(avatarCatalog);
  const[avatarPicker,setAvatarPicker]=useState(false);
  const[avatarLoading,setAvatarLoading]=useState(false);
  const[avatarError,setAvatarError]=useState("");
@@ -57,16 +58,18 @@ export default function Profile(){
    else setAvatarId("");
   });
   void auth.restore();
-  api<Avatar[]>("/avatars").then(items=>{if(mounted&&Array.isArray(items))setAvatars(items)}).catch(()=>{});
+  api<Avatar[]>("/avatars").then(items=>{if(mounted&&Array.isArray(items)&&items.length)setAvatars(items)}).catch(()=>{/* Curated avatar catalog remains available if the old gallery endpoint is down. */});
   return ()=>{mounted=false;off()};
  },[]);
  const openAvatars=async()=>{
   if(!session)return go("/auth");
   setAvatarPicker(true);setAvatarLoading(true);setAvatarError("");
+  // Render immediately from the backed-up catalog; refresh opportunistically.
+  if(!avatars.length)setAvatars(avatarCatalog);
   try{
    const items=await api<Avatar[]>("/avatars");
-   setAvatars(Array.isArray(items)?items:[]);
-  }catch(e){setAvatarError(e instanceof Error?e.message:String(e))}
+   if(Array.isArray(items)&&items.length)setAvatars(items);
+  }catch{/* The previous Apps Script gallery can fail; do not hide valid avatar choices. */}
   finally{setAvatarLoading(false)}
  };
  const pickAvatar=async(id:string)=>{
@@ -74,7 +77,7 @@ export default function Profile(){
   try{
    await api("/me",put({avatar_id:id}),true);
    setAvatarId(id);setAvatarPicker(false);
-  }catch(e){Alert.alert("Unable to save avatar",String(e))}
+  }catch(e){Alert.alert("Unable to save avatar","The images are available, but saving your selection still requires the account service. Please try again when the connection is restored.")}
   finally{setBusy(false)}
  };
  const go=(path:string)=>router.push(path as any);
@@ -176,8 +179,8 @@ export default function Profile(){
       <TouchableOpacity accessibilityRole="button" onPress={()=>setAvatarPicker(false)} style={{padding:9}}><Text style={{fontSize:25,color:ink}}>×</Text></TouchableOpacity>
      </View>
      <Text style={{color:"#644A57",marginBottom:15}}>Pick an image from our gallery. Your selection is saved in your account, not on your phone or PC.</Text>
-     {avatarLoading?<ActivityIndicator color="#D77F32" size="large" style={{marginVertical:35}}/>:null}
-     {avatarError?<Text style={{color:"#A63232",marginBottom:15}}>{avatarError}. Check that the latest Google Apps Script has been deployed.</Text>:null}
+     {avatarLoading&&avatars.length===0?<ActivityIndicator color="#D77F32" size="large" style={{marginVertical:35}}/>:null}
+     {avatarError?<Text style={{color:"#A63232",marginBottom:15}}>{avatarError}</Text>:null}
      <ScrollView style={{maxHeight:380}} contentContainerStyle={{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",paddingBottom:18}}>
       {avatars.map(a=><TouchableOpacity key={a.avatar_id} accessibilityRole="button" accessibilityLabel={"Select "+a.label} disabled={busy} onPress={()=>void pickAvatar(a.avatar_id)} style={[ui.avatarChoice,avatarId===a.avatar_id&&{borderColor:"#D17929",borderWidth:3}]}>
        <Image source={{uri:a.image_url}} style={{width:"100%",height:130,borderRadius:15}}/>
