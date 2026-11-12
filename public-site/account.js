@@ -9,7 +9,7 @@ const HISTORY_KEY="goodside_web_read_history_v1";
 const TOPICS=["community","environment","science","medical","kindness","technology","food","animals","education","culture"];
 const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const $=id=>document.getElementById(id);
-const state={session:null,mode:"signup",user:null,preferences:null,news:[],recipes:[],saved:[],savedRecipes:[],avatars:[],avatarOverride:null,view:"discover",selectedCategory:"",history:[]};
+const state={signupEnabled:true,session:null,mode:"signup",user:null,preferences:null,news:[],recipes:[],saved:[],savedRecipes:[],avatars:[],avatarOverride:null,view:"discover",selectedCategory:"",history:[]};
 function show(el,on=true){el.hidden=!on}
 function setText(id,text){$(id).textContent=String(text||"")}
 function feedback(text,error=false,element="workspace-message"){const node=$(element);node.textContent=String(text||"");node.classList.toggle("error",error);node.classList.toggle("success",!error)}
@@ -85,13 +85,26 @@ function setAuthMode(mode){
  setText("auth-submit",signup?"Create my account ↗":"Log in with email ↗");
  feedback("",false,"auth-message")
 }
-$("tab-signup").addEventListener("click",()=>setAuthMode("signup"));
+async function loadPublicSettings(){
+ try{
+  const data=await management("public-settings");
+  const settings=Object.fromEntries((Array.isArray(data)?data:[]).map(r=>[r.key,r.value]));
+  state.signupEnabled=settings.signup_enabled!=="false";
+  show($("tab-signup"),state.signupEnabled);
+  if(!state.signupEnabled&&state.mode==="signup"){
+   setAuthMode("login");
+   feedback("New email registrations are currently paused. Existing users can still log in.",false,"auth-message")
+  }
+ }catch(e){console.warn("Public settings unavailable; using defaults",e)}
+}
+$("tab-signup").addEventListener("click",()=>{if(state.signupEnabled)setAuthMode("signup")});
 $("tab-login").addEventListener("click",()=>setAuthMode("login"));
 $("auth-form").addEventListener("submit",async ev=>{
  ev.preventDefault();const email=$("auth-email").value.trim().toLowerCase(),password=$("auth-password").value,name=$("auth-name").value.trim();
  feedback("",false,"auth-message");
  if(!emailLike(email))return feedback("Enter a valid email address.",true,"auth-message");
  if(password.length<8)return feedback("Your password must contain at least 8 characters.",true,"auth-message");
+ if(state.mode==="signup"&&!state.signupEnabled)return feedback("Email registration is temporarily unavailable.",true,"auth-message");
  if(state.mode==="signup"&&!name)return feedback("Enter your name.",true,"auth-message");
  $("auth-submit").disabled=true;
  try{
@@ -391,4 +404,5 @@ async function start(){
   signedIn()
  }catch{state.session=null;persist();signedOut()}
 }
+void loadPublicSettings();
 void start();
