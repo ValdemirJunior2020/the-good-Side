@@ -90,6 +90,13 @@ function openRSSReader(item){
  const date=item.published?new Date(item.published):null;
  byId("rss-reader-byline").textContent="Good News Network"+(date&&!Number.isNaN(+date)?" · "+date.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}):"");
  byId("rss-reader-source").href=link;
+ const approved=stories.find(story=>allowedLink(story.original_url)===link&&story.summary);
+ byId("rss-reader-summary").textContent=approved
+  ?approved.summary
+  :"This headline comes from Good News Network. The complete original reporting remains available at the publisher.";
+ byId("rss-reader-note").textContent=approved
+  ?"This is The Good Side's approved summary, not the full publisher article."
+  :"Read the complete original article using the publisher link below.";
  dialog.showModal();
 }
 byId("rss-reader-close")?.addEventListener("click",()=>byId("rss-reader").close());
