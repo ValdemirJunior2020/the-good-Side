@@ -33,6 +33,6 @@ const styles=StyleSheet.create({
  activeItem:{borderWidth:1.2,borderColor:"rgba(255,255,255,.88)",shadowColor:"#F99B25",shadowOpacity:.28,shadowRadius:14},
  iconOutline:{height:45,alignItems:"center",justifyContent:"center"},
  activeOrb:{width:47,height:47,borderRadius:25,borderColor:"rgba(255,255,255,.98)",borderWidth:1.5,alignItems:"center",justifyContent:"center",overflow:"hidden",shadowColor:"#E98C25",shadowOpacity:.5,shadowRadius:10,shadowOffset:{width:0,height:4},elevation:5},
- label:{fontSize:11.5,fontWeight:"650",color:"#2E2029"},
+ label:{fontSize:11.5,fontWeight:"600",color:"#2E2029"},
  activeLabel:{color:"#FFF9F2",fontWeight:"900",textShadowColor:"rgba(139,65,15,.6)",textShadowOffset:{width:0,height:1},textShadowRadius:3}
 });
