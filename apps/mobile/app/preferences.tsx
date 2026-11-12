@@ -1,7 +1,6 @@
 import React,{useEffect,useState} from "react";
 import{ScrollView,Text,View,Switch,TouchableOpacity,Alert,TextInput,Platform}from"react-native";
 import{router}from"expo-router";
-import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import{api,auth,put}from"../src/client";
@@ -16,6 +15,9 @@ type Pref={
  food_notifications_enabled:boolean|string;breaking_alerts_enabled:boolean|string;
  notification_sound_enabled:boolean|string;
 };
+// Do not initialize push modules inside Expo Go (unsupported remote notifications).
+const loadNotifications=():typeof import("expo-notifications")|null=>
+ Constants.appOwnership==="expo"||Platform.OS==="web"?null:require("expo-notifications");
 const enabled=(v:unknown)=>v===true||v==="true"||v==="TRUE";
 const parse=<T,>(v:unknown,fallback:T):T=>{if(Array.isArray(v))return v as T;try{return typeof v==="string"?JSON.parse(v) as T:fallback}catch{return fallback}};
 const clock=/^([01]\d|2[0-3]):[0-5]\d$/;
@@ -35,7 +37,17 @@ export default function Preferences(){
  const toggleInterest=(c:string)=>set("selected_categories",(selected.includes(c)?selected.filter(x=>x!==c):[...selected,c]).join(","));
  const switchRow=(label:string,key:keyof Pref)=> <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",minHeight:49,gap:10}}><Text style={[styles.subtitle,{flex:1,color:colors.ink}]}>{label}</Text><Switch accessibilityLabel={label} value={enabled(p[key])} onValueChange={v=>set(key,v)} trackColor={{true:colors.orange}}/></View>;
  const validZone=()=>{try{new Intl.DateTimeFormat("en-US",{timeZone:p.notification_timezone});return true}catch{return false}};
- const previewSound=async()=>{try{const permission=await Notifications.requestPermissionsAsync();if(!permission.granted)return Alert.alert("Permission required","Allow notifications to preview the sound.");const custom=Constants.expoConfig?.extra?.hasSignatureSound===true;await Notifications.scheduleNotificationAsync({content:{title:"☀️ The Good Side",body:"Here is a little good for your day.",sound:custom?"ding.wav":"default",data:{preview_sound:true}},trigger:null});if(!custom)Alert.alert("Default sound preview","Copy your ding.wav to apps/mobile/assets and rebuild with EAS to preview the signature sound.")}catch(e){Alert.alert("Unable to play preview",String(e))}};
+ const previewSound=async()=>{
+  const Notifications=loadNotifications();
+  if(!Notifications)return Alert.alert("Development build required","Signature notification sounds are available in the installed iOS app, not Expo Go.");
+  try{
+   const permission=await Notifications.requestPermissionsAsync();
+   if(!permission.granted)return Alert.alert("Permission required","Allow notifications to preview the sound.");
+   const custom=Constants.expoConfig?.extra?.hasSignatureSound===true;
+   await Notifications.scheduleNotificationAsync({content:{title:"☀️ The Good Side",body:"Here is a little good for your day.",sound:custom?"ding.wav":"default",data:{preview_sound:true}},trigger:null});
+   if(!custom)Alert.alert("Default sound preview","The custom ding requires a development build configured with the bundled sound.");
+  }catch(e){Alert.alert("Unable to play preview",String(e))}
+ };
  const save=async()=>{
   if(!auth.currentUser)return Alert.alert("Sign in required","Create an account or log in with Google to save preferences.",[{text:"Cancel",style:"cancel"},{text:"Log in / Sign up",onPress:()=>router.push("/auth")}]);
   const deliveryTimes=times.slice(0,slots).map(v=>v.trim());
@@ -47,6 +59,11 @@ export default function Preferences(){
   try{
    let allow=enabled(p.notification_enabled);
    if(allow){
+    const Notifications=loadNotifications();
+    if(!Notifications){
+     allow=false;
+     Alert.alert("Development build required","Your notification times and preferences will be saved, but device push registration is unavailable inside Expo Go.");
+    }else{
     const permission=await Notifications.requestPermissionsAsync();
     if(!permission.granted){allow=false;Alert.alert("Permission required","Enable notifications in your iPhone settings when you're ready.");}
     else if(Platform.OS!=="web"){
@@ -56,6 +73,7 @@ export default function Preferences(){
      let deviceId=await SecureStore.getItemAsync("goodside_device_id");
      if(!deviceId){deviceId="device-"+Platform.OS+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2);await SecureStore.setItemAsync("goodside_device_id",deviceId)}
      await api("/me/device",{method:"POST",body:JSON.stringify({device_id:deviceId,platform:Platform.OS,token})},true);
+    }
     }
    }
    const body={selected_categories:selected,notification_enabled:allow,daily_digest_enabled:enabled(p.daily_digest_enabled),notification_local_time:deliveryTimes[0]||"12:00",
