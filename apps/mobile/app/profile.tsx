@@ -14,12 +14,12 @@ const ink="#301E2C";
 type Avatar={avatar_id:string;label:string;image_url:string;credit:string};
 
 function Glass({children,style}:{children:React.ReactNode;style?:object}){
- return <View style={[ui.glass,style]}><BlurView tint="light" intensity={65} pointerEvents="none" style={StyleSheet.absoluteFill}/><LinearGradient pointerEvents="none" colors={["rgba(255,255,255,.40)","rgba(255,233,219,.25)","rgba(255,221,240,.38)"]} style={StyleSheet.absoluteFill}/>{children}</View>;
+ return <View style={[ui.glass,style]}><BlurView tint="light" intensity={62} pointerEvents="none" style={StyleSheet.absoluteFill}/><LinearGradient pointerEvents="none" colors={["rgba(255,255,255,.54)","rgba(255,237,230,.30)","rgba(255,222,241,.42)"]} style={StyleSheet.absoluteFill}/>{children}</View>;
 }
 function Section({symbol,title,children}:{symbol:React.ReactNode;title:string;children:React.ReactNode}){
- return <View style={{marginTop:23}}>
-  <View style={ui.sectionHeader}><View style={ui.sectionIcon}><LinearGradient colors={["#FFF6D9","#FFD69D","#F3B570"]} style={ui.goldIcon}>{symbol}</LinearGradient></View><Text style={ui.sectionTitle}>{title}</Text></View>
-  <Glass style={{paddingVertical:0,paddingHorizontal:15}}>{children}</Glass>
+ return <View style={{marginTop:17}}>
+  <View style={ui.sectionHeader}><View style={ui.sectionIcon}>{symbol}</View><Text style={ui.sectionTitle}>{title}</Text></View>
+  <Glass style={{paddingVertical:0,paddingHorizontal:13}}>{children}</Glass>
  </View>;
 }
 function MenuRow({icon,label,onPress,last=false,disabled=false}:{icon:React.ReactNode;label:string;onPress:()=>void;last?:boolean;disabled?:boolean}){
@@ -105,15 +105,16 @@ export default function Profile(){
  const signedIn=Boolean(session);
  const currentAvatar=avatars.find(a=>a.avatar_id===avatarId);
  const avatarUrl=currentAvatar?.image_url||SUNRISE;
- return <LinearGradient colors={["#FFF0DE","#FFE1CF","#EAD4E6"]} style={{flex:1}}>
-  <ImageBackground source={{uri:SUNRISE}} resizeMode="cover" style={ui.sunrise} imageStyle={{opacity:.72}}>
-   <LinearGradient colors={["rgba(255,249,239,.79)","rgba(255,232,210,.03)","rgba(255,224,212,.18)","#F3D5D4"]} locations={[0,.24,.72,1]} style={StyleSheet.absoluteFill}/>
+ return <LinearGradient colors={["#FFF1E3","#F7D1C7","#DED0E5"]} style={{flex:1}}>
+  <ImageBackground source={{uri:SUNRISE}} resizeMode="cover" style={ui.sunrise} imageStyle={{opacity:.87}} pointerEvents="none">
+   <LinearGradient colors={["rgba(255,241,233,.56)","rgba(255,225,200,.12)","rgba(246,210,207,.38)","rgba(221,203,227,.88)"]} locations={[0,.28,.62,1]} style={StyleSheet.absoluteFill} pointerEvents="none"/>
   </ImageBackground>
   <ScrollView contentContainerStyle={ui.page} showsVerticalScrollIndicator={false}>
    <View style={ui.topRow}><TouchableOpacity accessibilityRole="button" onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={ui.back}><ArrowLeft size={23} color={ink}/><Text style={ui.backText}>Back</Text></TouchableOpacity></View>
-   <View style={ui.brand}><Sun size={38} color="#F6AE2D" strokeWidth={2.2}/><View><Text style={ui.brandName}>the good side<Text style={{color:"#EA8F28"}}>.</Text></Text><Text style={ui.brandSubtitle}>Your corner of good news.</Text></View></View>
+   <View style={ui.brand}><View style={ui.brandSunBadge}><LinearGradient pointerEvents="none" colors={["#FFEB95","#FFC43A","#EF8C15"]} style={StyleSheet.absoluteFill}/><Sun size={38} color="#FFFAE8" strokeWidth={2.4}/></View><View><Text style={ui.brandName}>the good side<Text style={{color:"#EA8F28"}}>.</Text></Text><Text style={ui.brandSubtitle}>Your corner of good news.</Text></View></View>
    <View style={ui.hero}>
     <View style={ui.avatarRim}>
+     <LinearGradient colors={["#FFE59A","#F8A068","#DD88B8","#FFD187"]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill} pointerEvents="none"/>
      <ImageBackground source={{uri:avatarUrl}} imageStyle={{borderRadius:110}} style={ui.avatar}>
       <LinearGradient colors={["rgba(255,212,132,.06)","rgba(83,43,86,.25)"]} style={StyleSheet.absoluteFill}/>
      </ImageBackground>
@@ -138,15 +139,15 @@ export default function Profile(){
       <LuxuryIcon size={49} tone={label==="Profile Info"?"peach":label==="Connected Apps"?"violet":"sun"}>{icon}</LuxuryIcon><Text style={ui.quickText}>{label}</Text>
     </TouchableOpacity>)}
    </View>
-   <Section symbol={<Sparkles size={18} color={gold}/>} title="Personalization">
+   <Section symbol={<Sparkles size={23} color={gold}/>} title="Personalization">
     <MenuRow icon={<Bell size={22} color={gold}/>} label="Preferences & Notifications" onPress={()=>go(signedIn?"/preferences":"/auth")}/>
     <MenuRow icon={<SlidersHorizontal size={22} color={gold}/>} label="Interest Tags" last onPress={()=>go(signedIn?"/categories":"/auth")}/>
    </Section>
-   <Section symbol={<Layers3 size={18} color={gold}/>} title="Activity">
+   <Section symbol={<Layers3 size={23} color={gold}/>} title="Activity">
     <MenuRow icon={<Bookmark size={22} color={gold}/>} label="Saved Stories" onPress={()=>go(signedIn?"/saved":"/auth")}/>
     <MenuRow icon={<BookOpen size={22} color={gold}/>} label="Reading History" last onPress={()=>Alert.alert("Reading history","Reading history is not available in this version yet. Your saved stories are available above.")}/>
    </Section>
-   <Section symbol={<ShieldCheck size={18} color={gold}/>} title="Data & Security">
+   <Section symbol={<ShieldCheck size={23} color={gold}/>} title="Data & Security">
     <MenuRow icon={<Lock size={22} color={gold}/>} label="Security & Privacy" onPress={()=>Alert.alert("Security & Privacy","The Good Side uses Google Sign-In and does not store your Google password. You can delete your app account below.")}/>
     <MenuRow icon={<Download size={22} color={gold}/>} label="My Data Export" last onPress={()=>signedIn?void exportData():go("/auth")}/>
    </Section>
@@ -186,35 +187,35 @@ export default function Profile(){
  </LinearGradient>;
 }
 const ui=StyleSheet.create({
- sunrise:{position:"absolute",top:0,left:0,right:0,height:510},
- page:{paddingHorizontal:18,paddingTop:58,paddingBottom:180},
+ sunrise:{position:"absolute",top:0,left:0,right:0,bottom:0},
+ page:{paddingHorizontal:20,paddingTop:66,paddingBottom:168},
  topRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
  back:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:8,paddingVertical:7,paddingRight:16},backText:{fontSize:17,color:ink,fontWeight:"600"},
- brand:{marginTop:7,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:9},
- brandSun:{fontSize:37},brandName:{fontSize:30,fontWeight:"900",color:ink,letterSpacing:-1.3},
- brandSubtitle:{fontSize:13,color:"#594450",marginTop:1},
- hero:{alignItems:"center",marginTop:22,marginBottom:16},
- avatarRim:{width:142,height:142,borderRadius:90,padding:5,borderWidth:2,borderColor:"#FFF9E9",backgroundColor:"rgba(245,163,84,.83)",shadowColor:"#B45D52",shadowOpacity:.34,shadowRadius:19,shadowOffset:{width:0,height:9}},
+ brand:{marginTop:4,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8},brandSunBadge:{width:46,height:46,borderRadius:25,overflow:"hidden",justifyContent:"center",alignItems:"center",shadowColor:"#EC952A",shadowRadius:14,shadowOpacity:.33},
+ brandSun:{fontSize:37},brandName:{fontSize:31,fontWeight:"900",color:ink,letterSpacing:-1.4},
+ brandSubtitle:{fontSize:14,color:"#594450",marginTop:1},
+ hero:{alignItems:"center",marginTop:15,marginBottom:13},
+ avatarRim:{width:142,height:142,borderRadius:90,padding:6,borderWidth:2,borderColor:"#FFF9E9",overflow:"hidden",backgroundColor:"#ECA76D",shadowColor:"#B45D52",shadowOpacity:.34,shadowRadius:19,shadowOffset:{width:0,height:9}},
  avatar:{width:"100%",height:"100%",borderRadius:90,overflow:"hidden",backgroundColor:"#FFCC91"},
  avatarCamera:{position:"absolute",top:104,left:"64%",width:43,height:43,borderRadius:24,backgroundColor:"#FFFAEF",borderWidth:2,borderColor:"#FFF",alignItems:"center",justifyContent:"center",shadowColor:"#A55747",shadowOpacity:.22,shadowRadius:10,shadowOffset:{width:0,height:4},elevation:5},
- nameRow:{flexDirection:"row",alignItems:"center",gap:12,marginTop:12},personName:{fontSize:33,color:ink,fontWeight:"900",letterSpacing:-.6},
+ nameRow:{flexDirection:"row",alignItems:"center",gap:12,marginTop:10},personName:{fontSize:32,color:ink,fontWeight:"900",letterSpacing:-.6},
  heroHint:{fontSize:12,color:"#58434E",marginTop:3},
- glass:{borderWidth:1.2,borderColor:"rgba(255,255,255,.86)",backgroundColor:"rgba(255,255,255,.38)",borderRadius:26,overflow:"hidden",shadowColor:"#71403B",shadowOpacity:.13,shadowRadius:30,shadowOffset:{width:0,height:12},elevation:3},
- quickGrid:{flexDirection:"row",gap:9},
- quickCard:{flex:1,borderRadius:25,minHeight:116,borderWidth:1.2,borderColor:"rgba(255,255,255,.86)",alignItems:"center",justifyContent:"center",overflow:"hidden",paddingHorizontal:5,paddingVertical:16,shadowColor:"#71403B",shadowOpacity:.13,shadowRadius:22,shadowOffset:{width:0,height:12}},
+ glass:{borderWidth:1.5,borderColor:"rgba(255,255,255,.94)",backgroundColor:"rgba(255,255,255,.34)",borderRadius:25,overflow:"hidden",shadowColor:"#79505E",shadowOpacity:.19,shadowRadius:19,shadowOffset:{width:0,height:8},elevation:4},
+ quickGrid:{flexDirection:"row",gap:8},
+ quickCard:{flex:1,borderRadius:24,minHeight:101,borderWidth:1.5,borderColor:"rgba(255,255,255,.97)",alignItems:"center",justifyContent:"center",overflow:"hidden",paddingHorizontal:3,paddingVertical:11,shadowColor:"#71403B",shadowOpacity:.18,shadowRadius:20,shadowOffset:{width:0,height:9}},
  quickIconBadge:{height:45,width:45,borderRadius:15,backgroundColor:"rgba(255,226,171,.74)",borderColor:"rgba(255,255,255,.87)",borderWidth:1,alignItems:"center",justifyContent:"center",marginBottom:10,shadowColor:"#BC6F41",shadowOpacity:.2,shadowRadius:12,shadowOffset:{width:0,height:5}},
  quickIcon:{alignItems:"center",justifyContent:"center"},
- quickText:{fontSize:12.5,fontWeight:"800",color:ink,textAlign:"center"},
- sectionHeader:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:7},
- sectionIcon:{width:36,height:36},sectionTitle:{fontSize:23,fontWeight:"900",color:ink,letterSpacing:-.7},
- menuRow:{flexDirection:"row",alignItems:"center",minHeight:61,gap:12},
+ quickText:{fontSize:12.5,fontWeight:"800",color:ink,textAlign:"center",marginTop:9},
+ sectionHeader:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:5},
+ sectionIcon:{width:27,height:30,justifyContent:"center",alignItems:"center"},sectionTitle:{fontSize:22,fontWeight:"900",color:ink,letterSpacing:-.7},
+ menuRow:{flexDirection:"row",alignItems:"center",minHeight:55,gap:12},
  rowBorder:{borderBottomWidth:1,borderBottomColor:"rgba(163,117,120,.2)"},
  menuIconBadge:{width:39,height:39,backgroundColor:"rgba(255,213,178,.65)",borderRadius:20,alignItems:"center",justifyContent:"center",borderColor:"rgba(255,255,255,.7)",borderWidth:1},
  menuIcon:{alignItems:"center",justifyContent:"center"},
- menuLabel:{flex:1,fontSize:15.5,fontWeight:"600",color:ink},
+ menuLabel:{flex:1,fontSize:15.5,fontWeight:"650",color:ink},
  arrow:{fontSize:30,color:ink,fontWeight:"300",marginRight:2},
- footer:{alignItems:"center",marginTop:23,gap:10},
- pill:{minHeight:48,minWidth:"63%",paddingHorizontal:24,paddingVertical:12,borderRadius:50,backgroundColor:"rgba(255,255,255,.38)",borderWidth:1,borderColor:"rgba(255,255,255,.85)",flexDirection:"row",gap:10,alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.13,shadowRadius:18,shadowOffset:{width:0,height:8}},
+ footer:{alignItems:"center",marginTop:16,gap:9},
+ pill:{minHeight:43,minWidth:"61%",paddingHorizontal:23,paddingVertical:10,borderRadius:50,backgroundColor:"rgba(255,255,255,.52)",borderWidth:1.4,borderColor:"rgba(255,255,255,.95)",flexDirection:"row",gap:10,alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.2,shadowRadius:14,shadowOffset:{width:0,height:6}},
  dangerPill:{backgroundColor:"rgba(255,232,232,.68)"},
  pillText:{fontSize:15.5,fontWeight:"800",color:ink},
  fieldLabel:{color:ink,fontWeight:"700",marginBottom:9},nameInput:{padding:12,backgroundColor:"#fff",borderRadius:15,borderWidth:1,borderColor:"#F3D2BD",marginBottom:10,color:ink},
