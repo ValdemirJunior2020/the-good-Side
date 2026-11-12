@@ -1,5 +1,5 @@
 import React,{useEffect,useRef} from "react";
-import {View,Text,Image,TouchableOpacity,StyleSheet,Animated,Easing,ActivityIndicator,type ViewStyle} from "react-native";
+import {View,Text,Image,TouchableOpacity,StyleSheet,Animated,Easing,Platform,type ViewStyle} from "react-native";
 import {LinearGradient} from "expo-linear-gradient";
 import {BlurView} from "expo-blur";
 import {colors} from "./theme";
@@ -20,7 +20,7 @@ export function GoodSideLoader({label="Loading…",compact=false}:{label?:string
  const spin=useRef(new Animated.Value(0)).current;
  useEffect(()=>{
   spin.setValue(0);
-  const animation=Animated.loop(Animated.timing(spin,{toValue:1,duration:1400,easing:Easing.linear,useNativeDriver:true}));
+  const animation=Animated.loop(Animated.timing(spin,{toValue:1,duration:1400,easing:Easing.linear,useNativeDriver:Platform.OS!=="web"}));
   animation.start();
   return ()=>animation.stop();
  },[spin]);
