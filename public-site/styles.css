@@ -197,3 +197,46 @@ body:has(.news-shell) .rss-section .section-rule-heading h2{font:800 14px system
  .rss-source-label{display:none}
  .rss-title{font-size:17px}
 }
+
+
+/* RSS article preview stays inside The Good Side's vintage-paper reader. */
+body:has(.news-shell) .rss-story-open{
+ appearance:none;
+ display:block;
+ width:100%;
+ padding:0;
+ margin:0;
+ text-align:left;
+ border:0;
+ background:transparent;
+ cursor:pointer;
+ font:bold 18px/1.2 Georgia,"Times New Roman",serif;
+ color:#342922;
+}
+body:has(.news-shell) .rss-story-open:hover{text-decoration:underline;text-decoration-color:#b66e4a;text-underline-offset:4px}
+body:has(.news-shell) .rss-footer{justify-content:flex-end}
+body:has(.news-shell) .rss-reader{
+ position:fixed;
+ width:min(640px,calc(100% - 32px));
+ max-height:calc(100dvh - 48px);
+ margin:auto;
+ padding:32px clamp(20px,4vw,45px);
+ color:#352d27;
+ background:linear-gradient(155deg,#fff8e9,#f3e4cd);
+ border:1px solid #ba9674;
+ border-radius:8px;
+ box-shadow:0 26px 80px rgba(37,23,17,.35),inset 0 0 28px rgba(172,123,67,.09);
+ overflow:auto;
+}
+body:has(.news-shell) .rss-reader::backdrop{background:rgba(31,23,21,.72);backdrop-filter:blur(5px)}
+.rss-reader-top{display:flex;justify-content:space-between;align-items:center;gap:15px;border-bottom:1px solid #cdb29a;padding-bottom:13px}
+.rss-reader-kicker{font:800 11px/1.3 system-ui,sans-serif;color:#965c3e;letter-spacing:1.3px}
+.rss-reader-close{background:transparent;border:0;font-size:24px;cursor:pointer;color:#493b33}
+.rss-reader h2{font:700 clamp(27px,4vw,42px)/1.12 Georgia,serif;letter-spacing:-.5px;margin:27px 0 14px}
+.rss-reader-byline{font:700 12px system-ui,sans-serif;color:#98684b}
+.rss-reader-body{border-top:1px solid #d7bea4;margin-top:20px;padding-top:20px;font:16px/1.75 Georgia,serif}
+.rss-reader-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:25px;align-items:center}
+.rss-reader-actions a,.rss-reader-actions button{padding:13px 17px;border-radius:7px;font:700 13px system-ui,sans-serif}
+.rss-reader-actions a{background:#a96b4d;color:white}
+.rss-reader-actions button{border:1px solid #c5aa8a;background:#f8edda;color:#443329;cursor:pointer}
+@media(max-width:650px){body:has(.news-shell) .rss-story-open{font-size:17px}}
