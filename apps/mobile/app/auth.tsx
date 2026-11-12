@@ -104,7 +104,7 @@ export default function SignIn(){
  };
  return <Background><KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}><ScrollView keyboardShouldPersistTaps="always" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} contentContainerStyle={{paddingHorizontal:22,paddingTop:68,paddingBottom:210,width:"100%",maxWidth:540,alignSelf:"center"}}>
   <TouchableOpacity onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={{alignSelf:"flex-start",paddingVertical:10}}><Text style={{color:ink,fontWeight:"700"}}>← Back</Text></TouchableOpacity>
-  <View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center"}}><Brand small/><MenuButton/></View><Text style={[styles.title,{marginTop:32,fontSize:31}]}>Your bright side starts here.</Text>
+  <View style={{alignItems:"flex-start"}}><Brand small/></View><View style={{alignItems:"flex-end",marginTop:36,marginBottom:10}}><MenuButton/></View><Text style={[styles.title,{marginTop:32,fontSize:31}]}>Your bright side starts here.</Text>
   <Text style={[styles.subtitle,{marginTop:10,marginBottom:20}]}>Create a free account with any email address. Google sign-in is still available.</Text>
   <Surface style={{marginBottom:15}}>
    <View style={{flexDirection:"row",gap:8,marginBottom:18}}>
