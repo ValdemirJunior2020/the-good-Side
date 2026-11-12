@@ -7,7 +7,7 @@ import {api,auth,put,type Session} from "../src/client";
 import {colors} from "../src/theme";
 import LuxuryIcon from "../src/LuxuryIcon";
 import {avatarCatalog} from "../src/avatarCatalog";
-import {getPublicAvatars,getPersonalAvatar,getPublicSettings,clearPersonalAvatar} from "../src/remoteConfig";
+import {getPublicAvatars,getPersonalAvatar,getPublicSettings,clearPersonalAvatar,syncManagedProfile} from "../src/remoteConfig";
 
 import {ArrowLeft,Camera,UserSquare2,Link2,Crown,Bell,SlidersHorizontal,Sparkles,Layers3,ShieldCheck,Bookmark,BookOpen,Lock,Download,LogOut,Headphones,Trash2,ChevronRight,House,Compass,ChefHat,Heart,UserRound,Pencil,Sun} from "lucide-react-native";
 
@@ -58,7 +58,8 @@ export default function Profile(){
    if(!mounted)return;
    setSession(user);setName(user?.displayName||"");
    if(user){api<{avatar_id?:string}>("/me",{},true).then(record=>{if(mounted)setAvatarId(record?.avatar_id||"")}).catch(()=>{});
-    void auth.getFreshToken().then(token=>token?getPersonalAvatar(token):null).then(url=>{if(mounted)setCustomAvatar(url)}).catch(()=>{});}
+    void auth.getFreshToken().then(token=>token?getPersonalAvatar(token):null).then(url=>{if(mounted)setCustomAvatar(url)}).catch(()=>{});
+    void auth.getFreshToken().then(token=>token?syncManagedProfile(token,user.displayName||user.email.split("@")[0]):null).catch(()=>{});}
    else{setAvatarId("");setCustomAvatar(null)}
   });
   void auth.restore();
