@@ -4,7 +4,7 @@ import {router,usePathname} from "expo-router";
 import {LinearGradient} from "expo-linear-gradient";
 import {BlurView} from "expo-blur";
 import {colors} from "./theme";
-const tabs:[string,string,string][]=[["Home","⌂","/"],["Discover","◈","/search"],["Food","♧","/food"],["Saved","♡","/saved"],["You","♟","/profile"]];
+const tabs:[string,string,string][]=[["Home","⌂","/"],["Discover","◇","/search"],["Food","♨","/food"],["Saved","♡","/saved"],["You","person","/profile"]];
 export default function TabBar(){
  const path=usePathname();
  return <View pointerEvents="box-none" style={styles.outer}>
@@ -14,7 +14,7 @@ export default function TabBar(){
     const active=path===href;
     return <TouchableOpacity key={name} accessibilityRole="tab" accessibilityLabel={name} accessibilityState={{selected:active}} onPress={()=>{if(!active)router.push(href as any)}} style={[styles.item,active&&styles.activeItem]} activeOpacity={.8}>
      {active?<LinearGradient colors={["#FFEEDC","#F8BE83","#E8AA92"]} style={StyleSheet.absoluteFill}/>:null}
-     <Text style={[styles.icon,active&&{color:"#A34A0F"}]}>{icon}</Text>
+     {name==="You"?<View style={[styles.personBadge,active&&styles.personBadgeActive]}><View style={styles.personHead}/><View style={styles.personShoulders}/></View>:<Text style={[styles.icon,active&&{color:"#A34A0F"}]}>{icon}</Text>}
      <Text style={[styles.label,active&&{color:"#A34A0F",fontWeight:"900"}]}>{name}</Text>
     </TouchableOpacity>;
    })}
@@ -27,5 +27,9 @@ const styles=StyleSheet.create({
  item:{flex:1,alignItems:"center",justifyContent:"center",borderRadius:38,overflow:"hidden",paddingVertical:7,gap:1},
  activeItem:{borderWidth:1,borderColor:"rgba(255,255,255,.93)"},
  icon:{fontSize:29,color:colors.ink,fontWeight:"400"},
- label:{fontSize:11.5,fontWeight:"600",color:colors.ink}
+ label:{fontSize:11.5,fontWeight:"600",color:colors.ink},
+ personBadge:{width:30,height:30,borderRadius:18,alignItems:"center",justifyContent:"center",overflow:"hidden",marginBottom:1},
+ personBadgeActive:{backgroundColor:"#EFA64E",borderColor:"rgba(255,255,255,.8)",borderWidth:1},
+ personHead:{position:"absolute",width:11,height:11,borderRadius:7,backgroundColor:"#392536",top:4},
+ personShoulders:{position:"absolute",width:21,height:15,borderTopLeftRadius:12,borderTopRightRadius:12,backgroundColor:"#392536",bottom:1}
 });
