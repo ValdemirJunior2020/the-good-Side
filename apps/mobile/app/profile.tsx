@@ -6,9 +6,10 @@ import {router} from "expo-router";
 import {api,auth,put,type Session} from "../src/client";
 import {colors} from "../src/theme";
 import LuxuryIcon from "../src/LuxuryIcon";
+import SunriseBackdrop from "../src/SunriseBackdrop";
 import {ArrowLeft,Camera,UserSquare2,Link2,Crown,Bell,SlidersHorizontal,Sparkles,Layers3,ShieldCheck,Bookmark,BookOpen,Lock,Download,LogOut,Headphones,Trash2,ChevronRight,House,Compass,ChefHat,Heart,UserRound,Pencil,Sun} from "lucide-react-native";
 
-const SUNRISE="https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1400&q=90";
+const SUNRISE="https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1100&q=85";
 const gold="#B96117";
 const ink="#301E2C";
 type Avatar={avatar_id:string;label:string;image_url:string;credit:string};
@@ -111,9 +112,7 @@ export default function Profile(){
  const currentAvatar=avatars.find(a=>a.avatar_id===avatarId);
  const avatarUrl=currentAvatar?.image_url||SUNRISE;
  return <LinearGradient colors={["#FFF1E3","#F7D1C7","#DED0E5"]} style={{flex:1}}>
-  <ImageBackground source={{uri:SUNRISE}} resizeMode="cover" style={ui.sunrise} imageStyle={{opacity:.87}} pointerEvents="none">
-   <LinearGradient colors={["rgba(255,230,221,.35)","rgba(255,208,178,.14)","rgba(246,199,207,.42)","rgba(232,192,216,.88)"]} locations={[0,.30,.66,1]} style={StyleSheet.absoluteFill} pointerEvents="none"/>
-  </ImageBackground>
+  <SunriseBackdrop/>
   <ScrollView contentContainerStyle={ui.page} showsVerticalScrollIndicator={false}>
    <View style={ui.topRow}><TouchableOpacity accessibilityRole="button" onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={ui.back}><ArrowLeft size={23} color={ink}/><Text style={ui.backText}>Back</Text></TouchableOpacity></View>
    <View style={ui.brand}><View style={ui.brandSunBadge}><LinearGradient pointerEvents="none" colors={["#FFEB95","#FFC43A","#EF8C15"]} style={StyleSheet.absoluteFill}/><Sun size={38} color="#FFFAE8" strokeWidth={2.4}/></View><View><Text style={ui.brandName}>the good side<Text style={{color:"#EA8F28"}}>.</Text></Text><Text style={ui.brandSubtitle}>Your corner of good news.</Text></View></View>
