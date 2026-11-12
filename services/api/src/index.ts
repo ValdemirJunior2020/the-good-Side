@@ -39,7 +39,9 @@ async function identity(req:Authed,res:Response,next:NextFunction){
  try{
   // Supabase access tokens are verified against the Auth server, never decoded/trusted locally.
   // Admin access is deliberately Google-only regardless of the account email.
-  if(token.startsWith("eyJ")&&process.env.SUPABASE_AUTH_URL&&process.env.SUPABASE_PUBLISHABLE_KEY){
+  let claimedIssuer="";
+  try{claimedIssuer=JSON.parse(Buffer.from(token.split(".")[1]||"","base64url").toString("utf8")).iss||""}catch{}
+  if(claimedIssuer===process.env.SUPABASE_AUTH_URL+"/auth/v1"&&process.env.SUPABASE_PUBLISHABLE_KEY){
    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
    try{
     const response=await fetch(process.env.SUPABASE_AUTH_URL+"/auth/v1/user",{
