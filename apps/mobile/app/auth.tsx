@@ -1,10 +1,11 @@
 import React,{useEffect,useState} from "react";
-import {Text,ScrollView,TouchableOpacity,Platform} from "react-native";
+import {Text,ScrollView,TouchableOpacity,Platform,View} from "react-native";
 import {router} from "expo-router";
 import * as Google from "expo-auth-session/providers/google";
 import {api,auth,json} from "../src/client";
 import {Background,Brand,Pill,Surface,styles} from "../src/components";
 import {colors} from "../src/theme";
+import AppMenu from "../src/AppMenu";
 function GoogleSignIn(){
  const [error,setError]=useState(""),[busy,setBusy]=useState(false);
  const [request,response,promptAsync]=Google.useIdTokenAuthRequest({
@@ -23,7 +24,7 @@ function GoogleSignIn(){
    router.replace("/categories");
   })().catch(e=>{auth.signOut();setError(String(e))}).finally(()=>setBusy(false));
  },[response]);
- return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><TouchableOpacity onPress={()=>router.back()}><Text style={{color:colors.ink}}>← Back</Text></TouchableOpacity><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:14}]}>Your bright side starts here.</Text><Text style={[styles.subtitle,{marginBottom:25}]}>Log in or create your free account with Google. Your profile is created automatically the first time you sign in. We do not store passwords.</Text><Surface><Pill title={busy?"Signing in…":"Log in / Create account with Google"} onPress={()=>{setError("");if(!request){setError("Configure the Google OAuth client IDs first");return}void promptAsync()}} disabled={busy||!request}/>{error?<Text style={{color:"#B54440",marginTop:15}}>{error}</Text>:null}<Text style={[styles.muted,{marginTop:17}]}>Sign in once to save stories and preferences. You can always browse news without an account.</Text></Surface><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
+ return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><TouchableOpacity onPress={()=>router.back()}><Text style={{color:colors.ink}}>← Back</Text></TouchableOpacity><AppMenu/></View><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:14}]}>Your bright side starts here.</Text><Text style={[styles.subtitle,{marginBottom:25}]}>Log in or create your free account with Google. Your profile is created automatically the first time you sign in. We do not store passwords.</Text><Surface><Pill title={busy?"Signing in…":"Log in / Create account with Google"} onPress={()=>{setError("");if(!request){setError("Configure the Google OAuth client IDs first");return}void promptAsync()}} disabled={busy||!request}/>{error?<Text style={{color:"#B54440",marginTop:15}}>{error}</Text>:null}<Text style={[styles.muted,{marginTop:17}]}>Sign in once to save stories and preferences. You can always browse news without an account.</Text></Surface><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
 }
 function atobCompat(input:string){
  const p=input.replace(/-/g,"+").replace(/_/g,"/");if(typeof atob==="function")return decodeURIComponent(Array.from(atob(p),c=>"%"+c.charCodeAt(0).toString(16).padStart(2,"0")).join(""));
@@ -36,5 +37,5 @@ export default function SignIn(){
  const androidId=process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
  const configured=Platform.OS==="ios"?Boolean(iosId):Platform.OS==="android"?Boolean(androidId):Boolean(webId);
  if(configured)return <GoogleSignIn/>;
- return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><TouchableOpacity onPress={()=>router.back()}><Text>← Back</Text></TouchableOpacity><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:12}]}>Set up Google login</Text><Surface><Text style={styles.subtitle}>Google login is not ready for this device. On iPhone, create an iOS OAuth client with bundle ID com.thegoodside.app and add EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID to apps/mobile/.env. Restart Expo after updating the file. To test native Google login reliably, use an EAS development build instead of Expo Go. Firebase is not used.</Text></Surface><Pill title="Browse good news as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
+ return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><TouchableOpacity onPress={()=>router.back()}><Text style={{color:colors.ink}}>← Back</Text></TouchableOpacity><AppMenu/></View><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:12}]}>Set up Google login</Text><Surface><Text style={styles.subtitle}>Google login is not ready for this device. On iPhone, create an iOS OAuth client with bundle ID com.thegoodside.app and add EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID to apps/mobile/.env. Restart Expo after updating the file. To test native Google login reliably, use an EAS development build instead of Expo Go. Firebase is not used.</Text></Surface><Pill title="Browse good news as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
 }
