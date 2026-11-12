@@ -59,7 +59,7 @@ export default function SignIn(){
  const recover=async()=>{
   setError("");setMessage("");
   const mail=email.trim().toLowerCase();
-  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(mail))return setError("Enter your email address above, then tap Forgot password again.");
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail))return setError("Enter your email address above, then tap Forgot password again.");
   setBusy(true);
   try{await emailAuth.resetPassword(mail);setMessage("If that email has an account, a password-reset link will arrive shortly. Check spam too.")}
   catch{setMessage("If that email has an account, a password-reset link will arrive shortly. Check spam too.")}
