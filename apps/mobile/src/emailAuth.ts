@@ -21,7 +21,7 @@ async function authRequest(path:string,body:Record<string,unknown>){
 }
 export const emailAuth={
  signUp(email:string,password:string,name:string){
-  return authRequest("/signup",{email:email.trim().toLowerCase(),password,data:{display_name:name.trim()}});
+  return authRequest("/signup?redirect_to="+encodeURIComponent("https://the-good-side-command-center.netlify.app/reset-password.html"),{email:email.trim().toLowerCase(),password,data:{display_name:name.trim()}});
  },
  signIn(email:string,password:string){
   return authRequest("/token?grant_type=password",{email:email.trim().toLowerCase(),password});
