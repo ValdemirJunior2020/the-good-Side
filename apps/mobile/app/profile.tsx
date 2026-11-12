@@ -195,7 +195,7 @@ const ui=StyleSheet.create({
  sunrise:{position:"absolute",top:0,left:0,right:0,bottom:0},
  page:{paddingHorizontal:16,paddingTop:72,paddingBottom:180,width:"100%",maxWidth:550,alignSelf:"center"},
  topRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
- back:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:8,paddingVertical:8,paddingHorizontal:14,borderRadius:30,borderWidth:1.5,borderColor:"rgba(255,255,255,.95)",backgroundColor:"rgba(255,245,240,.46)",shadowColor:"#fff",shadowOpacity:.75,shadowRadius:8},backText:{fontSize:16,color:ink,fontWeight:"650"},
+ back:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:8,paddingVertical:8,paddingHorizontal:14,borderRadius:30,borderWidth:1.5,borderColor:"rgba(255,255,255,.95)",backgroundColor:"rgba(255,245,240,.46)",shadowColor:"#fff",shadowOpacity:.75,shadowRadius:8},backText:{fontSize:16,color:ink,fontWeight:"600"},
  brand:{marginTop:0,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8},brandSunBadge:{width:49,height:49,borderRadius:25,overflow:"hidden",justifyContent:"center",alignItems:"center",shadowColor:"#EC952A",shadowRadius:14,shadowOpacity:.33},
  brandSun:{fontSize:37},brandName:{fontSize:30,fontWeight:"900",color:ink,letterSpacing:-1.25},
  brandSubtitle:{fontSize:14,color:"#594450",marginTop:1},
