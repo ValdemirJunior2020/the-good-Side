@@ -15,7 +15,8 @@ const explanations:Record<string,string>={
  news_feed_enabled:"Controls whether the mobile Home feed presents articles (does not delete news or interrupt scheduled pushes)"
 };
 async function managementApi<T>(token:string,route:string,options:RequestInit={}):Promise<T>{
- const resp=await fetch(ENDPOINT+"?route="+encodeURIComponent(route),{...options,headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json",...(options.headers||{})}});
+ const [operation,...extra]=route.split("&");
+ const resp=await fetch(ENDPOINT+"?route="+encodeURIComponent(operation)+(extra.length?"&"+extra.join("&"):""),{...options,headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json",...(options.headers||{})}});
  const obj=await resp.json() as {ok:boolean;data:T;error?:string};
  if(!resp.ok||!obj.ok)throw Error(obj.error||"Unable to complete request");
  return obj.data;
