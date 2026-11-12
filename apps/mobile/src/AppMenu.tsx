@@ -30,9 +30,9 @@ export default function AppMenu(){
   <TouchableOpacity accessibilityRole="button" accessibilityLabel="Open menu" accessibilityHint="More options and settings" onPress={()=>setOpen(true)} activeOpacity={.8} style={s.menuButton}>
    <Text style={s.hamburger}>☰</Text>
   </TouchableOpacity>
-  <Modal transparent visible={open} animationType="fade" statusBarTranslucent onRequestClose={()=>setOpen(false)}>
+  <Modal transparent visible={open} animationType="slide" presentationStyle="overFullScreen" statusBarTranslucent onRequestClose={()=>setOpen(false)}>
    <View style={s.screen}>
-    <Pressable accessibilityLabel="Close menu" onPress={()=>setOpen(false)} style={StyleSheet.absoluteFill}/>
+    <Pressable accessibilityRole="button" accessibilityLabel="Close menu" onPress={()=>setOpen(false)} style={s.backdrop}/>
     <View style={s.panel}>
      <BlurView tint="light" intensity={75} style={StyleSheet.absoluteFill} pointerEvents="none"/>
      <LinearGradient colors={["rgba(255,250,239,.76)","rgba(255,230,214,.78)","rgba(239,215,234,.80)"]} style={StyleSheet.absoluteFill} pointerEvents="none"/>
@@ -58,10 +58,11 @@ export default function AppMenu(){
  </>;
 }
 const s=StyleSheet.create({
- menuButton:{height:43,width:44,backgroundColor:"rgba(255,255,255,.48)",borderColor:"rgba(255,255,255,.9)",borderWidth:1.5,borderRadius:16,alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.13,shadowRadius:12,shadowOffset:{width:0,height:6}},
+ menuButton:{height:48,width:52,backgroundColor:"rgba(255,255,255,.48)",borderColor:"rgba(255,255,255,.9)",borderWidth:1.5,borderRadius:16,alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.13,shadowRadius:12,shadowOffset:{width:0,height:6}},
  hamburger:{fontSize:24,color:ink,lineHeight:29},
- screen:{flex:1,justifyContent:"flex-start",alignItems:"flex-end",paddingTop:57,paddingHorizontal:14,backgroundColor:"rgba(40,23,40,.25)"},
- panel:{width:"92%",maxWidth:370,overflow:"hidden",borderRadius:28,borderWidth:1.5,borderColor:"rgba(255,255,255,.9)",padding:17,shadowColor:"#59374A",shadowOpacity:.2,shadowRadius:26,shadowOffset:{width:0,height:14}},
+ screen:{flex:1,justifyContent:"flex-start",alignItems:"flex-end",paddingTop:65,paddingHorizontal:14},
+ backdrop:{...StyleSheet.absoluteFillObject,backgroundColor:"rgba(40,23,40,.35)"},
+ panel:{width:"92%",maxWidth:370,overflow:"hidden",borderRadius:28,borderWidth:1.5,borderColor:"rgba(255,255,255,.9)",padding:17,backgroundColor:"#FCE4DF",shadowColor:"#59374A",shadowOpacity:.2,shadowRadius:26,shadowOffset:{width:0,height:14},elevation:20},
  header:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:14},
  title:{fontSize:22,fontWeight:"800",color:ink,letterSpacing:-.7},subtitle:{fontSize:13,color:"#63545d",marginTop:4},
  close:{width:34,height:34,borderRadius:19,backgroundColor:"rgba(255,255,255,.75)",alignItems:"center",justifyContent:"center"},
