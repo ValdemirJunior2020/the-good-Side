@@ -33,5 +33,5 @@ export default function Food(){
     <Text style={[styles.subtitle,{marginTop:8}]} numberOfLines={3}>{item.summary}</Text>
     <Text style={[styles.muted,{marginTop:8}]}>{item.publisher}</Text>
    </Surface></TouchableOpacity>)}
- </ScrollView><TabBar/></Background>;
+ </ScrollView></Background>;
 }
