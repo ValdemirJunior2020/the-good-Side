@@ -148,7 +148,7 @@ const ui=StyleSheet.create({
  menuRow:{flexDirection:"row",alignItems:"center",minHeight:61,gap:12},
  rowBorder:{borderBottomWidth:1,borderBottomColor:"rgba(163,117,120,.2)"},
  menuIcon:{fontSize:24,color:gold,width:34,textAlign:"center"},
- menuLabel:{flex:1,fontSize:15.5,fontWeight:"650",color:ink},
+ menuLabel:{flex:1,fontSize:15.5,fontWeight:"600",color:ink},
  arrow:{fontSize:30,color:ink,fontWeight:"300",marginRight:2},
  footer:{alignItems:"center",marginTop:23,gap:10},
  pill:{minHeight:44,minWidth:"63%",paddingHorizontal:24,paddingVertical:10,borderRadius:35,backgroundColor:"rgba(255,245,241,.65)",borderWidth:1.5,borderColor:"rgba(255,255,255,.95)",alignItems:"center",justifyContent:"center",shadowColor:"#B5776C",shadowOpacity:.12,shadowRadius:10},
