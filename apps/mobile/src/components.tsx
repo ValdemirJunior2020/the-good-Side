@@ -44,7 +44,7 @@ export function MenuButton(){
   accessibilityRole="button"
   accessibilityLabel="Open navigation menu"
   hitSlop={10}
-  onPress={()=>{console.info("[GoodSideMenu] navigating to /menu");if(pathname!=="/menu")router.push("/menu")}}
+  onPress={()=>{if(pathname!=="/menu")router.push("/menu")}}
   style={({pressed})=>({
    width:52,height:50,borderRadius:23,backgroundColor:"#FFE7BF",borderWidth:1.5,
    borderColor:"#FFFFFF",alignItems:"center",justifyContent:"center",
