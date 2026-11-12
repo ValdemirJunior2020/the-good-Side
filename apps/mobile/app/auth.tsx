@@ -53,6 +53,15 @@ export default function SignIn(){
  const androidId=process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
  const googleConfigured=Platform.OS==="ios"?Boolean(iosId):Platform.OS==="android"?Boolean(androidId):Boolean(webId);
  const googleAvailable=googleConfigured&&Constants.appOwnership!=="expo";
+ const recover=async()=>{
+  setError("");setMessage("");
+  const mail=email.trim().toLowerCase();
+  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(mail))return setError("Enter your email address above, then tap Forgot password again.");
+  setBusy(true);
+  try{await emailAuth.resetPassword(mail);setMessage("If that email has an account, a password-reset link will arrive shortly. Check spam too.")}
+  catch{setMessage("If that email has an account, a password-reset link will arrive shortly. Check spam too.")}
+  finally{setBusy(false)}
+ };
  const submit=async()=>{
   setError("");setMessage("");
   const mail=email.trim().toLowerCase();
@@ -89,6 +98,7 @@ export default function SignIn(){
    {mode==="register"?<><Text style={sx.label}>Your name</Text><TextInput accessibilityLabel="Your name" autoComplete="name" value={name} onChangeText={setName} placeholder="First name" placeholderTextColor="#887381" style={sx.input} maxLength={80}/></>:null}
    <Text style={sx.label}>Email address</Text><TextInput accessibilityLabel="Email address" autoCapitalize="none" autoCorrect={false} autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor="#887381" style={sx.input} maxLength={254}/>
    <Text style={sx.label}>Password</Text><TextInput accessibilityLabel="Password" autoCapitalize="none" autoCorrect={false} autoComplete={mode==="register"?"new-password":"current-password"} secureTextEntry value={password} onChangeText={setPassword} placeholder="At least 8 characters" placeholderTextColor="#887381" style={sx.input}/>
+   {mode==="login"?<TouchableOpacity accessibilityRole="button" disabled={busy} onPress={()=>void recover()} style={{alignSelf:"flex-end",marginBottom:16,paddingVertical:4}}><Text style={{color:"#965329",fontWeight:"800"}}>Forgot password?</Text></TouchableOpacity>:null}
    <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={()=>void submit()} style={[sx.submit,busy&&{opacity:.55}]}>
     {busy?<ActivityIndicator color="#fff"/>:<Text style={{color:"#fff",fontWeight:"800",fontSize:16}}>{mode==="register"?"Create free account":"Log in with email"}</Text>}
    </TouchableOpacity>
