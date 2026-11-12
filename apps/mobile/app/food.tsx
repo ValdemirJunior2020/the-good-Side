@@ -2,7 +2,7 @@ import React,{useEffect,useState}from"react";
 import{ScrollView,Text,TouchableOpacity,RefreshControl,View}from"react-native";
 import{router}from"expo-router";
 import{api,type News}from"../src/client";
-import{Background,Surface,styles}from"../src/components";
+import{Background,Surface,GoodSideLoader,styles}from"../src/components";
 import TabBar from"../src/TabBar";
 import{colors}from"../src/theme";
 type Recipe={recipe_id:string;title:string;description:string;prep_minutes:number;cook_minutes:number;servings:number;source_url:string;dietary_tags:string};
@@ -18,6 +18,7 @@ export default function Food(){
  return <Background><ScrollView contentContainerStyle={{padding:22,paddingTop:65,paddingBottom:115}} refreshControl={<RefreshControl refreshing={loading} onRefresh={load}/>}>
   <Text style={[styles.title,{marginBottom:8}]}>Good food. Good world.</Text>
   <Text style={[styles.subtitle,{marginBottom:24}]}>Food innovations, community kindness and recipes worth sharing.</Text>
+  {loading?<GoodSideLoader label="Finding recipes and news…"/>:null}
   {error?<Text style={styles.subtitle}>{error}</Text>:null}
   <Text style={[styles.label,{fontSize:22,marginBottom:12}]}>🥗 Recipes</Text>
   {recipes.length===0?<Surface style={{marginBottom:20}}><Text style={styles.subtitle}>Fresh, properly credited recipes will appear here once reviewed.</Text></Surface>:
