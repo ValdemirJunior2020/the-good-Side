@@ -58,7 +58,7 @@ export default function Profile(){
    else setAvatarId("");
   });
   void auth.restore();
-  api<Avatar[]>("/avatars").then(items=>{if(mounted&&Array.isArray(items)&&items.length)setAvatars(previous=>{const merged=new Map(avatarCatalog.map(a=>[a.avatar_id,a]));for(const a of items)if(a?.avatar_id)merged.set(a.avatar_id,a);return Array.from(merged.values())})}).catch(()=>{/* Curated avatar catalog remains available if the old gallery endpoint is down. */});
+  api<Avatar[]>("/avatars").then(items=>{if(mounted&&Array.isArray(items)&&items.length)setAvatars(()=>{const merged=new Map<string,Avatar>(avatarCatalog.map(a=>[a.avatar_id,a]));for(const a of items)if(a?.avatar_id)merged.set(a.avatar_id,a);return Array.from(merged.values())})}).catch(()=>{/* Curated avatar catalog remains available if the old gallery endpoint is down. */});
   return ()=>{mounted=false;off()};
  },[]);
  const openAvatars=async()=>{
@@ -68,7 +68,7 @@ export default function Profile(){
   if(!avatars.length)setAvatars(avatarCatalog);
   try{
    const items=await api<Avatar[]>("/avatars");
-   if(Array.isArray(items)&&items.length)setAvatars(previous=>{const merged=new Map(avatarCatalog.map(a=>[a.avatar_id,a]));for(const a of items)if(a?.avatar_id)merged.set(a.avatar_id,a);return Array.from(merged.values())});
+   if(Array.isArray(items)&&items.length)setAvatars(()=>{const merged=new Map<string,Avatar>(avatarCatalog.map(a=>[a.avatar_id,a]));for(const a of items)if(a?.avatar_id)merged.set(a.avatar_id,a);return Array.from(merged.values())});
   }catch{/* The previous Apps Script gallery can fail; do not hide valid avatar choices. */}
   finally{setAvatarLoading(false)}
  };
