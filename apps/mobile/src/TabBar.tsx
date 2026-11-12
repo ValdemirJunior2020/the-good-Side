@@ -5,8 +5,11 @@ import {LinearGradient} from "expo-linear-gradient";
 import {BlurView} from "expo-blur";
 import {colors} from "./theme";
 import {House,Compass,ChefHat,Heart,UserRound} from "lucide-react-native";
+import LuxuryIcon from "./LuxuryIcon";
 const tabs:[string,string][]=[["Home","/"],["Discover","/search"],["Food","/food"],["Saved","/saved"],["You","/profile"]];
 const icons={Home:House,Discover:Compass,Food:ChefHat,Saved:Heart,You:UserRound};
+const tones={Home:"sun",Discover:"sky",Food:"mint",Saved:"rose",You:"peach"} as const;
+const pigments={Home:"#9C5D17",Discover:"#326CA9",Food:"#297E64",Saved:"#B64F7D",You:"#9C5425"};
 export default function TabBar(){
  const path=usePathname();
  return <View pointerEvents="box-none" style={styles.outer}>
@@ -17,7 +20,7 @@ export default function TabBar(){
     const IconComponent=icons[name as keyof typeof icons];
     return <TouchableOpacity key={name} accessibilityRole="tab" accessibilityLabel={name} accessibilityState={{selected:active}} onPress={()=>{if(!active)router.push(href as any)}} style={[styles.item,active&&styles.activeItem]} activeOpacity={.8}>
      {active?<LinearGradient colors={["#FFE7B1","#F4AA4D"]} style={StyleSheet.absoluteFill} pointerEvents="none"/>:null}
-     <IconComponent size={26} color={active?"#B75D15":"#332832"} strokeWidth={2.1}/>
+     <LuxuryIcon size={38} tone={tones[name as keyof typeof tones]}><IconComponent size={23} color={pigments[name as keyof typeof pigments]} strokeWidth={2.2}/></LuxuryIcon>
      <Text style={[styles.label,active&&{color:"#A34A0F",fontWeight:"900"}]}>{name}</Text>
     </TouchableOpacity>;
    })}
@@ -26,8 +29,8 @@ export default function TabBar(){
 }
 const styles=StyleSheet.create({
  outer:{position:"absolute",left:13,right:13,bottom:Platform.OS==="ios"?25:13,zIndex:30},
- container:{flexDirection:"row",borderRadius:44,minHeight:71,padding:5,backgroundColor:"rgba(255,246,243,.84)",borderWidth:1.5,borderColor:"rgba(255,255,255,.98)",overflow:"hidden",shadowColor:"#975C6C",shadowOpacity:.17,shadowRadius:21,shadowOffset:{width:0,height:10},elevation:8},
- item:{flex:1,alignItems:"center",justifyContent:"center",borderRadius:38,overflow:"hidden",paddingVertical:7,gap:1},
+ container:{flexDirection:"row",borderRadius:44,minHeight:86,padding:5,backgroundColor:"rgba(255,246,243,.84)",borderWidth:1.5,borderColor:"rgba(255,255,255,.98)",overflow:"hidden",shadowColor:"#975C6C",shadowOpacity:.17,shadowRadius:21,shadowOffset:{width:0,height:10},elevation:8},
+ item:{flex:1,alignItems:"center",justifyContent:"center",borderRadius:38,overflow:"visible",paddingVertical:5,gap:3},
  activeItem:{borderWidth:1,borderColor:"rgba(255,255,255,.93)"},
  icon:{fontSize:29,color:colors.ink,fontWeight:"400"},
  label:{fontSize:11.5,fontWeight:"600",color:colors.ink},
