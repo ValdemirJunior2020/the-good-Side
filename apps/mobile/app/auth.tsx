@@ -9,9 +9,18 @@ import {emailAuth} from "../src/emailAuth";
 import {getPublicSettings,syncManagedProfile} from "../src/remoteConfig";
 import {Background,Brand,Pill,Surface,GoodSideLoader,styles} from "../src/components";
 import {colors} from "../src/theme";
+import Svg,{Path} from "react-native-svg";
 
 WebBrowser.maybeCompleteAuthSession();
 const ink="#301E2C";
+function GoogleGLogo(){
+ return <Svg width={22} height={22} viewBox="0 0 24 24" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+  <Path fill="#4285F4" d="M21.35 11.1H12v3.8h5.35c-.23 1.21-.92 2.23-1.96 2.91v2.42h3.17c1.85-1.7 2.92-4.2 2.92-7.18 0-.7-.06-1.37-.13-2.03Z"/>
+  <Path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.61-2.45l-3.17-2.45c-.88.59-2 .94-3.44.94-2.64 0-4.88-1.78-5.68-4.17H3.05v2.51C4.69 19.64 8.08 22 12 22Z"/>
+  <Path fill="#FBBC05" d="M6.32 13.87A5.99 5.99 0 0 1 6 12c0-.65.11-1.28.32-1.87V7.62H3.05A9.95 9.95 0 0 0 2 12c0 1.61.39 3.13 1.05 4.38l3.27-2.51Z"/>
+  <Path fill="#EA4335" d="M12 5.96c1.48 0 2.8.51 3.85 1.52l2.88-2.88C16.98 2.96 14.72 2 12 2 8.08 2 4.69 4.36 3.05 7.62l3.27 2.51c.8-2.39 3.04-4.17 5.68-4.17Z"/>
+ </Svg>;
+}
 function GoogleButton(){
  const [error,setError]=useState(""),[busy,setBusy]=useState(false);
  const [request,response,promptAsync]=Google.useIdTokenAuthRequest({
@@ -35,7 +44,17 @@ function GoogleButton(){
   })().catch(async e=>{await auth.signOut();setError(String(e))}).finally(()=>setBusy(false));
  },[response]);
  return <View style={{marginTop:14}}>
-  <Pill title={busy?"Signing in…":"Continue with Google"} disabled={busy||!request} onPress={()=>{setError("");if(!request){setError("Google OAuth isn't configured for this device.");return}void promptAsync()}}/>
+  <TouchableOpacity
+   accessibilityRole="button"
+   accessibilityLabel="Continue with Google"
+   accessibilityState={{disabled:busy||!request,busy}}
+   activeOpacity={0.86}
+   disabled={busy||!request}
+   onPress={()=>{setError("");if(!request){setError("Google OAuth isn't configured for this device.");return}void promptAsync()}}
+   style={[sx.googleButton,(busy||!request)&&{opacity:.58}]}>
+   <View pointerEvents="none" style={sx.googleIcon}><GoogleGLogo/></View>
+   <Text style={sx.googleButtonText}>{busy?"Connecting to Google…":"Continue with Google"}</Text>
+  </TouchableOpacity>
   {busy?<GoodSideLoader compact label="Connecting securely…"/>:null}
   {error?<Text style={sx.error}>{error}</Text>:null}
  </View>;
@@ -119,6 +138,10 @@ export default function SignIn(){
  </ScrollView></KeyboardAvoidingView></Background>;
 }
 const sx=StyleSheet.create({
+ googleButton:{minHeight:56,marginTop:2,borderRadius:19,backgroundColor:"#FFFFFF",borderWidth:1.2,borderColor:"#E8D5CB",flexDirection:"row",alignItems:"center",justifyContent:"center",paddingHorizontal:52,shadowColor:"#9B6A53",shadowOpacity:.13,shadowRadius:12,shadowOffset:{width:0,height:5},elevation:3},
+ googleIcon:{position:"absolute",left:20,top:0,bottom:0,justifyContent:"center",alignItems:"center",width:24},
+ googleButtonText:{fontSize:15.5,fontWeight:"700",color:"#332830",textAlign:"center"},
+
  tab:{flex:1,paddingVertical:12,alignItems:"center",borderRadius:19,backgroundColor:"rgba(255,255,255,.64)",borderWidth:1,borderColor:"#fff"},
  tabActive:{backgroundColor:"#F9CAA7",borderColor:"#E7A878"},
  label:{color:ink,fontSize:14,fontWeight:"800",marginBottom:7},
