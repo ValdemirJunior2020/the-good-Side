@@ -135,7 +135,7 @@ export default function Profile(){
      [<Crown size={25} color="#A45B2A"/>,"Subscription",()=>Alert.alert("Free account","The Good Side currently has free access. No paid subscription is configured.")]
     ] as const).map(([icon,label,onPress])=><TouchableOpacity key={label} accessibilityRole="button" onPress={onPress} activeOpacity={.78} style={ui.quickCard}>
       <LinearGradient colors={["rgba(255,255,255,.78)","rgba(253,214,199,.62)","rgba(237,203,232,.72)"]} style={StyleSheet.absoluteFill}/>
-      <LuxuryIcon size={49} tone={label==="Profile Info"?"peach":label==="Connected Apps"?"violet":"sun"}>{icon}</LuxuryIcon><Text style={ui.quickText}>{label}</Text>
+      <LuxuryIcon size={38} tone={label==="Profile Info"?"peach":label==="Connected Apps"?"violet":"sun"}>{icon}</LuxuryIcon><Text style={ui.quickText}>{label}</Text>
     </TouchableOpacity>)}
    </View>
    <Section symbol={<Sparkles size={23} color={gold}/>} title="Personalization">
@@ -187,7 +187,7 @@ export default function Profile(){
 }
 const ui=StyleSheet.create({
  sunrise:{position:"absolute",top:0,left:0,right:0,bottom:0},
- page:{paddingHorizontal:20,paddingTop:66,paddingBottom:168},
+ page:{paddingHorizontal:18,paddingTop:66,paddingBottom:168,width:"100%",maxWidth:550,alignSelf:"center"},
  topRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
  back:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:8,paddingVertical:7,paddingRight:16},backText:{fontSize:17,color:ink,fontWeight:"600"},
  brand:{marginTop:4,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8},brandSunBadge:{width:46,height:46,borderRadius:25,overflow:"hidden",justifyContent:"center",alignItems:"center",shadowColor:"#EC952A",shadowRadius:14,shadowOpacity:.33},
@@ -200,11 +200,11 @@ const ui=StyleSheet.create({
  nameRow:{flexDirection:"row",alignItems:"center",gap:12,marginTop:10},personName:{fontSize:32,color:ink,fontWeight:"900",letterSpacing:-.6},
  heroHint:{fontSize:12,color:"#58434E",marginTop:3},
  glass:{borderWidth:1.5,borderColor:"rgba(255,255,255,.94)",backgroundColor:"rgba(255,255,255,.34)",borderRadius:25,overflow:"hidden",shadowColor:"#79505E",shadowOpacity:.19,shadowRadius:19,shadowOffset:{width:0,height:8},elevation:4},
- quickGrid:{flexDirection:"row",gap:8},
- quickCard:{flex:1,borderRadius:24,minHeight:101,borderWidth:1.5,borderColor:"rgba(255,255,255,.97)",alignItems:"center",justifyContent:"center",overflow:"hidden",paddingHorizontal:3,paddingVertical:11,shadowColor:"#71403B",shadowOpacity:.18,shadowRadius:20,shadowOffset:{width:0,height:9}},
+ quickGrid:{flexDirection:"row",gap:7},
+ quickCard:{flex:1,borderRadius:23,minHeight:83,borderWidth:1.5,borderColor:"rgba(255,255,255,.97)",alignItems:"center",justifyContent:"center",overflow:"hidden",paddingHorizontal:3,paddingVertical:8,shadowColor:"#71403B",shadowOpacity:.18,shadowRadius:20,shadowOffset:{width:0,height:9}},
  quickIconBadge:{height:45,width:45,borderRadius:15,backgroundColor:"rgba(255,226,171,.74)",borderColor:"rgba(255,255,255,.87)",borderWidth:1,alignItems:"center",justifyContent:"center",marginBottom:10,shadowColor:"#BC6F41",shadowOpacity:.2,shadowRadius:12,shadowOffset:{width:0,height:5}},
  quickIcon:{alignItems:"center",justifyContent:"center"},
- quickText:{fontSize:12.5,fontWeight:"800",color:ink,textAlign:"center",marginTop:9},
+ quickText:{fontSize:11.5,fontWeight:"800",color:ink,textAlign:"center",marginTop:5,lineHeight:14},
  sectionHeader:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:5},
  sectionIcon:{width:27,height:30,justifyContent:"center",alignItems:"center"},sectionTitle:{fontSize:22,fontWeight:"900",color:ink,letterSpacing:-.7},
  menuRow:{flexDirection:"row",alignItems:"center",minHeight:55,gap:12},
