@@ -60,7 +60,7 @@ function signedIn(){
  renderProfile();renderDiscover();void activateView("discover");
 }
 function signedOut(){
- show($("workspace"),false);show($("auth-screen"));setAuthMode("signup");
+ show($("workspace"),false);show($("auth-screen"));setAuthMode(state.signupEnabled?"signup":"login");
 }
 async function registerProfile(){
  if(!state.session)return;
