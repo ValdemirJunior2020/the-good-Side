@@ -54,6 +54,15 @@ export function Management({token}:{token:string}){
   await call("users",{method:"PUT",body:JSON.stringify({user_id:selected.user_id,clear_avatar:true})});
   setCustomUrl("");await reload("users");
  });
+ const sendRecovery=()=>run(async()=>{
+  if(!selected?.user_id.startsWith("supabase:"))throw Error("Password recovery is for email accounts. Google users recover access through Google.");
+  if(!selected.email||!window.confirm("Email password reset instructions to "+selected.email+"?"))return;
+  const url="https://tqdqekxvisgmotibjiwb.supabase.co/auth/v1/recover?redirect_to="+encodeURIComponent("https://the-good-side-command-center.netlify.app/reset-password.html");
+  const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json",apikey:"sb_publishable_FcW-IRdeyyBEmwxSAZZCXA_1T0qJIzo"},body:JSON.stringify({email:selected.email})});
+  const body=await response.json().catch(()=>({})) as {msg?:string;message?:string;error?:string};
+  if(!response.ok)throw Error(body.msg||body.message||body.error||"Could not send password recovery email");
+  setNotice("Password recovery email requested. The user must complete the reset themselves.");
+ });
  const saveAvatar=()=>run(async()=>{
   if(!avatarForm.avatar_id||!avatarForm.label.trim()||!avatarForm.image_url.startsWith("https://"))throw Error("Provide ID, label and HTTPS image URL");
   await call("avatars",{method:"POST",body:JSON.stringify({...avatarForm,sort_order:Number(avatarForm.sort_order)||100})});
@@ -89,7 +98,8 @@ export function Management({token}:{token:string}){
      {customUrl.startsWith("https://")&&<img src={customUrl} alt="Avatar preview" style={{height:100,width:100,objectFit:"contain",borderRadius:20,background:"#fff"}}/>}
      <p className="hint">Only this member's profile picture is changed. The shared avatar gallery is unaffected.</p>
      <div className="actions"><button disabled={busy||!customUrl.trim()} onClick={assign}>Assign avatar URL</button>
-      <button className="soft" disabled={busy} onClick={clear}>Clear custom avatar</button></div>
+      <button className="soft" disabled={busy} onClick={clear}>Clear custom avatar</button>
+      {selected.user_id.startsWith("supabase:")&&<button className="soft" disabled={busy} onClick={sendRecovery}>Send password reset email</button>}</div>
     </div>}
    </section>
   </>}
@@ -112,7 +122,7 @@ export function Management({token}:{token:string}){
    </div>
   </>}
   {section==="settings"&&<>
-   <div className="panel form-panel"><h3>App presentation settings</h3><p className="hint">These are controlled settings, not raw database access. Existing user preferences are not overwritten.</p>
+   <div className="panel form-panel"><h3>App presentation settings</h3><p className="hint">These are controlled settings, not raw database access. Existing user preferences are not overwritten.</p><div className="notice"><strong>Email account readiness:</strong> Email sign-up and the password-reset page are implemented. Before opening registration to the public, configure an SMTP provider and allow the hosted confirmation/reset URL in Supabase Authentication → URL Configuration. The built-in Supabase email sender cannot deliver to arbitrary addresses.</div>
     {settings.map(item=><div key={item.key} style={{padding:"16px 0",borderBottom:"1px solid #e8d8da"}}>
      <label>{item.key.replace(/_/g," ")}<input value={changes[item.key]??item.value} onChange={e=>setChanges({...changes,[item.key]:e.target.value})}/></label>
      <p className="hint">{explanations[item.key]||"Configuration"} </p>
