@@ -4,6 +4,7 @@ import {View,TouchableOpacity,StyleSheet} from "react-native";
 import {Drawer} from "expo-router/drawer";
 import {StatusBar} from "expo-status-bar";
 import {SafeAreaProvider} from "react-native-safe-area-context";
+import {GestureHandlerRootView} from "react-native-gesture-handler";
 import {Menu} from "lucide-react-native";
 import * as Notifications from "expo-notifications";
 import TabBar from "../src/TabBar";
@@ -19,7 +20,7 @@ Notifications.setNotificationHandler({handleNotification:async(notification)=>({
 const screens=["index","search","food","saved","profile","auth","categories","preferences","notifications","menu","article/[id]","recipe/[id]"] as const;
 
 export default function Root(){
- return <SafeAreaProvider>
+ return <GestureHandlerRootView style={{flex:1}}><SafeAreaProvider>
   <StatusBar style="dark"/>
   <View style={{flex:1}}>
    <Drawer
@@ -46,7 +47,7 @@ export default function Root(){
    </Drawer>
    <TabBar/>
   </View>
- </SafeAreaProvider>;
+ </SafeAreaProvider></GestureHandlerRootView>;
 }
 const styles=StyleSheet.create({
  menu:{height:45,width:49,backgroundColor:"rgba(255,255,255,.8)",borderColor:"rgba(255,255,255,.98)",borderWidth:1.4,borderRadius:15,alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.15,shadowRadius:12,shadowOffset:{width:0,height:6},elevation:6}
