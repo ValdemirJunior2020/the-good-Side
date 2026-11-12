@@ -1,5 +1,6 @@
 import React,{useEffect,useState} from "react";
 import {Text,ScrollView,TouchableOpacity,Platform,View} from "react-native";
+import Constants from "expo-constants";
 import {router} from "expo-router";
 import * as Google from "expo-auth-session/providers/google";
 import {api,auth,json} from "../src/client";
@@ -35,6 +36,7 @@ export default function SignIn(){
  const iosId=process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
  const androidId=process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
  const configured=Platform.OS==="ios"?Boolean(iosId):Platform.OS==="android"?Boolean(androidId):Boolean(webId);
- if(configured)return <GoogleSignIn/>;
- return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><TouchableOpacity onPress={()=>router.back()}><Text style={{color:colors.ink}}>← Back</Text></TouchableOpacity></View><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:12}]}>Set up Google login</Text><Surface><Text style={styles.subtitle}>Google login is not ready for this device. On iPhone, create an iOS OAuth client with bundle ID com.thegoodside.app and add EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID to apps/mobile/.env. Restart Expo after updating the file. To test native Google login reliably, use an EAS development build instead of Expo Go. Firebase is not used.</Text></Surface><Pill title="Browse good news as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
+ const expoGo=Constants.appOwnership==="expo";
+ if(configured&&!expoGo)return <GoogleSignIn/>;
+ return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><TouchableOpacity onPress={()=>router.back()}><Text style={{color:colors.ink}}>← Back</Text></TouchableOpacity></View><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:12}]}>Set up Google login</Text><Surface><Text style={styles.subtitle}>{expoGo?"Google sign-in cannot finish inside Expo Go, even if the Client IDs are configured. Install an EAS development build to use your app-specific OAuth redirect. You can browse all good news as a guest now.": "Google login needs a valid iOS OAuth client ID. Add EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID for bundle ID com.thegoodside.app to apps/mobile/.env and restart the development build. We do not use Firebase."}</Text></Surface><Pill title="Browse good news as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
 }
