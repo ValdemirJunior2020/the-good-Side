@@ -32,14 +32,14 @@ export default function TabBar(){
 }
 const styles=StyleSheet.create({
  outer:{position:"absolute",left:12,right:12,zIndex:30},
- dock:{height:104,flexDirection:"row",alignItems:"center",paddingHorizontal:5,
+ dock:{height:90,flexDirection:"row",alignItems:"center",paddingHorizontal:5,
   backgroundColor:"#FFFAF7",borderRadius:33,borderWidth:1.5,borderColor:"#FFFFFF",
   shadowColor:"#785C70",shadowOpacity:.19,shadowRadius:18,shadowOffset:{width:0,height:7},elevation:10},
- tab:{flex:1,minWidth:0,height:92,alignItems:"center",justifyContent:"center",
+ tab:{flex:1,minWidth:0,height:78,alignItems:"center",justifyContent:"center",
   borderRadius:26,paddingTop:2,paddingBottom:5},
  selected:{backgroundColor:"#FFE9D3"},
- icon:{width:62,height:62},
- youIcon:{width:76,height:66},
+ icon:{width:49,height:49},
+ youIcon:{width:55,height:53},
  text:{fontSize:11,fontWeight:"700",color:"#382B37",textAlign:"center",marginTop:1},
  activeText:{fontWeight:"900",color:"#9D4E2C"}
 });
