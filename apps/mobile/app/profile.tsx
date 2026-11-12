@@ -165,7 +165,7 @@ export default function Profile(){
     <MenuRow icon={<BookOpen size={22} color={gold}/>} label="Reading History" last onPress={()=>Alert.alert("Reading history","Reading history is not available in this version yet. Your saved stories are available above.")}/>
    </Section>
    <Section symbol={<ShieldCheck size={23} color={gold}/>} title="Data & Security">
-    <MenuRow icon={<Lock size={22} color={gold}/>} label="Security & Privacy" onPress={()=>Alert.alert("Security & Privacy","The Good Side offers Google or email sign-in. Email passwords are managed by Supabase Auth. Privacy Policy and Terms links will be added when available.")}/>
+    <MenuRow icon={<Lock size={22} color={gold}/>} label="Privacy Policy" onPress={()=>void Linking.openURL("https://thegoodsidenews.com/privacy.html")}/><MenuRow icon={<ShieldCheck size={22} color={gold}/>} label="Terms of Use" onPress={()=>void Linking.openURL("https://thegoodsidenews.com/terms.html")}/><MenuRow icon={<Trash2 size={22} color={gold}/>} label="Account deletion help" onPress={()=>void Linking.openURL("https://thegoodsidenews.com/delete-account.html")}/>
     <MenuRow icon={<Download size={22} color={gold}/>} label="My Data Export" last onPress={()=>signedIn?void exportData():go("/auth")}/>
    </Section>
    <View style={ui.footer}>
