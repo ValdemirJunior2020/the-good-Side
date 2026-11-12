@@ -424,5 +424,7 @@ async function start(){
   signedIn()
  }catch{state.session=null;persist();signedOut()}
 }
+const prefilledEmail=new URLSearchParams(location.search).get("email");
+if(prefilledEmail&&prefilledEmail.length<=254)document.getElementById("auth-email").value=prefilledEmail;
 void loadPublicSettings();
 void start();
