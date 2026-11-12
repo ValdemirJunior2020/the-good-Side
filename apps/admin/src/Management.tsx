@@ -33,7 +33,7 @@ export function Management({token}:{token:string}){
  const reload=async(which=section)=>{
   setLoading(true);setError("");
   try{
-   if(which==="users"){const d=await call<{users:Member[];overrides:Override[]}>("users");setMembers(d.users);setOverrides(d.overrides)}
+   if(which==="users"){const [d,aa]=await Promise.all([call<{users:Member[];overrides:Override[]}>("users"),call<Avatar[]>("avatars")]);setMembers(d.users);setOverrides(d.overrides);setAvatars(aa)}
    if(which==="avatars")setAvatars(await call<Avatar[]>("avatars"));
    if(which==="settings"){const d=await call<Setting[]>("settings");setSettings(d);setChanges(Object.fromEntries(d.map(x=>[x.key,x.value])))}
    if(which==="audit")setAudit(await call<Audit[]>("audit"));
@@ -84,7 +84,8 @@ export function Management({token}:{token:string}){
      <option value="">Select a user</option>{users.map(u=><option key={u.user_id} value={u.user_id}>{u.display_name||"Member"} · {u.email||u.user_id}</option>)}
     </select></label>
     {selected&&<div className="source-preview"><strong>{selected.display_name||selected.email}</strong><p className="hint">Account: {selected.user_id}</p><p>{selected.email}</p>
-     <label>Custom avatar URL for this user<input type="url" value={customUrl} onChange={e=>setCustomUrl(e.target.value)} placeholder="https://example.com/avatar.png"/></label>
+     <label>Choose an existing avatar<select value={selectedAvatar} onChange={e=>{const value=e.target.value;setSelectedAvatar(value);if(value)setCustomUrl(avatars.find(a=>a.avatar_id===value)?.image_url||"")}}><option value="">Custom URL / choose one below</option>{avatars.filter(a=>a.active).map(a=><option key={a.avatar_id} value={a.avatar_id}>{a.label}</option>)}</select></label>
+     <label>Custom avatar URL for this user<input type="url" value={customUrl} onChange={e=>{setCustomUrl(e.target.value);setSelectedAvatar("")}} placeholder="https://example.com/avatar.png"/></label>
      {customUrl.startsWith("https://")&&<img src={customUrl} alt="Avatar preview" style={{height:100,width:100,objectFit:"contain",borderRadius:20,background:"#fff"}}/>}
      <p className="hint">Only this member's profile picture is changed. The shared avatar gallery is unaffected.</p>
      <div className="actions"><button disabled={busy||!customUrl.trim()} onClick={assign}>Assign avatar URL</button>
