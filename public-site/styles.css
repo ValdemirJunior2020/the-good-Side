@@ -169,3 +169,31 @@ body:has(.news-shell) .news-shell::after { display:none; }
 @media (max-width:650px) {
   body:has(.news-shell) .news-shell { padding-left:19px; padding-right:19px; }
 }
+
+
+/* Live source-headline collection: subtle clipping-paper editorial style */
+body:has(.news-shell) .rss-section{
+ margin:26px 0 30px;
+ padding:15px 19px 10px;
+ background:linear-gradient(130deg,rgba(252,243,220,.76),rgba(234,214,183,.4));
+ border:1px solid rgba(139,105,64,.38);
+ border-left:4px solid #b47e53;
+ box-shadow:1px 4px 13px rgba(88,63,44,.08);
+}
+body:has(.news-shell) .rss-section .section-rule-heading{margin:0;gap:6px}
+body:has(.news-shell) .rss-section .section-rule-heading h2{font:800 14px system-ui,sans-serif;letter-spacing:1px;margin:0}
+.rss-source-label{font:600 10px system-ui,sans-serif;color:#805c4c;white-space:nowrap}
+.rss-intro{font:12px/1.6 system-ui,sans-serif;color:#675244;margin:7px 0 17px}
+.rss-headlines{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:20px}
+.rss-item{border-top:1px solid rgba(136,102,73,.26);padding:13px 0 15px}
+.rss-title{display:block;font:bold 18px/1.2 Georgia,"Times New Roman",serif;color:#342922}
+.rss-title:hover{text-decoration:underline;text-decoration-color:#b66e4a;text-underline-offset:4px}
+.rss-item-meta{margin-top:7px;font:700 10px system-ui,sans-serif;letter-spacing:.55px;color:#a05c3d}
+.rss-footer{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rss-footer a{font:700 11px system-ui,sans-serif;color:#9d5a3d}
+.rss-footer .refresh-link{margin:5px 0 7px}
+@media(max-width:650px){
+ .rss-headlines{grid-template-columns:1fr}
+ .rss-source-label{display:none}
+ .rss-title{font-size:17px}
+}
