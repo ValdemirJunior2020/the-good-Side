@@ -5,7 +5,7 @@ import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import{api,auth,put}from"../src/client";
-import{Background,Pill,Surface,styles}from"../src/components";
+import{Background,Pill,Surface,GoodSideLoader,styles}from"../src/components";
 import{colors,categories}from"../src/theme";
 type Frequency="daily"|"twice_daily"|"three_daily"|"selected_weekdays"|"breaking_only"|"digest_plus_alerts";
 type Pref={
@@ -95,13 +95,14 @@ export default function Preferences(){
     </View>
    </View>
   </Surface>
-  <Surface style={{marginBottom:14}}><Text style={styles.label}>Your quiet time</Text><Text style={styles.muted}>No alerts during these hours, including food and special news.</Text><View style={{flexDirection:"row",gap:10,marginTop:14}}>{(["quiet_hours_start","quiet_hours_end"]as const).map((key,i)=><View key={key} style={{flex:1}}><Text style={styles.muted}>{i===0?"From":"Until"}</Text><TextInput accessibilityLabel={i===0?"Quiet hours start":"Quiet hours end"} maxLength={5} style={styles.input} value={p[key]} onChangeText={v=>set(key,v)}/></View>)}</View>
+  <Surface style={{marginBottom:14}}><Text style={styles.label}>Your quiet time</Text><Text style={styles.muted}>No alerts during these hours, including food and special news.</Text><View style={{flexDirection:"row",gap:10,marginTop:14}}>{(["quiet_hours_start","quiet_hours_end"]as const).map((key,i)=><View key={key} style={{flex:1}}><Text style={styles.muted}>{i===0?"From":"Until"}</Text><TextInput accessibilityLabel={i===0?"Quiet hours start":"Quiet hours end"} maxLength={5} style={styles.input} selectionColor="#B96F39" cursorColor="#B96F39" value={p[key]} onChangeText={v=>set(key,v)}/></View>)}</View>
    {switchRow("Include weekends","weekend_enabled")}<Text style={[styles.muted,{marginTop:10}]}>Selected weekdays</Text><View style={{flexDirection:"row",flexWrap:"wrap",marginTop:8}}>{weekdays.map((d,i)=><React.Fragment key={d}>{choice(d,days.includes(i),()=>set("notification_weekdays",days.includes(i)?days.filter(x=>x!==i):[...days,i]))}</React.Fragment>)}</View>
   </Surface>
   <Surface style={{marginBottom:14}}><Text style={styles.label}>Extra good things</Text>{switchRow("Food & Recipes alerts","food_notifications_enabled")}{switchRow("Breaking positive news","breaking_alerts_enabled")}{switchRow("Play notification sound","notification_sound_enabled")}<TouchableOpacity accessibilityRole="button" onPress={previewSound} style={{padding:13,backgroundColor:"rgba(255,255,255,.85)",borderRadius:16,marginVertical:8}}><Text style={{fontWeight:"800",color:colors.ink}}>♫ Preview notification sound</Text></TouchableOpacity><Text style={styles.muted}>Your signature ding plays after it is bundled in an EAS build. iPhone silent mode and Focus settings are respected.</Text></Surface>
   <Surface style={{marginBottom:14}}><Text style={styles.label}>Your interests</Text><View style={{flexDirection:"row",flexWrap:"wrap"}}>{categories.filter((c,i,all)=>all.findIndex(v=>v[1]===c[1])===i).map(([label,id,emoji])=><React.Fragment key={id}>{choice(emoji+" "+label,selected.includes(id),()=>toggleInterest(id))}</React.Fragment>)}</View></Surface>
   <Surface style={{marginBottom:18}}><Text style={styles.label}>Language</Text><View style={{flexDirection:"row",flexWrap:"wrap"}}>{([["English","en"],["Português","pt"],["Español","es"]]as const).map(([label,id])=><React.Fragment key={id}>{choice(label,p.content_language===id,()=>set("content_language",id))}</React.Fragment>)}</View></Surface>
   <Surface style={{marginBottom:16}}><Text style={styles.label}>Next expected notification</Text><Text style={styles.subtitle}>{preview||"Loading..."}</Text><Text style={[styles.muted,{marginTop:6}]}>This preview reflects saved settings. Delivery can be delayed by your device or Apple.</Text></Surface>
-  <Pill title={busy?"Saving…":signedIn?"Save my settings":"Log in to save settings"} disabled={busy} onPress={signedIn?save:()=>router.push("/auth")}/>
+  {busy?<GoodSideLoader label="Saving your preferences…"/>:null}
+   <Pill title={busy?"Saving…":signedIn?"Save my settings":"Log in to save settings"} disabled={busy} onPress={signedIn?save:()=>router.push("/auth")}/>
  </ScrollView></Background>
 }
