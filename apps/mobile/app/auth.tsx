@@ -124,7 +124,15 @@ export default function SignIn(){
    <Text style={[styles.muted,{marginTop:15,fontSize:12,lineHeight:19}]}>Email accounts use secure Supabase Authentication. A verification email may be required before your first login.</Text>
   </Surface>
   <View style={{flexDirection:"row",alignItems:"center",gap:12,marginVertical:6}}><View style={sx.rule}/><Text style={{color:"#6E5865"}}>or</Text><View style={sx.rule}/></View>
-  {googleAvailable?<GoogleButton/>:<Text style={[styles.muted,{marginVertical:12,textAlign:"center"}]}>Google login requires an installed app build on this device. Email sign-up works here, including Expo Go.</Text>}
+  {googleAvailable?<GoogleButton/>:<View style={{marginTop:14}}>
+   <View accessibilityLabel="Google sign-in is unavailable in Expo Go" style={[sx.googleButton,{opacity:.72}]}>
+    <View pointerEvents="none" style={sx.googleIcon}><Image source={require("../assets/google-g.png")} resizeMode="contain" style={{width:22,height:22}}/></View>
+    <Text style={sx.googleButtonText}>Continue with Google</Text>
+   </View>
+   <Text style={[styles.muted,{marginTop:11,textAlign:"center",fontSize:13,lineHeight:20}]}>
+    {Constants.appOwnership==="expo"?"Google sign-in needs an installed iOS development build. Expo Go cannot complete the Google return-to-app step.":"Google sign-in needs a valid iOS Google client ID in this build."}{"\n"}Email sign-in works in Expo Go.
+   </Text>
+  </View>}
   <View style={{marginTop:17}}><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></View>
   <View style={{marginTop:16,flexDirection:"row",justifyContent:"center",gap:16,flexWrap:"wrap"}}><TouchableOpacity accessibilityRole="link" onPress={()=>void WebBrowser.openBrowserAsync("https://thegoodsidenews.com/privacy.html")}><Text style={{fontSize:13,color:"#874F37",textDecorationLine:"underline"}}>Privacy Policy</Text></TouchableOpacity><TouchableOpacity accessibilityRole="link" onPress={()=>void WebBrowser.openBrowserAsync("https://thegoodsidenews.com/terms.html")}><Text style={{fontSize:13,color:"#874F37",textDecorationLine:"underline"}}>Terms of Use</Text></TouchableOpacity></View>
  </ScrollView></KeyboardAvoidingView></Background>;
