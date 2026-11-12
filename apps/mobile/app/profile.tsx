@@ -49,6 +49,7 @@ export default function Profile(){
    else setAvatarId("");
   });
   void auth.restore();
+  api<Avatar[]>("/avatars").then(items=>{if(mounted&&Array.isArray(items))setAvatars(items)}).catch(()=>{});
   return ()=>{mounted=false;off()};
  },[]);
  const openAvatars=async()=>{
