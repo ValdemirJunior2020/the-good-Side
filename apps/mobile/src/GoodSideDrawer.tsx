@@ -4,17 +4,18 @@ import {LinearGradient} from "expo-linear-gradient";
 import {router} from "expo-router";
 import {House,Compass,ChefHat,Heart,UserRound,Settings,SlidersHorizontal,Bell,LogIn,LogOut,Sun,ChevronRight,Bookmark} from "lucide-react-native";
 import {auth,type Session} from "./client";
+import LuxuryIcon from "./LuxuryIcon";
 
 const ink="#251923";
 const menuItems=[
- {label:"Home",route:"/",icon:House,protected:false},
- {label:"Discover Good News",route:"/search",icon:Compass,protected:false},
- {label:"Food & Recipes",route:"/food",icon:ChefHat,protected:false},
- {label:"Saved Stories",route:"/saved",icon:Heart,protected:true},
- {label:"Your Profile",route:"/profile",icon:UserRound,protected:false},
- {label:"Settings & Notifications",route:"/preferences",icon:Settings,protected:true},
- {label:"Interest Tags",route:"/categories",icon:SlidersHorizontal,protected:true},
- {label:"Notification History",route:"/notifications",icon:Bell,protected:true}
+ {label:"Home",route:"/",icon:House,protected:false,tone:"sun"},
+ {label:"Discover Good News",route:"/search",icon:Compass,protected:false,tone:"sky"},
+ {label:"Food & Recipes",route:"/food",icon:ChefHat,protected:false,tone:"mint"},
+ {label:"Saved Stories",route:"/saved",icon:Heart,protected:true,tone:"rose"},
+ {label:"Your Profile",route:"/profile",icon:UserRound,protected:false,tone:"peach"},
+ {label:"Settings & Notifications",route:"/preferences",icon:Settings,protected:true,tone:"violet"},
+ {label:"Interest Tags",route:"/categories",icon:SlidersHorizontal,protected:true,tone:"sky"},
+ {label:"Notification History",route:"/notifications",icon:Bell,protected:true,tone:"peach"}
 ] as const;
 export default function GoodSideDrawer({close}:{close:()=>void}){
  const [session,setSession]=useState<Session|null>(auth.currentUser);
@@ -36,7 +37,7 @@ export default function GoodSideDrawer({close}:{close:()=>void}){
     {menuItems.map(item=>{
      const Icon=item.icon;
      return <TouchableOpacity key={item.route} accessibilityRole="button" accessibilityLabel={item.label} onPress={()=>navigate(item.route,item.protected)} style={styles.line}>
-      <View style={styles.iconWrap}><Icon size={20} color="#A45B2A"/></View>
+      <LuxuryIcon tone={item.tone} size={39}><Icon size={20} color="#87502C" strokeWidth={2.15}/></LuxuryIcon>
       <Text style={styles.lineText}>{item.label}</Text><ChevronRight size={18} color="#64525D"/>
      </TouchableOpacity>;
     })}
