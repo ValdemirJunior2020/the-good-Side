@@ -6,6 +6,7 @@ import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import {api,auth,json} from "../src/client";
 import {emailAuth} from "../src/emailAuth";
+import {getPublicSettings} from "../src/remoteConfig";
 import {Background,Brand,Pill,Surface,styles} from "../src/components";
 import {colors} from "../src/theme";
 
@@ -48,6 +49,8 @@ export default function SignIn(){
  const [mode,setMode]=useState<"register"|"login">("register");
  const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[name,setName]=useState("");
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
+ const [signupEnabled,setSignupEnabled]=useState(true);
+ useEffect(()=>{getPublicSettings().then(settings=>{if(settings.signup_enabled==="false"){setSignupEnabled(false);setMode("login")}}).catch(()=>{})},[]);
  const webId=process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim();
  const iosId=process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
  const androidId=process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
@@ -67,6 +70,7 @@ export default function SignIn(){
   const mail=email.trim().toLowerCase();
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail))return setError("Enter a valid email address.");
   if(password.length<8)return setError("Password must be at least 8 characters.");
+  if(mode==="register"&&!signupEnabled)return setError("New email registrations are temporarily paused.");
   if(mode==="register"&&!name.trim())return setError("Please enter your name.");
   setBusy(true);
   try{
@@ -91,7 +95,7 @@ export default function SignIn(){
   <Text style={[styles.subtitle,{marginTop:10,marginBottom:20}]}>Create a free account with any email address. Google sign-in is still available.</Text>
   <Surface style={{marginBottom:15}}>
    <View style={{flexDirection:"row",gap:8,marginBottom:18}}>
-    {(["register","login"] as const).map(item=><TouchableOpacity key={item} onPress={()=>{setMode(item);setError("");setMessage("")}} style={[sx.tab,mode===item&&sx.tabActive]}>
+    {(signupEnabled?["register","login"] as const:["login"] as const).map(item=><TouchableOpacity key={item} onPress={()=>{setMode(item);setError("");setMessage("")}} style={[sx.tab,mode===item&&sx.tabActive]}>
      <Text style={{color:ink,fontWeight:mode===item?"900":"600"}}>{item==="register"?"Create account":"Log in"}</Text>
     </TouchableOpacity>)}
    </View>
