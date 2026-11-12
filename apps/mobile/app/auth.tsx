@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from "react";
-import {Text,ScrollView,TouchableOpacity} from "react-native";
+import {Text,ScrollView,TouchableOpacity,Platform} from "react-native";
 import {router} from "expo-router";
 import * as Google from "expo-auth-session/providers/google";
 import {api,auth,json} from "../src/client";
@@ -31,7 +31,10 @@ function atobCompat(input:string){
 }
 
 export default function SignIn(){
- const configured=Boolean(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID||process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID||process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
+ const webId=process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim();
+ const iosId=process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
+ const androidId=process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
+ const configured=Platform.OS==="ios"?Boolean(iosId):Platform.OS==="android"?Boolean(androidId):Boolean(webId);
  if(configured)return <GoogleSignIn/>;
- return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><TouchableOpacity onPress={()=>router.back()}><Text>← Back</Text></TouchableOpacity><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:12}]}>Set up Google login</Text><Surface><Text style={styles.subtitle}>Google login is not configured in this build. Add the appropriate Google OAuth client IDs to apps/mobile/.env and restart Expo. Some native Google sign-in flows require an EAS development build rather than Expo Go. Firebase is not used.</Text></Surface><Pill title="Browse good news as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
+ return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><TouchableOpacity onPress={()=>router.back()}><Text>← Back</Text></TouchableOpacity><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:12}]}>Set up Google login</Text><Surface><Text style={styles.subtitle}>Google login is not ready for this device. On iPhone, create an iOS OAuth client with bundle ID com.thegoodside.app and add EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID to apps/mobile/.env. Restart Expo after updating the file. To test native Google login reliably, use an EAS development build instead of Expo Go. Firebase is not used.</Text></Surface><Pill title="Browse good news as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
 }
