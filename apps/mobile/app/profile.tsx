@@ -1,5 +1,3 @@
-import TabBar from "../src/TabBar";
-import AppMenu from "../src/AppMenu";
 import {BlurView} from "expo-blur";
 import React,{useEffect,useState} from "react";
 import {ActivityIndicator,Alert,Image,ImageBackground,Modal,ScrollView,Share,StyleSheet,Text,TextInput,TouchableOpacity,View} from "react-native";
@@ -111,7 +109,7 @@ export default function Profile(){
    <LinearGradient colors={["rgba(255,249,239,.79)","rgba(255,232,210,.03)","rgba(255,224,212,.18)","#F3D5D4"]} locations={[0,.24,.72,1]} style={StyleSheet.absoluteFill}/>
   </ImageBackground>
   <ScrollView contentContainerStyle={ui.page} showsVerticalScrollIndicator={false}>
-   <View style={ui.topRow}><TouchableOpacity accessibilityRole="button" onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={ui.back}><ArrowLeft size={23} color={ink}/><Text style={ui.backText}>Back</Text></TouchableOpacity><AppMenu/></View>
+   <View style={ui.topRow}><TouchableOpacity accessibilityRole="button" onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={ui.back}><ArrowLeft size={23} color={ink}/><Text style={ui.backText}>Back</Text></TouchableOpacity></View>
    <View style={ui.brand}><Sun size={38} color="#F6AE2D" strokeWidth={2.2}/><View><Text style={ui.brandName}>the good side<Text style={{color:"#EA8F28"}}>.</Text></Text><Text style={ui.brandSubtitle}>Your corner of good news.</Text></View></View>
    <View style={ui.hero}>
     <View style={ui.avatarRim}>
@@ -183,12 +181,12 @@ export default function Profile(){
     </View>
    </View>
   </Modal>
-  <TabBar/>
+  
  </LinearGradient>;
 }
 const ui=StyleSheet.create({
  sunrise:{position:"absolute",top:0,left:0,right:0,height:510},
- page:{paddingHorizontal:18,paddingTop:58,paddingBottom:140},
+ page:{paddingHorizontal:18,paddingTop:58,paddingBottom:180},
  topRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
  back:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:8,paddingVertical:7,paddingRight:16},backText:{fontSize:17,color:ink,fontWeight:"600"},
  brand:{marginTop:7,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:9},
