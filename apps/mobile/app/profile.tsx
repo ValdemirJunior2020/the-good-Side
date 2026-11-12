@@ -7,6 +7,7 @@ import {LinearGradient} from "expo-linear-gradient";
 import {router} from "expo-router";
 import {api,auth,put,type Session} from "../src/client";
 import {colors} from "../src/theme";
+import {ArrowLeft,Camera,UserSquare2,Link2,Crown,Bell,SlidersHorizontal,Sparkles,Layers3,ShieldCheck,Bookmark,BookOpen,Lock,Download,LogOut,Headphones,Trash2,ChevronRight,House,Compass,ChefHat,Heart,UserRound,Pencil,Sun} from "lucide-react-native";
 
 const SUNRISE="https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1100&q=85";
 const gold="#B96117";
@@ -16,20 +17,20 @@ type Avatar={avatar_id:string;label:string;image_url:string;credit:string};
 function Glass({children,style}:{children:React.ReactNode;style?:object}){
  return <View style={[ui.glass,style]}><BlurView tint="light" intensity={65} pointerEvents="none" style={StyleSheet.absoluteFill}/><LinearGradient pointerEvents="none" colors={["rgba(255,255,255,.40)","rgba(255,233,219,.25)","rgba(255,221,240,.38)"]} style={StyleSheet.absoluteFill}/>{children}</View>;
 }
-function Section({symbol,title,children}:{symbol:string;title:string;children:React.ReactNode}){
+function Section({symbol,title,children}:{symbol:React.ReactNode;title:string;children:React.ReactNode}){
  return <View style={{marginTop:23}}>
-  <View style={ui.sectionHeader}><Text style={ui.sectionIcon}>{symbol}</Text><Text style={ui.sectionTitle}>{title}</Text></View>
+  <View style={ui.sectionHeader}><View style={ui.sectionIcon}><LinearGradient colors={["#FFF6D9","#FFD69D","#F3B570"]} style={ui.goldIcon}>{symbol}</LinearGradient></View><Text style={ui.sectionTitle}>{title}</Text></View>
   <Glass style={{paddingVertical:0,paddingHorizontal:15}}>{children}</Glass>
  </View>;
 }
-function MenuRow({icon,label,onPress,last=false,disabled=false}:{icon:string;label:string;onPress:()=>void;last?:boolean;disabled?:boolean}){
+function MenuRow({icon,label,onPress,last=false,disabled=false}:{icon:React.ReactNode;label:string;onPress:()=>void;last?:boolean;disabled?:boolean}){
  return <TouchableOpacity accessibilityRole="button" accessibilityLabel={label} disabled={disabled} activeOpacity={.75} onPress={onPress} style={[ui.menuRow,!last&&ui.rowBorder,disabled&&{opacity:.45}]}>
-  <View style={ui.menuIconBadge}><Text style={ui.menuIcon}>{icon}</Text></View><Text style={ui.menuLabel}>{label}</Text><Text style={ui.arrow}>›</Text>
+  <View style={ui.menuIconBadge}><View style={ui.menuIcon}>{icon}</View></View><Text style={ui.menuLabel}>{label}</Text><ChevronRight size={22} color="#443741"/>
  </TouchableOpacity>;
 }
-function Action({label,onPress,danger=false,disabled=false}:{label:string;onPress:()=>void;danger?:boolean;disabled?:boolean}){
+function Action({label,onPress,danger=false,disabled=false,icon}:{label:string;onPress:()=>void;danger?:boolean;disabled?:boolean;icon?:React.ReactNode}){
  return <TouchableOpacity accessibilityRole="button" disabled={disabled} activeOpacity={.75} onPress={onPress} style={[ui.pill,danger&&ui.dangerPill,disabled&&{opacity:.55}]}>
-  <Text style={[ui.pillText,danger&&{color:"#BE302C"}]}>{label}</Text>
+  {icon}<Text style={[ui.pillText,danger&&{color:"#BE302C"}]}>{label}</Text>
  </TouchableOpacity>;
 }
 export default function Profile(){
@@ -110,16 +111,16 @@ export default function Profile(){
    <LinearGradient colors={["rgba(255,249,239,.79)","rgba(255,232,210,.03)","rgba(255,224,212,.18)","#F3D5D4"]} locations={[0,.24,.72,1]} style={StyleSheet.absoluteFill}/>
   </ImageBackground>
   <ScrollView contentContainerStyle={ui.page} showsVerticalScrollIndicator={false}>
-   <View style={ui.topRow}><TouchableOpacity accessibilityRole="button" onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={ui.back}><Text style={ui.backText}>‹  Back</Text></TouchableOpacity><AppMenu/></View>
-   <View style={ui.brand}><Text style={ui.brandSun}>☀️</Text><View><Text style={ui.brandName}>the good side<Text style={{color:"#EA8F28"}}>.</Text></Text><Text style={ui.brandSubtitle}>Your corner of good news.</Text></View></View>
+   <View style={ui.topRow}><TouchableOpacity accessibilityRole="button" onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={ui.back}><ArrowLeft size={23} color={ink}/><Text style={ui.backText}>Back</Text></TouchableOpacity><AppMenu/></View>
+   <View style={ui.brand}><Sun size={38} color="#F6AE2D" strokeWidth={2.2}/><View><Text style={ui.brandName}>the good side<Text style={{color:"#EA8F28"}}>.</Text></Text><Text style={ui.brandSubtitle}>Your corner of good news.</Text></View></View>
    <View style={ui.hero}>
     <View style={ui.avatarRim}>
      <ImageBackground source={{uri:avatarUrl}} imageStyle={{borderRadius:110}} style={ui.avatar}>
       <LinearGradient colors={["rgba(255,212,132,.06)","rgba(83,43,86,.25)"]} style={StyleSheet.absoluteFill}/>
      </ImageBackground>
     </View>
-    <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose profile picture" activeOpacity={.75} onPress={()=>void openAvatars()} style={ui.avatarCamera}><Text style={{fontSize:22}}>📷</Text></TouchableOpacity>
-    <View style={ui.nameRow}><Text style={ui.personName}>{signedIn?firstName:"Your corner"}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Edit profile" onPress={()=>signedIn?setEditing(v=>!v):go("/auth")}><Text style={{fontSize:23,color:ink}}>✎</Text></TouchableOpacity></View>
+    <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose profile picture" activeOpacity={.75} onPress={()=>void openAvatars()} style={ui.avatarCamera}><Camera size={20} color={ink}/></TouchableOpacity>
+    <View style={ui.nameRow}><Text style={ui.personName}>{signedIn?firstName:"Your corner"}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Edit profile" onPress={()=>signedIn?setEditing(v=>!v):go("/auth")}><Pencil size={20} color={ink}/></TouchableOpacity></View>
     {!signedIn?<Text style={ui.heroHint}>Create an account to personalize your good news</Text>:null}
    </View>
    {!signedIn?<Glass style={{padding:16,marginBottom:18}}><Text style={ui.authHeading}>Make your corner yours ✨</Text><Text style={ui.authHelper}>Save favorite stories, select an avatar, and personalize notifications.</Text><View style={ui.authRow}><TouchableOpacity accessibilityRole="button" style={ui.authLight} onPress={()=>go("/auth")}><Text style={ui.authText}>Log in</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" style={ui.authGold} onPress={()=>go("/auth")}><LinearGradient pointerEvents="none" colors={["#FFE3BB","#F2AE67"]} style={StyleSheet.absoluteFill}/><Text style={ui.authText}>Sign up free</Text></TouchableOpacity></View></Glass>:null}
@@ -130,35 +131,35 @@ export default function Profile(){
    </Glass>:null}
    <View style={ui.quickGrid}>
     {([
-     ["🪪","Profile Info",()=>signedIn?setEditing(v=>!v):go("/auth")],
-     ["🔗","Connected Apps",()=>Alert.alert("Connected account",signedIn?"Your Google account is used for secure sign-in. No additional connected apps are configured.":"Sign in with Google to connect your account.")],
-     ["👑","Subscription",()=>Alert.alert("Free account","The Good Side currently has free access. No paid subscription is configured.")]
+     [<UserSquare2 size={25} color="#A45B2A"/>,"Profile Info",()=>signedIn?setEditing(v=>!v):go("/auth")],
+     [<Link2 size={25} color="#A45B2A"/>,"Connected Apps",()=>Alert.alert("Connected account",signedIn?"Your Google account is used for secure sign-in. No additional connected apps are configured.":"Sign in with Google to connect your account.")],
+     [<Crown size={25} color="#A45B2A"/>,"Subscription",()=>Alert.alert("Free account","The Good Side currently has free access. No paid subscription is configured.")]
     ] as const).map(([icon,label,onPress])=><TouchableOpacity key={label} accessibilityRole="button" onPress={onPress} activeOpacity={.78} style={ui.quickCard}>
       <LinearGradient colors={["rgba(255,255,255,.78)","rgba(253,214,199,.62)","rgba(237,203,232,.72)"]} style={StyleSheet.absoluteFill}/>
-      <View style={ui.quickIconBadge}><Text style={ui.quickIcon}>{icon}</Text></View><Text style={ui.quickText}>{label}</Text>
+      <View style={ui.quickIconBadge}><View style={ui.quickIcon}>{icon}</View></View><Text style={ui.quickText}>{label}</Text>
     </TouchableOpacity>)}
    </View>
-   <Section symbol="✨" title="Personalization">
-    <MenuRow icon="🔔" label="Preferences & Notifications" onPress={()=>go(signedIn?"/preferences":"/auth")}/>
-    <MenuRow icon="🎚️" label="Interest Tags" last onPress={()=>go(signedIn?"/categories":"/auth")}/>
+   <Section symbol={<Sparkles size={18} color={gold}/>} title="Personalization">
+    <MenuRow icon={<Bell size={22} color={gold}/>} label="Preferences & Notifications" onPress={()=>go(signedIn?"/preferences":"/auth")}/>
+    <MenuRow icon={<SlidersHorizontal size={22} color={gold}/>} label="Interest Tags" last onPress={()=>go(signedIn?"/categories":"/auth")}/>
    </Section>
-   <Section symbol="📚" title="Activity">
-    <MenuRow icon="♡" label="Saved Stories" onPress={()=>go(signedIn?"/saved":"/auth")}/>
-    <MenuRow icon="📖" label="Reading History" last onPress={()=>Alert.alert("Reading history","Reading history is not available in this version yet. Your saved stories are available above.")}/>
+   <Section symbol={<Layers3 size={18} color={gold}/>} title="Activity">
+    <MenuRow icon={<Bookmark size={22} color={gold}/>} label="Saved Stories" onPress={()=>go(signedIn?"/saved":"/auth")}/>
+    <MenuRow icon={<BookOpen size={22} color={gold}/>} label="Reading History" last onPress={()=>Alert.alert("Reading history","Reading history is not available in this version yet. Your saved stories are available above.")}/>
    </Section>
-   <Section symbol="🛡️" title="Data & Security">
-    <MenuRow icon="🔒" label="Security & Privacy" onPress={()=>Alert.alert("Security & Privacy","The Good Side uses Google Sign-In and does not store your Google password. You can delete your app account below.")}/>
-    <MenuRow icon="⇩" label="My Data Export" last onPress={()=>signedIn?void exportData():go("/auth")}/>
+   <Section symbol={<ShieldCheck size={18} color={gold}/>} title="Data & Security">
+    <MenuRow icon={<Lock size={22} color={gold}/>} label="Security & Privacy" onPress={()=>Alert.alert("Security & Privacy","The Good Side uses Google Sign-In and does not store your Google password. You can delete your app account below.")}/>
+    <MenuRow icon={<Download size={22} color={gold}/>} label="My Data Export" last onPress={()=>signedIn?void exportData():go("/auth")}/>
    </Section>
    <View style={ui.footer}>
     {signedIn?<>
-     <Action label="⇥  Sign Out" onPress={async()=>{await auth.signOut();router.replace("/")}}/>
-     <Action label={busy?"Please wait…":"▤  Delete My Account and Data"} danger disabled={busy} onPress={confirmDelete}/>
+     <Action icon={<LogOut size={20} color={ink}/>} label="Sign Out" onPress={async()=>{await auth.signOut();router.replace("/")}}/>
+     <Action icon={<Trash2 size={20} color="#BE302C"/>} label={busy?"Please wait…":"Delete My Account and Data"} danger disabled={busy} onPress={confirmDelete}/>
     </>:<>
      <Action label="Log in with Google" onPress={()=>go("/auth")}/>
      <Action label="Create Free Account" onPress={()=>go("/auth")}/>
     </>}
-    <Action label="☏  Contact Support" onPress={()=>Alert.alert("Contact support","The support contact address has not yet been configured.")}/>
+    <Action icon={<Headphones size={20} color={ink}/>} label="Contact Support" onPress={()=>Alert.alert("Contact support","The support contact address has not yet been configured.")}/>
    </View>
   </ScrollView>
   <Modal visible={avatarPicker} transparent animationType="slide" onRequestClose={()=>setAvatarPicker(false)}>
@@ -189,7 +190,7 @@ const ui=StyleSheet.create({
  sunrise:{position:"absolute",top:0,left:0,right:0,height:510},
  page:{paddingHorizontal:18,paddingTop:58,paddingBottom:140},
  topRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
- back:{alignSelf:"flex-start",paddingVertical:7,paddingRight:16},backText:{fontSize:17,color:ink,fontWeight:"600"},
+ back:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:8,paddingVertical:7,paddingRight:16},backText:{fontSize:17,color:ink,fontWeight:"600"},
  brand:{marginTop:7,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:9},
  brandSun:{fontSize:37},brandName:{fontSize:30,fontWeight:"900",color:ink,letterSpacing:-1.3},
  brandSubtitle:{fontSize:13,color:"#594450",marginTop:1},
@@ -203,18 +204,18 @@ const ui=StyleSheet.create({
  quickGrid:{flexDirection:"row",gap:9},
  quickCard:{flex:1,borderRadius:25,minHeight:116,borderWidth:1.2,borderColor:"rgba(255,255,255,.86)",alignItems:"center",justifyContent:"center",overflow:"hidden",paddingHorizontal:5,paddingVertical:16,shadowColor:"#71403B",shadowOpacity:.13,shadowRadius:22,shadowOffset:{width:0,height:12}},
  quickIconBadge:{height:45,width:45,borderRadius:15,backgroundColor:"rgba(255,226,171,.74)",borderColor:"rgba(255,255,255,.87)",borderWidth:1,alignItems:"center",justifyContent:"center",marginBottom:10,shadowColor:"#BC6F41",shadowOpacity:.2,shadowRadius:12,shadowOffset:{width:0,height:5}},
- quickIcon:{fontSize:28,textShadowColor:"rgba(193,118,72,.3)",textShadowRadius:7},
+ quickIcon:{alignItems:"center",justifyContent:"center"},
  quickText:{fontSize:12.5,fontWeight:"800",color:ink,textAlign:"center"},
  sectionHeader:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:7},
- sectionIcon:{fontSize:25},sectionTitle:{fontSize:23,fontWeight:"900",color:ink,letterSpacing:-.7},
+ sectionIcon:{width:36,height:36},sectionTitle:{fontSize:23,fontWeight:"900",color:ink,letterSpacing:-.7},
  menuRow:{flexDirection:"row",alignItems:"center",minHeight:61,gap:12},
  rowBorder:{borderBottomWidth:1,borderBottomColor:"rgba(163,117,120,.2)"},
  menuIconBadge:{width:39,height:39,backgroundColor:"rgba(255,213,178,.65)",borderRadius:20,alignItems:"center",justifyContent:"center",borderColor:"rgba(255,255,255,.7)",borderWidth:1},
- menuIcon:{fontSize:23,color:gold,textAlign:"center"},
+ menuIcon:{alignItems:"center",justifyContent:"center"},
  menuLabel:{flex:1,fontSize:15.5,fontWeight:"600",color:ink},
  arrow:{fontSize:30,color:ink,fontWeight:"300",marginRight:2},
  footer:{alignItems:"center",marginTop:23,gap:10},
- pill:{minHeight:48,minWidth:"63%",paddingHorizontal:24,paddingVertical:12,borderRadius:50,backgroundColor:"rgba(255,255,255,.38)",borderWidth:1,borderColor:"rgba(255,255,255,.85)",alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.13,shadowRadius:18,shadowOffset:{width:0,height:8}},
+ pill:{minHeight:48,minWidth:"63%",paddingHorizontal:24,paddingVertical:12,borderRadius:50,backgroundColor:"rgba(255,255,255,.38)",borderWidth:1,borderColor:"rgba(255,255,255,.85)",flexDirection:"row",gap:10,alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.13,shadowRadius:18,shadowOffset:{width:0,height:8}},
  dangerPill:{backgroundColor:"rgba(255,232,232,.68)"},
  pillText:{fontSize:15.5,fontWeight:"800",color:ink},
  fieldLabel:{color:ink,fontWeight:"700",marginBottom:9},nameInput:{padding:12,backgroundColor:"#fff",borderRadius:15,borderWidth:1,borderColor:"#F3D2BD",marginBottom:10,color:ink},
@@ -223,6 +224,7 @@ const ui=StyleSheet.create({
  modalTitle:{fontSize:24,color:ink,fontWeight:"900"},
  avatarChoice:{width:"47%",borderWidth:1.5,borderColor:"rgba(255,255,255,.95)",backgroundColor:"rgba(255,255,255,.55)",borderRadius:21,padding:9,marginBottom:14},
  choiceImage:{width:"100%",height:130,borderRadius:15},
+ goldIcon:{width:34,height:34,borderRadius:12,borderColor:"rgba(255,255,255,.9)",borderWidth:1,justifyContent:"center",alignItems:"center"},
  authHeading:{color:ink,fontSize:20,fontWeight:"800"},authHelper:{color:"#63545d",fontSize:14,lineHeight:20,marginTop:8,marginBottom:14},
  authRow:{flexDirection:"row",gap:10},authLight:{flex:1,backgroundColor:"rgba(255,255,255,.78)",borderColor:"#fff",borderWidth:1,borderRadius:18,alignItems:"center",paddingVertical:13},authGold:{flex:1,overflow:"hidden",borderColor:"#fff",borderWidth:1,borderRadius:18,alignItems:"center",paddingVertical:13},authText:{fontSize:15,fontWeight:"800",color:ink}
 });
