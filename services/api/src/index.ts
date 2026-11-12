@@ -105,7 +105,19 @@ app.post("/me/recipes/:id",asyncRoute(async(req,res)=>send(res,await sheet("save
 app.delete("/me/recipes/:id",asyncRoute(async(req,res)=>send(res,await sheet("unsaveRecipe",{user_id:req.uid,recipe_id:req.params.id}))));
 app.get("/me/notifications",asyncRoute(async(req,res)=>send(res,await sheet("listNotifications",{user_id:req.uid}))));
 app.post("/me/device",asyncRoute(async(req,res)=>{const body=z.object({device_id:z.string().max(128),platform:z.enum(["ios","android"]),token:z.string().startsWith("ExponentPushToken[").max(250)}).parse(req.body);send(res,await sheet("registerDevice",{...body,user_id:req.uid,push_token_reference:encrypt(body.token),token:undefined}));}));
-app.delete("/me",asyncRoute(async(req,res)=>{if(req.uid?.startsWith("supabase:"))return res.status(501).json({error:"Email account deletion must be completed by support until automatic Auth deletion is configured."});await sheet("deleteUser",{user_id:req.uid});send(res,{deleted:true,google_account_unchanged:true})}));
+app.delete("/me",asyncRoute(async(req,res)=>{
+ const isEmail=req.uid?.startsWith("supabase:");
+ const token=req.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
+ if(isEmail&&(!process.env.SUPABASE_AUTH_URL||!token))return res.status(503).json({error:"Email account deletion is temporarily unavailable"});
+ await sheet("deleteUser",{user_id:req.uid});
+ if(isEmail){
+  const response=await fetch(process.env.SUPABASE_AUTH_URL+"/functions/v1/goodside-admin?route=my-account",{
+   method:"DELETE",headers:{Authorization:"Bearer "+token}
+  });
+  if(!response.ok)throw Error("The profile was cleared, but the email identity deletion needs support assistance. Please contact support.");
+ }
+ send(res,{deleted:true,google_account_unchanged:!isEmail});
+}));
 app.use("/admin",identity,(req:Authed,res,next)=>req.admin?next():res.status(403).json({error:"Admin only"}));
 const recipePayload=z.object({
  recipe_id:z.string().max(128).optional(),title:z.string().min(3).max(200),
