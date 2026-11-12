@@ -72,7 +72,7 @@ export default function Preferences(){
  const choice=(label:string,active:boolean,action:()=>void)=> <TouchableOpacity accessibilityRole="button" accessibilityState={{selected:active}} onPress={action} style={{paddingHorizontal:13,paddingVertical:11,margin:3,borderRadius:16,backgroundColor:active?colors.peach:"rgba(255,255,255,.9)",borderWidth:1,borderColor:active?colors.orange:colors.stroke}}><Text style={{color:colors.ink,fontWeight:active?"800":"500"}}>{label}</Text></TouchableOpacity>;
  return <Background><ScrollView contentContainerStyle={{padding:22,paddingTop:58,paddingBottom:180}}>
   <TouchableOpacity onPress={()=>router.back()}><Text style={styles.muted}>← Back</Text></TouchableOpacity>
-  <View style={{alignItems:"flex-end"}}><MenuButton/></View>
+  <View style={{alignItems:"flex-end",marginTop:36,marginBottom:10}}><MenuButton/></View>
   <Text style={[styles.title,{marginTop:24}]}>Make good news yours.</Text>
   <Text style={[styles.subtitle,{marginVertical:13}]}>Your interests, your schedule, your peace.</Text>
   {!signedIn?<Surface style={{marginBottom:16,backgroundColor:"#FFF0DA"}}><Text style={styles.label}>Save your preferences with a free account</Text><Text style={[styles.muted,{marginVertical:10}]}>You are browsing as a guest. Sign in to save interests, notification times and food alerts.</Text><Pill title="Log in / Create account" onPress={()=>router.push("/auth")}/></Surface>:null}
