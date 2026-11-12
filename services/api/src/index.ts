@@ -52,7 +52,7 @@ async function sheet(action:string,payload:Record<string,unknown>={}){
  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),15000);
  try{const reply=await fetch(process.env.APPS_SCRIPT_URL!,{method:"POST",headers:{"content-type":"text/plain;charset=utf-8"},body:JSON.stringify({secret:process.env.APPS_SCRIPT_SHARED_SECRET,action,payload}),signal:controller.signal,redirect:"follow"});if(!reply.ok)throw Error("Database unavailable");const out=await reply.json() as {ok:boolean;data?:any;error?:string};if(!out.ok)throw Error(out.error||"Database error");return out.data;}finally{clearTimeout(timer);}
 }
-const profile=z.object({display_name:z.string().trim().min(1).max(80).optional(),preferred_language:z.enum(["en","pt","es"]).optional(),timezone:z.string().refine(isValidTimezone).optional()});
+const profile=z.object({display_name:z.string().trim().min(1).max(80).optional(),preferred_language:z.enum(["en","pt","es"]).optional(),timezone:z.string().refine(isValidTimezone).optional(),avatar_id:z.string().max(80).optional()});
 const hhmm=z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/);
 const prefs=z.object({
  notification_frequency:z.enum(["daily","twice_daily","three_daily","selected_weekdays","breaking_only","digest_plus_alerts"]).optional(),
@@ -68,6 +68,7 @@ const send=(res:Response,p:unknown)=>res.json({ok:true,data:p});
 app.get("/health",(_req,res)=>res.json({status:"ok"}));
 app.get("/news",asyncRoute(async(req,res)=>send(res,await sheet("listNews",newsQuery.parse(req.query)))));
 app.get("/news/:id",asyncRoute(async(req,res)=>send(res,await sheet("getNews",{news_id:req.params.id}))));
+app.get("/avatars",asyncRoute(async(_req,res)=>send(res,await sheet("listAvatars"))));
 app.get("/recipes",asyncRoute(async(req,res)=>send(res,await sheet("listRecipes"))));
 app.get("/recipes/:id",asyncRoute(async(req,res)=>send(res,await sheet("getRecipe",{recipe_id:req.params.id}))));
 app.use("/me",identity);
