@@ -27,6 +27,29 @@ export function Management({token}:{token:string}){
  const [search,setSearch]=useState(""),[picked,setPicked]=useState(""),[customUrl,setCustomUrl]=useState(""),[selectedAvatar,setSelectedAvatar]=useState("");
  const [avatarForm,setAvatarForm]=useState({avatar_id:"",label:"",image_url:"",credit:"",sort_order:"100",active:true});
  const [changes,setChanges]=useState<Record<string,string>>({});
+ const [reviewEmail,setReviewEmail]=useState("infojr.83+apple-review@gmail.com");
+ const [reviewPassword,setReviewPassword]=useState("");
+ const [reviewAccountCreated,setReviewAccountCreated]=useState(false);
+ const generateReviewPassword=()=>{
+  const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*-_";
+  const bytes=new Uint32Array(32);crypto.getRandomValues(bytes);
+  setReviewPassword(Array.from(bytes,n=>alphabet[n%alphabet.length]).join(""));
+  setReviewAccountCreated(false);
+ };
+ const createReviewAccount=async()=>{
+  setError("");setNotice("");
+  if(!window.confirm("Create a STANDARD USER for Apple App Review? This account will NOT have Command Center access."))return;
+  if(!reviewEmail.toLowerCase().includes("apple-review")||reviewPassword.length<18){setError("Use a controlled Apple-review email and generate a strong password.");return}
+  setBusy(true);
+  try{
+   const result=await call<{created:boolean;email:string;role:string}>("apple-review-account",{method:"POST",body:JSON.stringify({email:reviewEmail,password:reviewPassword})});
+   if(!result.created||result.role!=="member")throw Error("Could not confirm safe member role");
+   setReviewAccountCreated(true);
+   setNotice("Apple review user created. Copy credentials securely to your password manager and later App Store Connect. This account has NO admin privileges.");
+   await reload("users");
+  }catch(e){setError(String(e))}finally{setBusy(false)}
+ };
+
  const selected=members.find(u=>u.user_id===picked);
  const users=useMemo(()=>members.filter(u=>(u.display_name+" "+u.email+" "+u.user_id).toLowerCase().includes(search.toLowerCase())).slice(0,100),[members,search]);
  const call=<T,>(route:string,init:RequestInit={})=>managementApi<T>(token,route,init);
@@ -86,6 +109,15 @@ export function Management({token}:{token:string}){
   </div>
   {loading&&<p className="hint">Loading records…</p>}{error&&<p role="alert" className="error">{error}</p>}{notice&&<p role="status" className="notice">{notice}</p>}
   {section==="users"&&<>
+   <section className="panel form-panel" style={{marginBottom:16}}>
+    <h3>Apple App Review — test account</h3>
+    <p className="hint">Create a dedicated standard consumer account for Apple's reviewers. This is NOT a Command Center admin. Your normal Google admin permissions remain private.</p>
+    <label>Review email that you control<input type="email" value={reviewEmail} autoComplete="off" onChange={e=>{setReviewEmail(e.target.value);setReviewAccountCreated(false)}}/></label>
+    <label>Unique review password<input type="password" value={reviewPassword} autoComplete="new-password" onChange={e=>{setReviewPassword(e.target.value);setReviewAccountCreated(false)}} placeholder="Generate a unique strong password"/></label>
+    <div className="actions"><button type="button" className="soft" onClick={generateReviewPassword}>Generate secure password</button><button type="button" disabled={busy||reviewPassword.length<18} onClick={()=>void createReviewAccount()}>Create review user</button></div>
+    {reviewAccountCreated&&<div className="notice"><strong>Review user created:</strong> {reviewEmail}. Keep the password in your password manager and paste it into App Store Connect Review Information only. <button type="button" onClick={()=>{void navigator.clipboard.writeText(reviewPassword)}}>Copy password</button><button type="button" className="soft" onClick={()=>setReviewPassword("")}>Clear password from screen</button></div>}
+    <p className="hint">The suggested Gmail +alias delivers into the existing Gmail inbox, if your email service accepts plus-addresses. Verify sign-in on a real iPhone before submitting. Do not create another account if it already exists.</p>
+   </section>
    <section className="panel form-panel"><h3>Members ({members.length})</h3>
     <p className="hint">Includes users in the app profile table and verified-email accounts registered with Supabase. Admins cannot see passwords.</p>
     <label>Search by name, email or user ID<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search members…"/></label>
