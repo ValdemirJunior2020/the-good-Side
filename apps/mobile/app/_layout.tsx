@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from "react";
-import {View,TouchableOpacity,Pressable,StyleSheet,Modal} from "react-native";
+import {View,TouchableOpacity,Pressable,StyleSheet,Modal,Keyboard,Platform} from "react-native";
 import {Stack,usePathname} from "expo-router";
 import {StatusBar} from "expo-status-bar";
 import {SafeAreaProvider,useSafeAreaInsets} from "react-native-safe-area-context";
@@ -18,13 +18,15 @@ Notifications.setNotificationHandler({handleNotification:async(notification)=>({
 
 function Shell(){
  const [menuOpen,setMenuOpen]=useState(false);
+ const [keyboardOpen,setKeyboardOpen]=useState(false);
  const insets=useSafeAreaInsets();
  const pathname=usePathname();
  useEffect(()=>{setMenuOpen(false)},[pathname]);
+ useEffect(()=>{const show=Keyboard.addListener("keyboardDidShow",()=>setKeyboardOpen(true));const hide=Keyboard.addListener("keyboardDidHide",()=>setKeyboardOpen(false));return ()=>{show.remove();hide.remove()}},[]);
 
  return <View style={styles.root}>
   <Stack screenOptions={{headerShown:false,animation:"fade"}}/>
-  <TabBar/>
+  {!keyboardOpen&&<TabBar/>}
   {pathname!=="/profile"&&<TouchableOpacity
    testID="global-menu-button"
    accessibilityRole="button"
