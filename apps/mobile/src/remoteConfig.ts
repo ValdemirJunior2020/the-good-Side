@@ -29,3 +29,11 @@ export async function clearPersonalAvatar(token:string):Promise<void>{
  const response=await r.json() as {ok:boolean;error?:string};
  if(!r.ok||!response.ok)throw Error(response.error||"Unable to clear custom avatar");
 }
+
+export async function syncManagedProfile(token:string,display_name:string):Promise<void>{
+ const response=await fetch(ROOT+"?route=my-profile",{
+  method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},
+  body:JSON.stringify({display_name:display_name.slice(0,80)})
+ });
+ if(!response.ok)throw Error("Admin profile synchronization unavailable");
+}
