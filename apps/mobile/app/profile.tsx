@@ -1,6 +1,6 @@
 import TabBar from "../src/TabBar";
 import React,{useEffect,useState} from "react";
-import {Alert,ImageBackground,Linking,ScrollView,Share,StyleSheet,Text,TextInput,TouchableOpacity,View} from "react-native";
+import {ActivityIndicator,Alert,Image,ImageBackground,Modal,ScrollView,Share,StyleSheet,Text,TextInput,TouchableOpacity,View} from "react-native";
 import {LinearGradient} from "expo-linear-gradient";
 import {router} from "expo-router";
 import {api,auth,put,type Session} from "../src/client";
@@ -9,6 +9,7 @@ import {colors} from "../src/theme";
 const SUNRISE="https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1100&q=85";
 const gold="#B96117";
 const ink="#301E2C";
+type Avatar={avatar_id:string;label:string;image_url:string;credit:string};
 
 function Glass({children,style}:{children:React.ReactNode;style?:object}){
  return <View style={[ui.glass,style]}><LinearGradient pointerEvents="none" colors={["rgba(255,255,255,.65)","rgba(255,235,226,.45)","rgba(255,225,239,.58)"]} style={StyleSheet.absoluteFill}/>{children}</View>;
@@ -34,7 +35,39 @@ export default function Profile(){
  const[name,setName]=useState(auth.currentUser?.displayName||"");
  const[editing,setEditing]=useState(false);
  const[busy,setBusy]=useState(false);
- useEffect(()=>{const off=auth.subscribe(user=>{setSession(user);setName(user?.displayName||"")});void auth.restore();return off},[]);
+ const[avatarId,setAvatarId]=useState("");
+ const[avatars,setAvatars]=useState<Avatar[]>([]);
+ const[avatarPicker,setAvatarPicker]=useState(false);
+ const[avatarLoading,setAvatarLoading]=useState(false);
+ const[avatarError,setAvatarError]=useState("");
+ useEffect(()=>{
+  let mounted=true;
+  const off=auth.subscribe(user=>{
+   if(!mounted)return;
+   setSession(user);setName(user?.displayName||"");
+   if(user){api<{avatar_id?:string}>("/me",{},true).then(record=>{if(mounted)setAvatarId(record?.avatar_id||"")}).catch(()=>{});}
+   else setAvatarId("");
+  });
+  void auth.restore();
+  return ()=>{mounted=false;off()};
+ },[]);
+ const openAvatars=async()=>{
+  if(!session)return go("/auth");
+  setAvatarPicker(true);setAvatarLoading(true);setAvatarError("");
+  try{
+   const items=await api<Avatar[]>("/avatars");
+   setAvatars(Array.isArray(items)?items:[]);
+  }catch(e){setAvatarError(e instanceof Error?e.message:String(e))}
+  finally{setAvatarLoading(false)}
+ };
+ const pickAvatar=async(id:string)=>{
+  setBusy(true);
+  try{
+   await api("/me",put({avatar_id:id}),true);
+   setAvatarId(id);setAvatarPicker(false);
+  }catch(e){Alert.alert("Unable to save avatar",String(e))}
+  finally{setBusy(false)}
+ };
  const go=(path:string)=>router.push(path as any);
  const saveName=async()=>{
   if(!name.trim()){Alert.alert("Name required","Please enter a display name.");return}
@@ -67,6 +100,8 @@ export default function Profile(){
  };
  const firstName=(name.trim().split(/\s+/)[0]||"Friend");
  const signedIn=Boolean(session);
+ const currentAvatar=avatars.find(a=>a.avatar_id===avatarId);
+ const avatarUrl=currentAvatar?.image_url||SUNRISE;
  return <LinearGradient colors={["#FFF0DE","#FFE1CF","#EAD4E6"]} style={{flex:1}}>
   <ImageBackground source={{uri:SUNRISE}} resizeMode="cover" style={ui.sunrise} imageStyle={{opacity:.72}}>
    <LinearGradient colors={["rgba(255,249,239,.79)","rgba(255,232,210,.03)","rgba(255,224,212,.18)","#F3D5D4"]} locations={[0,.24,.72,1]} style={StyleSheet.absoluteFill}/>
@@ -76,11 +111,11 @@ export default function Profile(){
    <View style={ui.brand}><Text style={ui.brandSun}>☀️</Text><View><Text style={ui.brandName}>the good side<Text style={{color:"#EA8F28"}}>.</Text></Text><Text style={ui.brandSubtitle}>Your corner of good news.</Text></View></View>
    <View style={ui.hero}>
     <View style={ui.avatarRim}>
-     <ImageBackground source={{uri:SUNRISE}} imageStyle={{borderRadius:110}} style={ui.avatar}>
+     <ImageBackground source={{uri:avatarUrl}} imageStyle={{borderRadius:110}} style={ui.avatar}>
       <LinearGradient colors={["rgba(255,212,132,.06)","rgba(83,43,86,.25)"]} style={StyleSheet.absoluteFill}/>
      </ImageBackground>
     </View>
-    <View style={ui.avatarCamera}><Text style={{fontSize:22}}>☀️</Text></View>
+    <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose profile picture" activeOpacity={.75} onPress={()=>void openAvatars()} style={ui.avatarCamera}><Text style={{fontSize:22}}>📷</Text></TouchableOpacity>
     <View style={ui.nameRow}><Text style={ui.personName}>{signedIn?firstName:"Your corner"}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Edit profile" onPress={()=>signedIn?setEditing(v=>!v):go("/auth")}><Text style={{fontSize:23,color:ink}}>✎</Text></TouchableOpacity></View>
     {!signedIn?<Text style={ui.heroHint}>Create an account to personalize your good news</Text>:null}
    </View>
@@ -122,6 +157,27 @@ export default function Profile(){
     <Action label="☏  Contact Support" onPress={()=>Alert.alert("Contact support","The support contact address has not yet been configured.")}/>
    </View>
   </ScrollView>
+  <Modal visible={avatarPicker} transparent animationType="slide" onRequestClose={()=>setAvatarPicker(false)}>
+   <View style={ui.modalBackdrop}>
+    <View style={ui.modalPanel}>
+     <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+      <Text style={ui.modalTitle}>Choose your sunshine</Text>
+      <TouchableOpacity accessibilityRole="button" onPress={()=>setAvatarPicker(false)} style={{padding:9}}><Text style={{fontSize:25,color:ink}}>×</Text></TouchableOpacity>
+     </View>
+     <Text style={{color:"#644A57",marginBottom:15}}>Pick an image from our gallery. Your selection is saved in your account, not on your phone or PC.</Text>
+     {avatarLoading?<ActivityIndicator color="#D77F32" size="large" style={{marginVertical:35}}/>:null}
+     {avatarError?<Text style={{color:"#A63232",marginBottom:15}}>{avatarError}. Check that the latest Google Apps Script has been deployed.</Text>:null}
+     <ScrollView style={{maxHeight:380}} contentContainerStyle={{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",paddingBottom:18}}>
+      {avatars.map(a=><TouchableOpacity key={a.avatar_id} accessibilityRole="button" accessibilityLabel={"Select "+a.label} disabled={busy} onPress={()=>void pickAvatar(a.avatar_id)} style={[ui.avatarChoice,avatarId===a.avatar_id&&{borderColor:"#D17929",borderWidth:3}]}>
+       <Image source={{uri:a.image_url}} style={ui.choiceImage}/>
+       <Text numberOfLines={1} style={{fontSize:12,color:ink,fontWeight:"700",marginTop:7,textAlign:"center"}}>{a.label}</Text>
+      </TouchableOpacity>)}
+     </ScrollView>
+     {!avatarLoading&&!avatarError&&avatars.length===0?<Text style={{color:"#674B59"}}>No profile images are currently available.</Text>:null}
+     <Action label={busy?"Saving…":"Cancel"} disabled={busy} onPress={()=>setAvatarPicker(false)}/>
+    </View>
+   </View>
+  </Modal>
   <TabBar/>
  </LinearGradient>;
 }
@@ -154,5 +210,10 @@ const ui=StyleSheet.create({
  pill:{minHeight:44,minWidth:"63%",paddingHorizontal:24,paddingVertical:10,borderRadius:35,backgroundColor:"rgba(255,245,241,.65)",borderWidth:1.5,borderColor:"rgba(255,255,255,.95)",alignItems:"center",justifyContent:"center",shadowColor:"#B5776C",shadowOpacity:.12,shadowRadius:10},
  dangerPill:{backgroundColor:"rgba(255,232,232,.68)"},
  pillText:{fontSize:15.5,fontWeight:"800",color:ink},
- fieldLabel:{color:ink,fontWeight:"700",marginBottom:9},nameInput:{padding:12,backgroundColor:"#fff",borderRadius:15,borderWidth:1,borderColor:"#F3D2BD",marginBottom:10,color:ink}
+ fieldLabel:{color:ink,fontWeight:"700",marginBottom:9},nameInput:{padding:12,backgroundColor:"#fff",borderRadius:15,borderWidth:1,borderColor:"#F3D2BD",marginBottom:10,color:ink},
+ modalBackdrop:{flex:1,justifyContent:"flex-end",backgroundColor:"rgba(50,28,42,.42)"},
+ modalPanel:{backgroundColor:"#FFF0E9",borderTopLeftRadius:32,borderTopRightRadius:32,paddingHorizontal:20,paddingTop:22,paddingBottom:35,borderWidth:1.5,borderColor:"#FFF"},
+ modalTitle:{fontSize:24,color:ink,fontWeight:"900"},
+ avatarChoice:{width:"47%",borderWidth:1.5,borderColor:"rgba(255,255,255,.95)",backgroundColor:"rgba(255,255,255,.55)",borderRadius:21,padding:9,marginBottom:14},
+ choiceImage:{width:"100%",height:130,borderRadius:15}
 });
