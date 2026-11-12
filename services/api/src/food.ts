@@ -44,7 +44,7 @@ async function db(path:string,init:RequestInit={}):Promise<unknown>{
 export async function readFoodPreferences(userId:string):Promise<FoodPreferences>{
  const result=await db("food_preferences?user_id=eq."+encodeURIComponent(userId)+"&select=*");
  const current=Array.isArray(result)?result[0]:undefined;
- return current?foodPreferenceInput.parse({...DEFAULT_FOOD,...current}):DEFAULT_FOOD;
+ return current?foodPreferenceInput.parse(Object.fromEntries(Object.keys(DEFAULT_FOOD).map(key=>[key,current[key]??DEFAULT_FOOD[key as keyof FoodPreferences]]))):DEFAULT_FOOD;
 }
 export async function writeFoodPreferences(userId:string,payload:unknown):Promise<FoodPreferences>{
  const pref=foodPreferenceInput.parse(payload);
