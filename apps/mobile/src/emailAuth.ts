@@ -30,6 +30,6 @@ export const emailAuth={
   return authRequest("/token?grant_type=refresh_token",{refresh_token});
  },
  resetPassword(email:string){
-  return authRequest("/recover",{email:email.trim().toLowerCase()});
+  return authRequest("/recover?redirect_to="+encodeURIComponent("https://the-good-side-command-center.netlify.app/reset-password.html"),{email:email.trim().toLowerCase()});
  }
 };
