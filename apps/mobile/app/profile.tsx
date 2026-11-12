@@ -7,7 +7,7 @@ import {api,auth,put,type Session} from "../src/client";
 import {colors} from "../src/theme";
 import LuxuryIcon from "../src/LuxuryIcon";
 import {avatarCatalog} from "../src/avatarCatalog";
-import {getPublicAvatars,getPersonalAvatar,getPublicSettings} from "../src/remoteConfig";
+import {getPublicAvatars,getPersonalAvatar,getPublicSettings,clearPersonalAvatar} from "../src/remoteConfig";
 
 import {ArrowLeft,Camera,UserSquare2,Link2,Crown,Bell,SlidersHorizontal,Sparkles,Layers3,ShieldCheck,Bookmark,BookOpen,Lock,Download,LogOut,Headphones,Trash2,ChevronRight,House,Compass,ChefHat,Heart,UserRound,Pencil,Sun} from "lucide-react-native";
 
@@ -81,7 +81,8 @@ export default function Profile(){
   setBusy(true);
   try{
    await api("/me",put({avatar_id:id}),true);
-   setAvatarId(id);setAvatarPicker(false);
+   if(customAvatar){const token=await auth.getFreshToken();if(token)await clearPersonalAvatar(token)}
+   setAvatarId(id);setCustomAvatar(null);setAvatarPicker(false);
   }catch(e){Alert.alert("Unable to save avatar","The images are available, but saving your selection still requires the account service. Please try again when the connection is restored.")}
   finally{setBusy(false)}
  };
