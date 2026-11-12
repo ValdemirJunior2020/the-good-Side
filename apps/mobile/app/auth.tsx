@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from "react";
-import {Text,ScrollView,TouchableOpacity,Platform} from "react-native";
+import {Text,ScrollView,TouchableOpacity} from "react-native";
 import {router} from "expo-router";
 import * as Google from "expo-auth-session/providers/google";
 import {api,auth,json} from "../src/client";
@@ -23,7 +23,7 @@ function GoogleSignIn(){
    router.replace("/categories");
   })().catch(e=>{auth.signOut();setError(String(e))}).finally(()=>setBusy(false));
  },[response]);
- return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><TouchableOpacity onPress={()=>router.back()}><Text style={{color:colors.ink}}>← Back</Text></TouchableOpacity><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:14}]}>Your bright side starts here.</Text><Text style={[styles.subtitle,{marginBottom:25}]}>Sign in securely with your Google account. We do not store passwords.</Text><Surface><Pill title={busy?"Signing in…":"Continue with Google"} onPress={()=>{setError("");if(!request){setError("Configure the Google OAuth client IDs first");return}void promptAsync()}} disabled={busy||!request}/>{error?<Text style={{color:"#B54440",marginTop:15}}>{error}</Text>:null}<Text style={[styles.muted,{marginTop:17}]}>A Google OAuth client and the HTTPS API gateway must be configured before sign-in.</Text></Surface><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
+ return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><TouchableOpacity onPress={()=>router.back()}><Text style={{color:colors.ink}}>← Back</Text></TouchableOpacity><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:14}]}>Your bright side starts here.</Text><Text style={[styles.subtitle,{marginBottom:25}]}>Log in or create your free account with Google. Your profile is created automatically the first time you sign in. We do not store passwords.</Text><Surface><Pill title={busy?"Signing in…":"Log in / Create account with Google"} onPress={()=>{setError("");if(!request){setError("Configure the Google OAuth client IDs first");return}void promptAsync()}} disabled={busy||!request}/>{error?<Text style={{color:"#B54440",marginTop:15}}>{error}</Text>:null}<Text style={[styles.muted,{marginTop:17}]}>Sign in once to save stories and preferences. You can always browse news without an account.</Text></Surface><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
 }
 function atobCompat(input:string){
  const p=input.replace(/-/g,"+").replace(/_/g,"/");if(typeof atob==="function")return decodeURIComponent(Array.from(atob(p),c=>"%"+c.charCodeAt(0).toString(16).padStart(2,"0")).join(""));
@@ -33,5 +33,5 @@ function atobCompat(input:string){
 export default function SignIn(){
  const configured=Boolean(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID||process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID||process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
  if(configured)return <GoogleSignIn/>;
- return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><TouchableOpacity onPress={()=>router.back()}><Text>← Back</Text></TouchableOpacity><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:12}]}>Google sign-in setup</Text><Surface><Text style={styles.subtitle}>To enable secure login, configure the Google OAuth client IDs in apps/mobile/.env and restart Expo. Firebase is not used.</Text></Surface><Pill title="Browse good news as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
+ return <Background><ScrollView contentContainerStyle={{padding:24,paddingTop:75}}><TouchableOpacity onPress={()=>router.back()}><Text>← Back</Text></TouchableOpacity><Brand/><Text style={[styles.title,{marginTop:45,marginBottom:12}]}>Set up Google login</Text><Surface><Text style={styles.subtitle}>Google login is not configured in this build. Add the appropriate Google OAuth client IDs to apps/mobile/.env and restart Expo. Some native Google sign-in flows require an EAS development build rather than Expo Go. Firebase is not used.</Text></Surface><Pill title="Browse good news as guest" secondary onPress={()=>router.replace("/")}/></ScrollView></Background>
 }
