@@ -5,6 +5,7 @@ import {LinearGradient} from "expo-linear-gradient";
 import {router} from "expo-router";
 import {api,auth,put,type Session} from "../src/client";
 import {colors} from "../src/theme";
+import LuxuryIcon from "../src/LuxuryIcon";
 import {ArrowLeft,Camera,UserSquare2,Link2,Crown,Bell,SlidersHorizontal,Sparkles,Layers3,ShieldCheck,Bookmark,BookOpen,Lock,Download,LogOut,Headphones,Trash2,ChevronRight,House,Compass,ChefHat,Heart,UserRound,Pencil,Sun} from "lucide-react-native";
 
 const SUNRISE="https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1100&q=85";
@@ -23,7 +24,7 @@ function Section({symbol,title,children}:{symbol:React.ReactNode;title:string;ch
 }
 function MenuRow({icon,label,onPress,last=false,disabled=false}:{icon:React.ReactNode;label:string;onPress:()=>void;last?:boolean;disabled?:boolean}){
  return <TouchableOpacity accessibilityRole="button" accessibilityLabel={label} disabled={disabled} activeOpacity={.75} onPress={onPress} style={[ui.menuRow,!last&&ui.rowBorder,disabled&&{opacity:.45}]}>
-  <View style={ui.menuIconBadge}><View style={ui.menuIcon}>{icon}</View></View><Text style={ui.menuLabel}>{label}</Text><ChevronRight size={22} color="#443741"/>
+  <LuxuryIcon tone={label.includes("Notifications")?"sun":label.includes("Tags")?"sky":label.includes("Saved")?"rose":label.includes("Reading")?"violet":label.includes("Security")?"mint":"peach"} size={42}>{icon}</LuxuryIcon><Text style={ui.menuLabel}>{label}</Text><ChevronRight size={22} color="#443741"/>
  </TouchableOpacity>;
 }
 function Action({label,onPress,danger=false,disabled=false,icon}:{label:string;onPress:()=>void;danger?:boolean;disabled?:boolean;icon?:React.ReactNode}){
@@ -134,7 +135,7 @@ export default function Profile(){
      [<Crown size={25} color="#A45B2A"/>,"Subscription",()=>Alert.alert("Free account","The Good Side currently has free access. No paid subscription is configured.")]
     ] as const).map(([icon,label,onPress])=><TouchableOpacity key={label} accessibilityRole="button" onPress={onPress} activeOpacity={.78} style={ui.quickCard}>
       <LinearGradient colors={["rgba(255,255,255,.78)","rgba(253,214,199,.62)","rgba(237,203,232,.72)"]} style={StyleSheet.absoluteFill}/>
-      <View style={ui.quickIconBadge}><View style={ui.quickIcon}>{icon}</View></View><Text style={ui.quickText}>{label}</Text>
+      <LuxuryIcon size={49} tone={label==="Profile Info"?"peach":label==="Connected Apps"?"violet":"sun"}>{icon}</LuxuryIcon><Text style={ui.quickText}>{label}</Text>
     </TouchableOpacity>)}
    </View>
    <Section symbol={<Sparkles size={18} color={gold}/>} title="Personalization">
