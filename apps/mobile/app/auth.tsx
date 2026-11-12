@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from "react";
-import {Text,ScrollView,TouchableOpacity,Platform,View,TextInput,ActivityIndicator,StyleSheet} from "react-native";
+import {Text,ScrollView,TouchableOpacity,Platform,View,TextInput,ActivityIndicator,StyleSheet,KeyboardAvoidingView,Keyboard} from "react-native";
 import Constants from "expo-constants";
 import {router} from "expo-router";
 import * as Google from "expo-auth-session/providers/google";
@@ -7,7 +7,7 @@ import * as WebBrowser from "expo-web-browser";
 import {api,auth,json} from "../src/client";
 import {emailAuth} from "../src/emailAuth";
 import {getPublicSettings,syncManagedProfile} from "../src/remoteConfig";
-import {Background,Brand,Pill,Surface,styles} from "../src/components";
+import {Background,Brand,Pill,Surface,GoodSideLoader,styles} from "../src/components";
 import {colors} from "../src/theme";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -36,6 +36,7 @@ function GoogleButton(){
  },[response]);
  return <View style={{marginTop:14}}>
   <Pill title={busy?"Signing in…":"Continue with Google"} disabled={busy||!request} onPress={()=>{setError("");if(!request){setError("Google OAuth isn't configured for this device.");return}void promptAsync()}}/>
+  {busy?<GoodSideLoader compact label="Connecting securely…"/>:null}
   {error?<Text style={sx.error}>{error}</Text>:null}
  </View>;
 }
@@ -91,7 +92,7 @@ export default function SignIn(){
    setError(detail);
   }finally{setBusy(false)}
  };
- return <Background><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{paddingHorizontal:22,paddingTop:68,paddingBottom:165,width:"100%",maxWidth:540,alignSelf:"center"}}>
+ return <Background><KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":undefined}><ScrollView keyboardShouldPersistTaps="always" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} contentContainerStyle={{paddingHorizontal:22,paddingTop:68,paddingBottom:210,width:"100%",maxWidth:540,alignSelf:"center"}}>
   <TouchableOpacity onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={{alignSelf:"flex-start",paddingVertical:10}}><Text style={{color:ink,fontWeight:"700"}}>← Back</Text></TouchableOpacity>
   <Brand/><Text style={[styles.title,{marginTop:32,fontSize:31}]}>Your bright side starts here.</Text>
   <Text style={[styles.subtitle,{marginTop:10,marginBottom:20}]}>Create a free account with any email address. Google sign-in is still available.</Text>
@@ -101,12 +102,12 @@ export default function SignIn(){
      <Text style={{color:ink,fontWeight:mode===item?"900":"600"}}>{item==="register"?"Create account":"Log in"}</Text>
     </TouchableOpacity>)}
    </View>
-   {mode==="register"?<><Text style={sx.label}>Your name</Text><TextInput accessibilityLabel="Your name" autoComplete="name" value={name} onChangeText={setName} placeholder="First name" placeholderTextColor="#887381" style={sx.input} maxLength={80}/></>:null}
-   <Text style={sx.label}>Email address</Text><TextInput accessibilityLabel="Email address" autoCapitalize="none" autoCorrect={false} autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor="#887381" style={sx.input} maxLength={254}/>
-   <Text style={sx.label}>Password</Text><TextInput accessibilityLabel="Password" autoCapitalize="none" autoCorrect={false} autoComplete={mode==="register"?"new-password":"current-password"} secureTextEntry value={password} onChangeText={setPassword} placeholder="At least 8 characters" placeholderTextColor="#887381" style={sx.input}/>
+   {mode==="register"?<><Text style={sx.label}>Your name</Text><TextInput accessibilityLabel="Your name" selectionColor="#B96F39" cursorColor="#B96F39" editable={!busy} autoComplete="name" value={name} onChangeText={setName} placeholder="First name" placeholderTextColor="#887381" style={sx.input} maxLength={80} returnKeyType="next"/></>:null}
+   <Text style={sx.label}>Email address</Text><TextInput accessibilityLabel="Email address" selectionColor="#B96F39" cursorColor="#B96F39" editable={!busy} autoCapitalize="none" autoCorrect={false} autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor="#887381" style={sx.input} maxLength={254} returnKeyType="next"/>
+   <Text style={sx.label}>Password</Text><TextInput accessibilityLabel="Password" selectionColor="#B96F39" cursorColor="#B96F39" editable={!busy} autoCapitalize="none" autoCorrect={false} autoComplete={mode==="register"?"new-password":"current-password"} secureTextEntry value={password} onChangeText={setPassword} placeholder="At least 8 characters" placeholderTextColor="#887381" style={sx.input} returnKeyType="done" onSubmitEditing={()=>{Keyboard.dismiss();void submit()}}/>
    {mode==="login"?<TouchableOpacity accessibilityRole="button" disabled={busy} onPress={()=>void recover()} style={{alignSelf:"flex-end",marginBottom:16,paddingVertical:4}}><Text style={{color:"#965329",fontWeight:"800"}}>Forgot password?</Text></TouchableOpacity>:null}
    <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={()=>void submit()} style={[sx.submit,busy&&{opacity:.55}]}>
-    {busy?<ActivityIndicator color="#fff"/>:<Text style={{color:"#fff",fontWeight:"800",fontSize:16}}>{mode==="register"?"Create free account":"Log in with email"}</Text>}
+    {busy?<GoodSideLoader compact label={mode==="register"?"Creating account…":"Signing in…"}/>:<Text style={{color:"#fff",fontWeight:"800",fontSize:16}}>{mode==="register"?"Create free account":"Log in with email"}</Text>}
    </TouchableOpacity>
    {message?<Text accessibilityRole="text" style={sx.success}>{message}</Text>:null}
    {error?<Text accessibilityRole="alert" style={sx.error}>{error}</Text>:null}
@@ -115,13 +116,13 @@ export default function SignIn(){
   <View style={{flexDirection:"row",alignItems:"center",gap:12,marginVertical:6}}><View style={sx.rule}/><Text style={{color:"#6E5865"}}>or</Text><View style={sx.rule}/></View>
   {googleAvailable?<GoogleButton/>:<Text style={[styles.muted,{marginVertical:12,textAlign:"center"}]}>Google login requires an installed app build on this device. Email sign-up works here, including Expo Go.</Text>}
   <View style={{marginTop:17}}><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></View>
- </ScrollView></Background>;
+ </ScrollView></KeyboardAvoidingView></Background>;
 }
 const sx=StyleSheet.create({
  tab:{flex:1,paddingVertical:12,alignItems:"center",borderRadius:19,backgroundColor:"rgba(255,255,255,.64)",borderWidth:1,borderColor:"#fff"},
  tabActive:{backgroundColor:"#F9CAA7",borderColor:"#E7A878"},
  label:{color:ink,fontSize:14,fontWeight:"800",marginBottom:7},
- input:{backgroundColor:"#fff",borderWidth:1.4,borderColor:"#EBD1C5",borderRadius:16,minHeight:50,fontSize:16,color:ink,paddingHorizontal:15,marginBottom:15},
+ input:{backgroundColor:"#FFFFFF",opacity:1,borderWidth:2,borderColor:"#C88E78",borderRadius:16,minHeight:54,fontSize:16,color:"#301E2C",paddingHorizontal:15,marginBottom:16,position:"relative",zIndex:5},
  submit:{minHeight:51,borderRadius:18,alignItems:"center",justifyContent:"center",backgroundColor:"#B96F39"},
  error:{color:"#AD3535",marginTop:13,fontSize:14,lineHeight:20},
  success:{color:"#326747",marginTop:13,fontSize:14,lineHeight:20},
