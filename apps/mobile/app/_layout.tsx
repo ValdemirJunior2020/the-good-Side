@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from "react";
-import {View,TouchableOpacity,Pressable,StyleSheet,Platform} from "react-native";
+import {View,TouchableOpacity,Pressable,StyleSheet,Modal,Text} from "react-native";
 import {Stack,usePathname} from "expo-router";
 import {StatusBar} from "expo-status-bar";
 import {SafeAreaProvider,useSafeAreaInsets} from "react-native-safe-area-context";
@@ -35,14 +35,26 @@ function Shell(){
    onPress={()=>setMenuOpen(open=>!open)}
    style={[styles.trigger,{top:insets.top+12}]}>
    <LinearGradient pointerEvents="none" colors={["#FFF9E8","#FFE2B6","#F3AD78"]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
-   {menuOpen?<X color="#81402A" size={25} strokeWidth={2.4}/>:<Menu color="#81402A" size={26} strokeWidth={2.5}/>}
+   <Menu color="#81402A" size={25} strokeWidth={2.5}/>
+   <Text style={styles.buildMark}>G3</Text>
   </TouchableOpacity>
-  {menuOpen?<View style={styles.overlay}>
-    <Pressable accessibilityRole="button" accessibilityLabel="Close navigation menu" onPress={()=>setMenuOpen(false)} style={styles.backdrop}/>
-    <View style={[styles.drawer,{paddingTop:Math.max(insets.top,20)}]}>
-     <GoodSideDrawer close={()=>setMenuOpen(false)}/>
+  <Modal
+   visible={menuOpen}
+   transparent
+   statusBarTranslucent
+   animationType="slide"
+   presentationStyle="overFullScreen"
+   onRequestClose={()=>setMenuOpen(false)}>
+    <View style={styles.overlay}>
+     <Pressable accessibilityRole="button" accessibilityLabel="Close navigation menu" onPress={()=>setMenuOpen(false)} style={styles.backdrop}/>
+     <View style={[styles.drawer,{paddingTop:Math.max(insets.top,20)}]}>
+      <GoodSideDrawer close={()=>setMenuOpen(false)}/>
+     </View>
+     <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close menu" onPress={()=>setMenuOpen(false)} style={[styles.closeButton,{top:insets.top+12}]}>
+      <X size={25} strokeWidth={2.5} color="#81402A"/>
+     </TouchableOpacity>
     </View>
-   </View>:null}
+  </Modal>
  </View>;
 }
 export default function Root(){
@@ -51,7 +63,9 @@ export default function Root(){
 const styles=StyleSheet.create({
  root:{flex:1},
  trigger:{position:"absolute",right:17,zIndex:70,height:48,width:52,borderRadius:17,overflow:"hidden",borderWidth:1.5,borderColor:"rgba(255,255,255,.98)",alignItems:"center",justifyContent:"center",backgroundColor:"#FFE7BF",shadowColor:"#BA764E",shadowOpacity:.25,shadowRadius:12,shadowOffset:{width:0,height:6},elevation:12},
- overlay:{position:"absolute",top:0,left:0,right:0,bottom:0,zIndex:60,flexDirection:"row",justifyContent:"flex-end"},
+ overlay:{flex:1,flexDirection:"row",justifyContent:"flex-end"},
+ closeButton:{position:"absolute",right:17,height:48,width:52,borderRadius:17,backgroundColor:"#FFE7BF",borderWidth:1.5,borderColor:"#fff",alignItems:"center",justifyContent:"center"},
+ buildMark:{fontSize:9,fontWeight:"900",color:"#81402A",marginTop:-3},
  backdrop:{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundColor:"rgba(37,25,35,.40)"},
  drawer:{width:"86%",maxWidth:390,height:"100%",backgroundColor:"#FCE8DF",borderTopLeftRadius:32,borderBottomLeftRadius:32,overflow:"hidden",shadowColor:"#49313D",shadowOpacity:.28,shadowRadius:28,shadowOffset:{width:-8,height:0},elevation:15}
 });
