@@ -4,7 +4,7 @@ import {useSafeAreaInsets} from "react-native-safe-area-context";
 import {LinearGradient} from "expo-linear-gradient";
 import {router} from "expo-router";
 import {api,auth,put} from "../src/client";
-import {Background,Pill,styles} from "../src/components";
+import {Background,Pill,GoodSideLoader,styles} from "../src/components";
 import {categories,colors} from "../src/theme";
 
 function asCategories(value:unknown):string[]{
@@ -46,7 +46,7 @@ export default function Categories(){
  return <Background><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[ui.page,{paddingBottom:bottomClearance}]}>
   <Text style={[styles.title,{fontSize:36,lineHeight:42}]}>What makes you{"\n"}smile?</Text>
   <Text style={[styles.subtitle,{marginTop:10,marginBottom:22}]}>Choose the stories that brighten your day. Change your interests anytime.</Text>
-  {loading?<ActivityIndicator color={colors.orange} style={{marginVertical:24}}/>:null}
+  {loading?<GoodSideLoader label="Loading your interests…"/>:null}
   <View style={ui.grid}>{categories.map(([label,id,emoji])=>{
    const active=selected.includes(id);
    return <TouchableOpacity key={id} accessibilityRole="checkbox" accessibilityState={{checked:active}} onPress={()=>toggle(id)} activeOpacity={.79} style={[ui.card,active&&ui.selected]}>
@@ -58,6 +58,7 @@ export default function Categories(){
   })}</View>
   <View style={ui.footer}>
    <Text style={ui.counter}>{selected.length} interests selected</Text>
+   {busy?<GoodSideLoader compact label="Saving interests…"/>:null}
    <Pill title={busy?"Saving…":"Continue →"} onPress={save} disabled={busy||loading}/>
   </View>
  </ScrollView></Background>;
