@@ -240,3 +240,38 @@ body:has(.news-shell) .rss-reader::backdrop{background:rgba(31,23,21,.72);backdr
 .rss-reader-actions a{background:#a96b4d;color:white}
 .rss-reader-actions button{border:1px solid #c5aa8a;background:#f8edda;color:#443329;cursor:pointer}
 @media(max-width:650px){body:has(.news-shell) .rss-story-open{font-size:17px}}
+
+
+/* The Good Side supplied golden 3D logo — first header preview.
+   A faint ivory paper backing and warm soft glow echo the uploaded reference. */
+body:has(.news-shell) .news-brand-line{
+  min-height:125px;
+}
+body:has(.news-shell) .news-masthead{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  padding:3px 10px 4px;
+  border-radius:13px;
+  background:linear-gradient(140deg,rgba(255,253,246,.7),rgba(250,238,216,.48));
+  box-shadow:0 6px 17px rgba(108,75,34,.10),inset 0 1px 1px rgba(255,255,255,.65);
+}
+body:has(.news-shell) .masthead-logo-image{
+  width:clamp(228px,26vw,380px);
+  height:auto;
+  aspect-ratio:3 / 1;
+  display:block;
+  object-fit:contain;
+  filter:drop-shadow(0 5px 5px rgba(79,47,20,.25)) drop-shadow(0 0 10px rgba(240,163,60,.13));
+}
+@media(max-width:950px){
+  body:has(.news-shell) .news-brand-line{min-height:103px}
+  body:has(.news-shell) .masthead-logo-image{width:clamp(215px,31vw,300px)}
+}
+@media(max-width:650px){
+  body:has(.news-shell) .news-brand-line{min-height:98px;gap:7px}
+  body:has(.news-shell) .news-masthead{padding:0 3px}
+  body:has(.news-shell) .masthead-logo-image{width:clamp(190px,48vw,270px)}
+}
