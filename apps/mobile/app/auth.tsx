@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from "react";
-import {Text,ScrollView,TouchableOpacity,Platform,View,TextInput,ActivityIndicator,StyleSheet,KeyboardAvoidingView,Keyboard,Image} from "react-native";
+import {Text,ScrollView,TouchableOpacity,Platform,View,TextInput,ActivityIndicator,StyleSheet,KeyboardAvoidingView,Keyboard,Image,Alert} from "react-native";
 import Constants from "expo-constants";
 import {router} from "expo-router";
 import * as Google from "expo-auth-session/providers/google";
@@ -125,12 +125,18 @@ export default function SignIn(){
   </Surface>
   <View style={{flexDirection:"row",alignItems:"center",gap:12,marginVertical:6}}><View style={sx.rule}/><Text style={{color:"#6E5865"}}>or</Text><View style={sx.rule}/></View>
   {googleAvailable?<GoogleButton/>:<View style={{marginTop:14}}>
-   <View accessibilityLabel="Google sign-in is unavailable in Expo Go" style={[sx.googleButton,{opacity:.72}]}>
-    <View pointerEvents="none" style={sx.googleIcon}><Image source={require("../assets/google-g.png")} resizeMode="contain" style={{width:22,height:22}}/></View>
+   <TouchableOpacity
+    testID="google-signin-development-build"
+    accessibilityRole="button"
+    accessibilityLabel="Continue with Google. Requires installed development build."
+    activeOpacity={0.84}
+    onPress={()=>Alert.alert("Google sign-in","Google sign-in cannot complete inside Expo Go. It will be available in an installed iOS development build with the Google OAuth client configured. You can use email sign-in here.",[{text:"OK"}])}
+    style={sx.googleButton}>
+    <Image source={require("../assets/google-g.png")} resizeMode="contain" style={{width:24,height:24,marginRight:12}}/>
     <Text style={sx.googleButtonText}>Continue with Google</Text>
-   </View>
-   <Text style={[styles.muted,{marginTop:11,textAlign:"center",fontSize:13,lineHeight:20}]}>
-    {Constants.appOwnership==="expo"?"Google sign-in needs an installed iOS development build. Expo Go cannot complete the Google return-to-app step.":"Google sign-in needs a valid iOS Google client ID in this build."}{"\n"}Email sign-in works in Expo Go.
+   </TouchableOpacity>
+   <Text style={{color:"#704F50",fontSize:12.5,lineHeight:19,textAlign:"center",marginTop:8,paddingHorizontal:12}}>
+    {Constants.appOwnership==="expo"?"Available with the installed iPhone app · Not in Expo Go":"Requires Google OAuth configuration for this build"}
    </Text>
   </View>}
   <View style={{marginTop:17}}><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></View>
@@ -138,7 +144,7 @@ export default function SignIn(){
  </ScrollView></KeyboardAvoidingView></Background>;
 }
 const sx=StyleSheet.create({
- googleButton:{minHeight:56,marginTop:2,borderRadius:19,backgroundColor:"#FFFFFF",borderWidth:1.2,borderColor:"#E8D5CB",flexDirection:"row",alignItems:"center",justifyContent:"center",paddingHorizontal:52,shadowColor:"#9B6A53",shadowOpacity:.13,shadowRadius:12,shadowOffset:{width:0,height:5},elevation:3},
+ googleButton:{minHeight:58,marginTop:2,borderRadius:19,backgroundColor:"#FFFFFF",borderWidth:1.8,borderColor:"#D7A78C",flexDirection:"row",alignItems:"center",justifyContent:"center",paddingHorizontal:16,shadowColor:"#9B6A53",shadowOpacity:.15,shadowRadius:12,shadowOffset:{width:0,height:5},elevation:3},
  googleIcon:{position:"absolute",left:20,top:0,bottom:0,justifyContent:"center",alignItems:"center",width:24},
  googleButtonText:{fontSize:15.5,fontWeight:"700",color:"#332830",textAlign:"center"},
 
