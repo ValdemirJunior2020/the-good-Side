@@ -143,6 +143,37 @@ app.post("/admin/broadcast/send",asyncRoute(async(req,res)=>{
 app.get("/admin/broadcast/history",asyncRoute(async(req,res)=>send(res,await sheet("broadcastHistory",{limit:100}))));
 app.get("/admin/sources",asyncRoute(async(req,res)=>send(res,await sheet("listSources"))));
 app.post("/admin/sources",asyncRoute(async(req,res)=>send(res,await sheet("upsertSource",{...req.body,actor_id:req.uid}))));
+// Google News discovery is strictly editorial review only. Never auto-approve these leads.
+// The Google RSS URL is not a publisher original URL and is deliberately refused here.
+app.post("/worker/discover",asyncRoute(async(req,res)=>{
+ const key=req.get("x-worker-key")||"";
+ if(!process.env.RESEARCH_WORKER_KEY||!safeEqual(key,process.env.RESEARCH_WORKER_KEY))return res.status(403).json({error:"Unauthorized"});
+ const story=z.object({
+  title:z.string().trim().min(15).max(300),summary:z.string().trim().min(25).max(1200),
+  original_url:z.string().url().startsWith("https://"),publisher:z.string().trim().min(2).max(100),
+  category:z.string().trim().min(2).max(80),
+  source_published_at:z.string().datetime(),
+  content_hash:z.string().min(32).max(128),
+  confidence_score:z.number().min(70).max(100),positivity_score:z.number().min(70).max(100),
+  language:z.literal("en")
+ }).strict().parse(req.body);
+ const url=new URL(story.original_url);
+ // A verified original publisher URL is required, and only curated domains are allowed.
+ const domains=["positive.news","goodnewsnetwork.org","optimistdaily.com",
+  "reasonstobecheerful.world","goodgoodgood.co","nicenews.com"];
+ const trusted=domains.some(host=>url.hostname===host||url.hostname.endsWith("."+host));
+ if(!trusted||url.username||url.password||!/^https:$/.test(url.protocol))
+  return res.status(422).json({error:"Verified publisher URL required; Google News redirects cannot be published"});
+ const publishedAt=Date.parse(story.source_published_at);
+ if(!Number.isFinite(publishedAt)||publishedAt>Date.now()+86400000||publishedAt<Date.now()-14*86400000)
+  return res.status(422).json({error:"Discovery outside the 14-day editorial window"});
+ const saved=await sheet("addNews",{
+  ...story,news_id:createHash("sha256").update(story.original_url).digest("hex").slice(0,24),
+  full_summary:story.summary,approval_status:"pending",actor_id:"google-news-rss-review"
+ });
+ send(res,{...saved,status:"pending",requires_human_approval:true});
+}));
+
 // Only authenticated research-worker submissions from the trusted pilot source may auto-publish.
 // Stories failing provenance, language or scoring checks never enter the public feed.
 app.post("/worker/candidates",asyncRoute(async(req,res)=>{
