@@ -61,7 +61,7 @@ const s=StyleSheet.create({
  menuButton:{height:48,width:52,backgroundColor:"rgba(255,255,255,.48)",borderColor:"rgba(255,255,255,.9)",borderWidth:1.5,borderRadius:16,alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.13,shadowRadius:12,shadowOffset:{width:0,height:6}},
  hamburger:{fontSize:24,color:ink,lineHeight:29},
  screen:{flex:1,justifyContent:"flex-start",alignItems:"flex-end",paddingTop:65,paddingHorizontal:14},
- backdrop:{...StyleSheet.absoluteFillObject,backgroundColor:"rgba(40,23,40,.35)"},
+ backdrop:{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundColor:"rgba(40,23,40,.35)"},
  panel:{width:"92%",maxWidth:370,overflow:"hidden",borderRadius:28,borderWidth:1.5,borderColor:"rgba(255,255,255,.9)",padding:17,backgroundColor:"#FCE4DF",shadowColor:"#59374A",shadowOpacity:.2,shadowRadius:26,shadowOffset:{width:0,height:14},elevation:20},
  header:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:14},
  title:{fontSize:22,fontWeight:"800",color:ink,letterSpacing:-.7},subtitle:{fontSize:13,color:"#63545d",marginTop:4},
