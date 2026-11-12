@@ -98,7 +98,7 @@ export default function Profile(){
   }catch(e){Alert.alert("Unable to save",String(e))}finally{setBusy(false)}
  };
  const confirmDelete=()=>{
-  Alert.alert("Permanently delete account?","Your The Good Side profile, preferences and saved data will be deleted. Your third-party identity provider account will not be deleted.",[
+  Alert.alert("Permanently delete account?","Your The Good Side profile, preferences and saved data will be deleted. Google accounts remain with Google. If you created an email/password account, that Good Side login will also be deleted.",[
    {text:"Cancel",style:"cancel"},
    {text:"Delete account",style:"destructive",onPress:async()=>{
     setBusy(true);
