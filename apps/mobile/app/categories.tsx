@@ -44,7 +44,7 @@ export default function Categories(){
   finally{setBusy(false)}
  };
  return <Background><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[ui.page,{paddingBottom:bottomClearance}]}>
-  <View style={{alignItems:"flex-end"}}><MenuButton/></View>
+  <View style={{alignItems:"flex-end",marginTop:36,marginBottom:10}}><MenuButton/></View>
   <Text style={[styles.title,{fontSize:36,lineHeight:42}]}>What makes you{"\n"}smile?</Text>
   <Text style={[styles.subtitle,{marginTop:10,marginBottom:22}]}>Choose the stories that brighten your day. Change your interests anytime.</Text>
   {loading?<GoodSideLoader label="Loading your interests…"/>:null}
