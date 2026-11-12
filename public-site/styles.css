@@ -19,3 +19,126 @@ body:has(.news-shell) .news-shell{max-width:1560px;margin:0 auto;padding:0 28px}
 body:has(.news-shell) footer{padding:35px 0 22px}
 @media(max-width:1050px){.news-columns{grid-template-columns:165px minmax(0,1fr)}.right-rail{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:18px}.right-rail>h2,.right-rail>#most-read-feed{display:none}.news-center{border-right:0;padding-right:0}.editorial-cards{grid-template-columns:repeat(2,1fr)}.masthead-tagline{display:none}.news-nav{gap:18px}}
 @media(max-width:650px){body:has(.news-shell) .news-shell{padding:0 15px}.news-brand-line{flex-wrap:wrap;padding:12px 0}.news-masthead{font-size:28px}.masthead-actions{gap:9px}.masthead-actions>a:nth-child(-n+2){display:none}.masthead-actions .news-login,.masthead-actions .news-signup{padding:8px;font-size:11px}.news-nav{overflow:auto;justify-content:flex-start;gap:10px;height:48px}.news-nav a{flex-shrink:0;font-size:14px}.good-news-ticker{font-size:11px;gap:8px}.good-news-ticker a{display:none}.good-news-ticker strong{font-size:10px}.news-columns{display:block}.latest-rail{display:none}.news-center{padding:0;border:0}.lead-photo img{aspect-ratio:1.7/1}.news-lead h1{font-size:36px}.lead-story-layout{grid-template-columns:1fr}.lead-story-layout blockquote{font-size:20px;padding:14px}.lead-meta{flex-wrap:wrap;gap:8px}.section-rule-heading{display:block}.section-rule-heading label{display:block;margin-bottom:10px}.section-rule-heading input{width:70%}.editorial-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.editorial-card h3{font-size:16px}.right-rail{display:grid;grid-template-columns:1fr;gap:0}.news-shell .bottom-line{line-height:1.7}}
+
+
+/* ==========================================
+   PASTEL VINTAGE JOURNAL — Good Side News
+   Intentional subtle torn-paper details.
+   Scoped to the public editorial homepage.
+   ========================================== */
+body:has(.news-shell){
+  --paper:#f1e4cf;
+  --paper-light:#fbf2df;
+  --paper-edge:#d5bfa3;
+  --newspaper-ink:#352c2a;
+  color:var(--newspaper-ink);
+  background-color:#e7d6bc;
+  background-image:
+    radial-gradient(ellipse at 12% 9%,rgba(255,252,232,.66),transparent 36%),
+    radial-gradient(ellipse at 91% 72%,rgba(191,147,109,.10),transparent 39%),
+    repeating-linear-gradient(0deg,rgba(100,78,54,.012) 0px,rgba(100,78,54,.012) 1px,transparent 1px,transparent 5px),
+    linear-gradient(110deg,#e9d8bd 0%,#f6ebd6 47%,#ead9c0 100%);
+}
+body:has(.news-shell) .news-shell{
+  position:relative;
+  margin:28px auto 40px;
+  padding:12px 39px 46px;
+  background:
+    radial-gradient(circle at 0% 0%,rgba(158,115,72,.095),transparent 26%),
+    radial-gradient(circle at 100% 100%,rgba(172,113,65,.075),transparent 25%),
+    repeating-linear-gradient(90deg,rgba(84,59,39,.012) 0 1px,transparent 1px 7px),
+    linear-gradient(155deg,#fbf3e4,#f2e5d0 64%,#f9eedc);
+  border:1px solid rgba(148,111,70,.19);
+  box-shadow:0 12px 35px rgba(83,60,38,.13),0 2px 4px rgba(73,54,37,.13),inset 0 0 25px rgba(161,117,75,.055);
+  isolation:isolate;
+}
+/* Irregular soft top and bottom paper edges (no change to text/layout). */
+body:has(.news-shell) .news-shell::before,
+body:has(.news-shell) .news-shell::after{
+  content:"";
+  position:absolute;
+  left:-1px;right:-1px;
+  height:11px;
+  pointer-events:none;
+  background:#f8eedc;
+  z-index:2;
+}
+body:has(.news-shell) .news-shell::before{
+  top:-8px;
+  clip-path:polygon(0 80%,3% 49%,7% 72%,11% 26%,15% 60%,19% 37%,24% 63%,29% 25%,34% 74%,39% 39%,44% 68%,49% 35%,54% 69%,59% 24%,64% 67%,69% 45%,74% 73%,79% 31%,85% 68%,90% 41%,95% 74%,100% 47%,100% 100%,0 100%);
+}
+body:has(.news-shell) .news-shell::after{
+  bottom:-8px;
+  background:#f6ead5;
+  clip-path:polygon(0 0,100% 0,100% 31%,96% 67%,91% 35%,86% 70%,81% 44%,76% 78%,71% 41%,66% 72%,60% 34%,55% 74%,49% 46%,44% 81%,38% 39%,33% 72%,27% 45%,21% 76%,15% 35%,9% 72%,4% 41%,0 70%);
+}
+body:has(.news-shell) .news-brand-line,
+body:has(.news-shell) .news-nav,
+body:has(.news-shell) .news-center,
+body:has(.news-shell) .news-rail .rail-story,
+body:has(.news-shell) .news-lead .lead-meta{
+  border-color:rgba(126,92,63,.32);
+}
+body:has(.news-shell) .good-news-ticker{
+  background:#e9d5b7;
+  border:1px solid rgba(156,116,71,.25);
+  box-shadow:inset 0 1px rgba(255,250,236,.8);
+}
+body:has(.news-shell) .good-news-ticker strong{
+  background:#a66a50;
+}
+body:has(.news-shell) .lead-story-layout blockquote,
+body:has(.news-shell) .atacama-detail{
+  background:linear-gradient(150deg,#f1e0c3,#f7ebd8);
+  border-color:#c3a16c;
+}
+body:has(.news-shell) .inbox-card,
+body:has(.news-shell) .app-promo{
+  position:relative;
+  background:linear-gradient(155deg,#fff3de,#efdebf);
+  border:1px solid rgba(156,119,79,.28);
+  border-radius:5px 12px 7px 10px;
+  box-shadow:2px 5px 13px rgba(90,65,38,.11);
+}
+body:has(.news-shell) .inbox-card::before,
+body:has(.news-shell) .app-promo::before{
+  content:"";
+  position:absolute;
+  width:63px;height:17px;
+  top:-8px;left:calc(50% - 31px);
+  background:rgba(199,166,112,.32);
+  transform:rotate(-3deg);
+  border-left:1px solid rgba(160,128,79,.10);
+  border-right:1px solid rgba(160,128,79,.10);
+  pointer-events:none;
+}
+body:has(.news-shell) .news-signup,
+body:has(.news-shell) .inbox-card button,
+body:has(.news-shell) .app-promo a{
+  background:#a96b4d;
+  border-color:#a96b4d;
+}
+body:has(.news-shell) .news-login,
+body:has(.news-shell) .newspaper-filters .chip,
+body:has(.news-shell) .refresh-link,
+body:has(.news-shell) .section-rule-heading input{
+  background:rgba(255,250,237,.83);
+  border-color:#d3b99b;
+}
+body:has(.news-shell) .newspaper-filters .chip.active{
+  color:#fff7e9;
+  background:#59483a;
+  border-color:#59483a;
+}
+body:has(.news-shell) footer{
+  background:#3b342e;
+}
+@media(max-width:650px){
+  body:has(.news-shell) .news-shell{
+    margin:12px auto 25px;
+    padding:9px 17px 32px;
+    width:calc(100% - 20px);
+  }
+  body:has(.news-shell) .news-shell::before,
+  body:has(.news-shell) .news-shell::after{height:7px}
+}
