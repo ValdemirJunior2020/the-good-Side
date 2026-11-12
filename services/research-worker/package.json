@@ -7,7 +7,8 @@
     "research": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "aihot:import": "tsx src/aihot.ts",
-    "test": "node --import tsx --test src/*.test.ts"
+    "test": "node --import tsx --test src/*.test.ts",
+    "google:discover": "tsx src/google-news.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
