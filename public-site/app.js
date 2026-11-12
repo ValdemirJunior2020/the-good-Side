@@ -85,7 +85,7 @@ function openRSSReader(item){
  const dialog=byId("rss-reader");
  if(!dialog||typeof dialog.showModal!=="function")return;
  const link=allowedLink(item.url);
- if(!link||new URL(link).hostname.replace(/^www\\./,"")!=="goodnewsnetwork.org")return;
+ if(!link||new URL(link).hostname.replace(/^www\./,"")!=="goodnewsnetwork.org")return;
  byId("rss-reader-title").textContent=item.title||"Good news";
  const date=item.published?new Date(item.published):null;
  byId("rss-reader-byline").textContent="Good News Network"+(date&&!Number.isNaN(+date)?" · "+date.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}):"");
