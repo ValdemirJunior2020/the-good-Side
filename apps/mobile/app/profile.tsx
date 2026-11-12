@@ -127,7 +127,7 @@ export default function Profile(){
   <LinearGradient pointerEvents="none" colors={["rgba(255,225,213,.20)","rgba(255,225,213,.18)","rgba(243,197,201,.45)","rgba(239,207,225,.92)"]} locations={[0,.3,.64,1]} style={StyleSheet.absoluteFill}/>
   <ScrollView contentContainerStyle={ui.page} showsVerticalScrollIndicator={false}>
    <View style={ui.topRow}><TouchableOpacity accessibilityRole="button" onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={ui.back}><ArrowLeft size={23} color={ink}/><Text style={ui.backText}>Back</Text></TouchableOpacity></View>
-   <View style={ui.brand}><View style={ui.brandSunBadge}><LinearGradient pointerEvents="none" colors={["#FFEB95","#FFC43A","#EF8C15"]} style={StyleSheet.absoluteFill}/><Sun size={42} color="#FFF6C8" strokeWidth={2.6}/></View><View><Text style={ui.brandName}>the good side<Text style={{color:"#EA8F28"}}>.</Text></Text><Text style={ui.brandSubtitle}>Your corner of good news.</Text></View></View>
+   <View style={ui.brand}><Image source={require("../assets/good-side-logo.png")} resizeMode="contain" accessibilityLabel="The Good Side golden sunrise logo" style={{width:216,height:73}}/></View>
    <View style={ui.hero}>
     <View style={ui.avatarRim}>
      <LinearGradient colors={["#FFE59A","#F8A068","#DD88B8","#FFD187"]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill} pointerEvents="none"/>
