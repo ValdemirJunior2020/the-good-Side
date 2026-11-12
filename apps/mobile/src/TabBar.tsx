@@ -20,7 +20,7 @@ export default function TabBar(){
     const IconComponent=icons[name as keyof typeof icons];
     return <TouchableOpacity key={name} accessibilityRole="tab" accessibilityLabel={name} accessibilityState={{selected:active}} onPress={()=>{if(!active)router.push(href as any)}} style={[styles.item,active&&styles.activeItem]} activeOpacity={.8}>
      {active?<LinearGradient colors={["#FFE7B1","#F4AA4D"]} style={StyleSheet.absoluteFill} pointerEvents="none"/>:null}
-     {active?<LuxuryIcon size={46} tone="sun"><IconComponent size={27} color="#9E5019" strokeWidth={2.4}/></LuxuryIcon>:<IconComponent size={29} color="#332832" strokeWidth={1.9}/>}
+     <LuxuryIcon size={active?44:35} tone={tones[name as keyof typeof tones]}><IconComponent size={active?26:21} color={pigments[name as keyof typeof pigments]} strokeWidth={active?2.5:2.15}/></LuxuryIcon>
      <Text style={[styles.label,active&&{color:"#A34A0F",fontWeight:"900"}]}>{name}</Text>
     </TouchableOpacity>;
    })}
@@ -29,8 +29,8 @@ export default function TabBar(){
 }
 const styles=StyleSheet.create({
  outer:{position:"absolute",left:13,right:13,bottom:Platform.OS==="ios"?22:13,zIndex:30},
- container:{flexDirection:"row",borderRadius:44,minHeight:77,padding:5,backgroundColor:"rgba(255,247,246,.62)",borderWidth:1.5,borderColor:"rgba(255,255,255,.98)",overflow:"hidden",shadowColor:"#975C6C",shadowOpacity:.17,shadowRadius:21,shadowOffset:{width:0,height:10},elevation:8},
- item:{flex:1,alignItems:"center",justifyContent:"center",borderRadius:38,overflow:"visible",paddingVertical:7,gap:4},
+ container:{flexDirection:"row",borderRadius:44,minHeight:76,padding:5,backgroundColor:"rgba(255,247,246,.62)",borderWidth:1.5,borderColor:"rgba(255,255,255,.98)",overflow:"hidden",shadowColor:"#975C6C",shadowOpacity:.17,shadowRadius:21,shadowOffset:{width:0,height:10},elevation:8},
+ item:{flex:1,alignItems:"center",justifyContent:"center",borderRadius:38,overflow:"visible",paddingVertical:6,gap:3},
  activeItem:{borderWidth:1,borderColor:"rgba(255,255,255,.93)"},
  icon:{fontSize:29,color:colors.ink,fontWeight:"400"},
  label:{fontSize:12.5,fontWeight:"600",color:colors.ink},
