@@ -7,6 +7,7 @@ import {api,auth,put,type Session} from "../src/client";
 import {colors} from "../src/theme";
 import LuxuryIcon from "../src/LuxuryIcon";
 import {avatarCatalog} from "../src/avatarCatalog";
+import {getPublicAvatars,getPersonalAvatar,getPublicSettings} from "../src/remoteConfig";
 
 import {ArrowLeft,Camera,UserSquare2,Link2,Crown,Bell,SlidersHorizontal,Sparkles,Layers3,ShieldCheck,Bookmark,BookOpen,Lock,Download,LogOut,Headphones,Trash2,ChevronRight,House,Compass,ChefHat,Heart,UserRound,Pencil,Sun} from "lucide-react-native";
 
@@ -45,6 +46,8 @@ export default function Profile(){
  const[editing,setEditing]=useState(false);
  const[busy,setBusy]=useState(false);
  const[avatarId,setAvatarId]=useState("");
+ const[customAvatar,setCustomAvatar]=useState<string|null>(null);
+ const[supportEmail,setSupportEmail]=useState("infojr.83@gmail.com");
  const[avatars,setAvatars]=useState<Avatar[]>(avatarCatalog);
  const[avatarPicker,setAvatarPicker]=useState(false);
  const[avatarLoading,setAvatarLoading]=useState(false);
@@ -54,11 +57,13 @@ export default function Profile(){
   const off=auth.subscribe(user=>{
    if(!mounted)return;
    setSession(user);setName(user?.displayName||"");
-   if(user){api<{avatar_id?:string}>("/me",{},true).then(record=>{if(mounted)setAvatarId(record?.avatar_id||"")}).catch(()=>{});}
-   else setAvatarId("");
+   if(user){api<{avatar_id?:string}>("/me",{},true).then(record=>{if(mounted)setAvatarId(record?.avatar_id||"")}).catch(()=>{});
+    void auth.getFreshToken().then(token=>token?getPersonalAvatar(token):null).then(url=>{if(mounted)setCustomAvatar(url)}).catch(()=>{});}
+   else{setAvatarId("");setCustomAvatar(null)}
   });
   void auth.restore();
-  api<Avatar[]>("/avatars").then(items=>{if(mounted&&Array.isArray(items)&&items.length)setAvatars(()=>{const merged=new Map<string,Avatar>(avatarCatalog.map(a=>[a.avatar_id,a]));for(const a of items)if(a?.avatar_id)merged.set(a.avatar_id,a);return Array.from(merged.values())})}).catch(()=>{/* Curated avatar catalog remains available if the old gallery endpoint is down. */});
+  getPublicAvatars().then(items=>{if(mounted&&items.length)setAvatars(items)}).catch(()=>{/* Local avatar catalog is an offline fallback. */});
+  getPublicSettings().then(settings=>{if(mounted&&settings.support_email)setSupportEmail(settings.support_email)}).catch(()=>{});
   return ()=>{mounted=false;off()};
  },[]);
  const openAvatars=async()=>{
@@ -67,8 +72,8 @@ export default function Profile(){
   // Render immediately from the backed-up catalog; refresh opportunistically.
   if(!avatars.length)setAvatars(avatarCatalog);
   try{
-   const items=await api<Avatar[]>("/avatars");
-   if(Array.isArray(items)&&items.length)setAvatars(()=>{const merged=new Map<string,Avatar>(avatarCatalog.map(a=>[a.avatar_id,a]));for(const a of items)if(a?.avatar_id)merged.set(a.avatar_id,a);return Array.from(merged.values())});
+   const items=await getPublicAvatars();
+   if(Array.isArray(items)&&items.length)setAvatars(items);
   }catch{/* The previous Apps Script gallery can fail; do not hide valid avatar choices. */}
   finally{setAvatarLoading(false)}
  };
@@ -91,7 +96,7 @@ export default function Profile(){
   }catch(e){Alert.alert("Unable to save",String(e))}finally{setBusy(false)}
  };
  const confirmDelete=()=>{
-  Alert.alert("Permanently delete account?","Your The Good Side profile, preferences and saved data will be deleted. Your Google account will not be deleted.",[
+  Alert.alert("Permanently delete account?","Your The Good Side profile, preferences and saved data will be deleted. Your third-party identity provider account will not be deleted.",[
    {text:"Cancel",style:"cancel"},
    {text:"Delete account",style:"destructive",onPress:async()=>{
     setBusy(true);
@@ -113,8 +118,8 @@ export default function Profile(){
  const firstName=(name.trim().split(/\s+/)[0]||"Friend");
  const signedIn=Boolean(session);
  const currentAvatar=avatars.find(a=>a.avatar_id===avatarId);
- const avatarUrl=currentAvatar?.image_url||SUNRISE;
- const support=async()=>{const address="mailto:infojr.83@gmail.com?subject="+encodeURIComponent("The Good Side - Support");try{await Linking.openURL(address)}catch{Alert.alert("Contact Support","Please email infojr.83@gmail.com")}};
+ const avatarUrl=customAvatar||currentAvatar?.image_url||SUNRISE;
+ const support=async()=>{const address="mailto:"+supportEmail+"?subject="+encodeURIComponent("The Good Side - Support");try{await Linking.openURL(address)}catch{Alert.alert("Contact Support","Please email "+supportEmail)}};
  return <LinearGradient colors={["#FFF1E3","#F7D1C7","#DED0E5"]} style={{flex:1}}>
   <ImageBackground source={{uri:SUNRISE}} resizeMode="cover" style={StyleSheet.absoluteFill} pointerEvents="none"/>
   <LinearGradient pointerEvents="none" colors={["rgba(255,225,213,.20)","rgba(255,225,213,.18)","rgba(243,197,201,.45)","rgba(239,207,225,.92)"]} locations={[0,.3,.64,1]} style={StyleSheet.absoluteFill}/>
@@ -140,7 +145,7 @@ export default function Profile(){
    <View style={ui.quickGrid}>
     {([
      [<UserSquare2 size={25} color="#A45B2A"/>,"Profile Info",()=>signedIn?setEditing(v=>!v):go("/auth")],
-     [<Link2 size={25} color="#A45B2A"/>,"Connected Apps",()=>Alert.alert("Connected account",signedIn?"Your Google account is used for secure sign-in. No additional connected apps are configured.":"Sign in with Google to connect your account.")],
+     [<Link2 size={25} color="#A45B2A"/>,"Connected Apps",()=>Alert.alert("Connected account",signedIn?"Your email or Google account is used for secure sign-in. No additional connected apps are configured.":"Sign in to connect your account.")],
      [<Crown size={25} color="#A45B2A"/>,"Subscription",()=>Alert.alert("Free account","The Good Side currently has free access. No paid subscription is configured.")]
     ] as const).map(([icon,label,onPress])=><TouchableOpacity key={label} accessibilityRole="button" onPress={onPress} activeOpacity={.78} style={ui.quickCard}>
       <LinearGradient colors={["rgba(255,255,255,.80)","rgba(255,225,217,.58)","rgba(247,214,236,.65)"]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
@@ -157,7 +162,7 @@ export default function Profile(){
     <MenuRow icon={<BookOpen size={22} color={gold}/>} label="Reading History" last onPress={()=>Alert.alert("Reading history","Reading history is not available in this version yet. Your saved stories are available above.")}/>
    </Section>
    <Section symbol={<ShieldCheck size={23} color={gold}/>} title="Data & Security">
-    <MenuRow icon={<Lock size={22} color={gold}/>} label="Security & Privacy" onPress={()=>Alert.alert("Security & Privacy","The Good Side uses Google Sign-In and does not store your Google password. Privacy Policy and Terms links will be added when their official URLs are available.")}/>
+    <MenuRow icon={<Lock size={22} color={gold}/>} label="Security & Privacy" onPress={()=>Alert.alert("Security & Privacy","The Good Side offers Google or email sign-in. Email passwords are managed by Supabase Auth. Privacy Policy and Terms links will be added when available.")}/>
     <MenuRow icon={<Download size={22} color={gold}/>} label="My Data Export" last onPress={()=>signedIn?void exportData():go("/auth")}/>
    </Section>
    <View style={ui.footer}>
@@ -165,7 +170,7 @@ export default function Profile(){
      <Action icon={<LogOut size={20} color={ink}/>} label="Sign Out" onPress={async()=>{await auth.signOut();router.replace("/")}}/>
      <Action icon={<Trash2 size={20} color="#BE302C"/>} label={busy?"Please wait…":"Delete My Account and Data"} danger disabled={busy} onPress={confirmDelete}/>
     </>:<>
-     <Action label="Log in with Google" onPress={()=>go("/auth")}/>
+     <Action label="Log in" onPress={()=>go("/auth")}/>
      <Action label="Create Free Account" onPress={()=>go("/auth")}/>
     </>}
     <Action icon={<Headphones size={20} color={ink}/>} label="Contact Support" onPress={()=>void support()}/>
