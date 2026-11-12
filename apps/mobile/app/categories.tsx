@@ -4,7 +4,7 @@ import {useSafeAreaInsets} from "react-native-safe-area-context";
 import {LinearGradient} from "expo-linear-gradient";
 import {router} from "expo-router";
 import {api,auth,put} from "../src/client";
-import {Background,Pill,GoodSideLoader,styles} from "../src/components";
+import {Background,Pill,GoodSideLoader,MenuButton,styles} from "../src/components";
 import {categories,colors} from "../src/theme";
 
 function asCategories(value:unknown):string[]{
@@ -44,6 +44,7 @@ export default function Categories(){
   finally{setBusy(false)}
  };
  return <Background><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[ui.page,{paddingBottom:bottomClearance}]}>
+  <View style={{alignItems:"flex-end"}}><MenuButton/></View>
   <Text style={[styles.title,{fontSize:36,lineHeight:42}]}>What makes you{"\n"}smile?</Text>
   <Text style={[styles.subtitle,{marginTop:10,marginBottom:22}]}>Choose the stories that brighten your day. Change your interests anytime.</Text>
   {loading?<GoodSideLoader label="Loading your interests…"/>:null}
