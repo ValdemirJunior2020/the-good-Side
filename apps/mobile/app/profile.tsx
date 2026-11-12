@@ -174,7 +174,7 @@ export default function Profile(){
      {avatarError?<Text style={{color:"#A63232",marginBottom:15}}>{avatarError}. Check that the latest Google Apps Script has been deployed.</Text>:null}
      <ScrollView style={{maxHeight:380}} contentContainerStyle={{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",paddingBottom:18}}>
       {avatars.map(a=><TouchableOpacity key={a.avatar_id} accessibilityRole="button" accessibilityLabel={"Select "+a.label} disabled={busy} onPress={()=>void pickAvatar(a.avatar_id)} style={[ui.avatarChoice,avatarId===a.avatar_id&&{borderColor:"#D17929",borderWidth:3}]}>
-       <Image source={{uri:a.image_url}} style={ui.choiceImage}/>
+       <Image source={{uri:a.image_url}} style={{width:"100%",height:130,borderRadius:15}}/>
        <Text numberOfLines={1} style={{fontSize:12,color:ink,fontWeight:"700",marginTop:7,textAlign:"center"}}>{a.label}</Text>
       </TouchableOpacity>)}
      </ScrollView>
@@ -212,7 +212,7 @@ const ui=StyleSheet.create({
  rowBorder:{borderBottomWidth:1,borderBottomColor:"rgba(163,117,120,.2)"},
  menuIconBadge:{width:39,height:39,backgroundColor:"rgba(255,213,178,.65)",borderRadius:20,alignItems:"center",justifyContent:"center",borderColor:"rgba(255,255,255,.7)",borderWidth:1},
  menuIcon:{alignItems:"center",justifyContent:"center"},
- menuLabel:{flex:1,fontSize:15.5,fontWeight:"650",color:ink},
+ menuLabel:{flex:1,fontSize:15.5,fontWeight:"600",color:ink},
  arrow:{fontSize:30,color:ink,fontWeight:"300",marginRight:2},
  footer:{alignItems:"center",marginTop:16,gap:9},
  pill:{minHeight:43,minWidth:"61%",paddingHorizontal:23,paddingVertical:10,borderRadius:50,backgroundColor:"rgba(255,255,255,.52)",borderWidth:1.4,borderColor:"rgba(255,255,255,.95)",flexDirection:"row",gap:10,alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.2,shadowRadius:14,shadowOffset:{width:0,height:6}},
