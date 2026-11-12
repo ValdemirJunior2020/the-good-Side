@@ -143,7 +143,7 @@ export default function Profile(){
    {editing&&signedIn?<Glass style={{padding:16,marginBottom:18}}>
     <Text style={ui.fieldLabel}>Display name</Text>
     <TextInput accessibilityLabel="Display name" selectionColor="#B96F39" cursorColor="#B96F39" placeholder="Your display name" placeholderTextColor="#806D78" value={name} onChangeText={setName} style={[ui.nameInput,{backgroundColor:"#FFFFFF",borderColor:"#C88E78",borderWidth:2,color:"#301E2C",minHeight:52,zIndex:4}]} maxLength={80}/>
-    <Action label={busy?"Saving…":"Save profile"} disabled={busy} onPress={saveName}/>
+    <Action label={busy?"Saving…":"Save profile"} disabled={busy} onPress={saveName}/>{busy?<GoodSideLoader compact label="Saving your profile…"/>:null}
    </Glass>:null}
    <View style={ui.quickGrid}>
     {([
