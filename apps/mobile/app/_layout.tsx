@@ -25,7 +25,7 @@ function Shell(){
  return <View style={styles.root}>
   <Stack screenOptions={{headerShown:false,animation:"fade"}}/>
   <TabBar/>
-  <TouchableOpacity
+  {pathname!=="/profile"&&<TouchableOpacity
    testID="global-menu-button"
    accessibilityRole="button"
    accessibilityLabel={menuOpen?"Close menu":"Open menu"}
@@ -36,7 +36,7 @@ function Shell(){
    style={[styles.trigger,{top:insets.top+12}]}>
    <LinearGradient pointerEvents="none" colors={["rgba(255,255,255,.95)","rgba(255,227,213,.8)","rgba(244,191,204,.7)"]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}/>
    <Menu color="#81402A" size={25} strokeWidth={2.5}/>
-  </TouchableOpacity>
+  </TouchableOpacity>}
   <Modal
    visible={menuOpen}
    transparent
