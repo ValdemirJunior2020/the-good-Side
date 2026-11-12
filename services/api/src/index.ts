@@ -23,7 +23,7 @@ const oauthClient=new OAuth2Client();
 const allowedClients=Array.from(new Set([...(process.env.GOOGLE_CLIENT_IDS||"").split(","),process.env.GOOGLE_ADMIN_WEB_CLIENT_ID||""].map(s=>s.trim()).filter(Boolean)));
 const adminEmails=new Set((process.env.ADMIN_GOOGLE_EMAILS||"").split(",").map(s=>s.trim().toLowerCase()).filter(Boolean));
 const app=express();app.disable("x-powered-by");app.set("trust proxy","loopback");app.use(express.json({limit:"64kb"}));
-const allowedOrigins=Array.from(new Set([...(process.env.ALLOWED_ORIGIN||"").split(","),process.env.GOOGLE_ADMIN_ORIGIN||""].map(s=>s.trim()).filter(Boolean)));
+const allowedOrigins=Array.from(new Set([...(process.env.ALLOWED_ORIGIN||"").split(","),process.env.GOOGLE_ADMIN_ORIGIN||"",...(process.env.PUBLIC_WEB_ORIGINS||"").split(",")].map(s=>s.trim()).filter(Boolean)));
 app.use(cors({origin:allowedOrigins.length?allowedOrigins:false}));
 console.log("Good Side API CORS configured for",allowedOrigins.length,"origin(s)");
 app.use(rateLimit({windowMs:60000,limit:90,standardHeaders:"draft-7",legacyHeaders:false}));
