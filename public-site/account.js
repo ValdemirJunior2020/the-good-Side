@@ -142,9 +142,16 @@ function initializeGoogle(){
    await afterLogin()
   }catch(e){state.session=null;persist();displayError(e,"auth-message")}
  }});
- window.google.accounts.id.renderButton($("google-button"),{theme:"outline",size:"large",shape:"pill",width:310,text:"continue_with"});
+ const container=$("google-button");
+ // The Google SDK controls its own iframe. Render once into a clean container
+ // using the actual mobile width; avoid adding a second overlapping label.
+ container.replaceChildren();
+ const measured=Math.floor(container.getBoundingClientRect().width);
+ const width=Math.max(220,Math.min(310,measured||310));
+ window.google.accounts.id.renderButton(container,{theme:"outline",size:"large",shape:"pill",width,text:"continue_with",logo_alignment:"left"});
+
 }
-let googlePoll=0;const googleTimer=setInterval(()=>{googlePoll++;if(window.google?.accounts?.id){clearInterval(googleTimer);initializeGoogle()}else if(googlePoll>25)clearInterval(googleTimer)},350);
+let googlePoll=0;const googleTimer=setInterval(()=>{googlePoll++;if(window.google?.accounts?.id){clearInterval(googleTimer);initializeGoogle()}else if(googlePoll>25){clearInterval(googleTimer);feedback("Google sign-in could not load in this browser. You can still use email sign-in.",true,"auth-message")}},350);
 $("logout").addEventListener("click",()=>{
  state.session=null;state.user=null;persist();window.google?.accounts?.id?.disableAutoSelect?.();signedOut()
 });
