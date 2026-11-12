@@ -1,12 +1,12 @@
 import {BlurView} from "expo-blur";
 import React,{useEffect,useState} from "react";
-import {ActivityIndicator,Alert,Image,ImageBackground,Modal,ScrollView,Share,StyleSheet,Text,TextInput,TouchableOpacity,View} from "react-native";
+import {ActivityIndicator,Alert,Image,ImageBackground,Modal,ScrollView,Share,StyleSheet,Text,TextInput,TouchableOpacity,View,Linking} from "react-native";
 import {LinearGradient} from "expo-linear-gradient";
 import {router} from "expo-router";
 import {api,auth,put,type Session} from "../src/client";
 import {colors} from "../src/theme";
 import LuxuryIcon from "../src/LuxuryIcon";
-import SunriseBackdrop from "../src/SunriseBackdrop";
+
 import {ArrowLeft,Camera,UserSquare2,Link2,Crown,Bell,SlidersHorizontal,Sparkles,Layers3,ShieldCheck,Bookmark,BookOpen,Lock,Download,LogOut,Headphones,Trash2,ChevronRight,House,Compass,ChefHat,Heart,UserRound,Pencil,Sun} from "lucide-react-native";
 
 const SUNRISE="https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1100&q=85";
@@ -111,11 +111,13 @@ export default function Profile(){
  const signedIn=Boolean(session);
  const currentAvatar=avatars.find(a=>a.avatar_id===avatarId);
  const avatarUrl=currentAvatar?.image_url||SUNRISE;
+ const support=async()=>{const address="mailto:infojr.83@gmail.com?subject="+encodeURIComponent("The Good Side - Support");try{await Linking.openURL(address)}catch{Alert.alert("Contact Support","Please email infojr.83@gmail.com")}};
  return <LinearGradient colors={["#FFF1E3","#F7D1C7","#DED0E5"]} style={{flex:1}}>
-  <SunriseBackdrop/>
+  <ImageBackground source={{uri:SUNRISE}} resizeMode="cover" style={StyleSheet.absoluteFill} pointerEvents="none"/>
+  <LinearGradient pointerEvents="none" colors={["rgba(255,225,213,.20)","rgba(255,225,213,.18)","rgba(243,197,201,.45)","rgba(239,207,225,.92)"]} locations={[0,.3,.64,1]} style={StyleSheet.absoluteFill}/>
   <ScrollView contentContainerStyle={ui.page} showsVerticalScrollIndicator={false}>
    <View style={ui.topRow}><TouchableOpacity accessibilityRole="button" onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={ui.back}><ArrowLeft size={23} color={ink}/><Text style={ui.backText}>Back</Text></TouchableOpacity></View>
-   <View style={ui.brand}><View style={ui.brandSunBadge}><LinearGradient pointerEvents="none" colors={["#FFEB95","#FFC43A","#EF8C15"]} style={StyleSheet.absoluteFill}/><Sun size={38} color="#FFFAE8" strokeWidth={2.4}/></View><View><Text style={ui.brandName}>the good side<Text style={{color:"#EA8F28"}}>.</Text></Text><Text style={ui.brandSubtitle}>Your corner of good news.</Text></View></View>
+   <View style={ui.brand}><View style={ui.brandSunBadge}><LinearGradient pointerEvents="none" colors={["#FFEB95","#FFC43A","#EF8C15"]} style={StyleSheet.absoluteFill}/><Sun size={42} color="#FFF6C8" strokeWidth={2.6}/></View><View><Text style={ui.brandName}>the good side<Text style={{color:"#EA8F28"}}>.</Text></Text><Text style={ui.brandSubtitle}>Your corner of good news.</Text></View></View>
    <View style={ui.hero}>
     <View style={ui.avatarRim}>
      <LinearGradient colors={["#FFE59A","#F8A068","#DD88B8","#FFD187"]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill} pointerEvents="none"/>
@@ -124,7 +126,7 @@ export default function Profile(){
      </ImageBackground>
     </View>
     <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose profile picture" activeOpacity={.75} onPress={()=>void openAvatars()} style={ui.avatarCamera}><Camera size={20} color={ink}/></TouchableOpacity>
-    <View style={ui.nameRow}><Text style={ui.personName}>{signedIn?firstName:"Your corner"}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Edit profile" onPress={()=>signedIn?setEditing(v=>!v):go("/auth")}><Pencil size={20} color={ink}/></TouchableOpacity></View>
+    <View style={ui.nameRow}><Text style={ui.personName}>{signedIn?firstName:"Your profile"}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Edit profile" onPress={()=>signedIn?setEditing(v=>!v):go("/auth")}><Pencil size={20} color={ink}/></TouchableOpacity></View>
     {!signedIn?<Text style={ui.heroHint}>Log in to personalize your profile</Text>:null}
    </View>
    {editing&&signedIn?<Glass style={{padding:16,marginBottom:18}}>
@@ -152,7 +154,7 @@ export default function Profile(){
     <MenuRow icon={<BookOpen size={22} color={gold}/>} label="Reading History" last onPress={()=>Alert.alert("Reading history","Reading history is not available in this version yet. Your saved stories are available above.")}/>
    </Section>
    <Section symbol={<ShieldCheck size={23} color={gold}/>} title="Data & Security">
-    <MenuRow icon={<Lock size={22} color={gold}/>} label="Security & Privacy" onPress={()=>Alert.alert("Security & Privacy","The Good Side uses Google Sign-In and does not store your Google password. You can delete your app account below.")}/>
+    <MenuRow icon={<Lock size={22} color={gold}/>} label="Security & Privacy" onPress={()=>Alert.alert("Security & Privacy","The Good Side uses Google Sign-In and does not store your Google password. Privacy Policy and Terms links will be added when their official URLs are available.")}/>
     <MenuRow icon={<Download size={22} color={gold}/>} label="My Data Export" last onPress={()=>signedIn?void exportData():go("/auth")}/>
    </Section>
    <View style={ui.footer}>
@@ -163,7 +165,7 @@ export default function Profile(){
      <Action label="Log in with Google" onPress={()=>go("/auth")}/>
      <Action label="Create Free Account" onPress={()=>go("/auth")}/>
     </>}
-    <Action icon={<Headphones size={20} color={ink}/>} label="Contact Support" onPress={()=>Alert.alert("Contact support","The support contact address has not yet been configured.")}/>
+    <Action icon={<Headphones size={20} color={ink}/>} label="Contact Support" onPress={()=>void support()}/>
    </View>
   </ScrollView>
   <Modal visible={avatarPicker} transparent animationType="slide" onRequestClose={()=>setAvatarPicker(false)}>
@@ -192,37 +194,37 @@ export default function Profile(){
 }
 const ui=StyleSheet.create({
  sunrise:{position:"absolute",top:0,left:0,right:0,bottom:0},
- page:{paddingHorizontal:16,paddingTop:72,paddingBottom:180,width:"100%",maxWidth:550,alignSelf:"center"},
+ page:{paddingHorizontal:18,paddingTop:72,paddingBottom:155,width:"100%",maxWidth:550,alignSelf:"center"},
  topRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
  back:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:8,paddingVertical:8,paddingHorizontal:14,borderRadius:30,borderWidth:1.5,borderColor:"rgba(255,255,255,.95)",backgroundColor:"rgba(255,245,240,.46)",shadowColor:"#fff",shadowOpacity:.75,shadowRadius:8},backText:{fontSize:16,color:ink,fontWeight:"600"},
- brand:{marginTop:0,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8},brandSunBadge:{width:49,height:49,borderRadius:25,overflow:"hidden",justifyContent:"center",alignItems:"center",shadowColor:"#EC952A",shadowRadius:14,shadowOpacity:.33},
- brandSun:{fontSize:37},brandName:{fontSize:30,fontWeight:"900",color:ink,letterSpacing:-1.25},
+ brand:{marginTop:3,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:9},brandSunBadge:{width:49,height:49,borderRadius:25,overflow:"hidden",justifyContent:"center",alignItems:"center",shadowColor:"#EC952A",shadowRadius:14,shadowOpacity:.33},
+ brandSun:{fontSize:37},brandName:{fontSize:31,fontWeight:"900",color:ink,letterSpacing:-1.25},
  brandSubtitle:{fontSize:14,color:"#594450",marginTop:1},
- hero:{alignItems:"center",marginTop:16,marginBottom:13},
+ hero:{alignItems:"center",marginTop:15,marginBottom:12},
  avatarRim:{width:152,height:152,borderRadius:90,padding:6,borderWidth:2,borderColor:"#FFF9E9",overflow:"hidden",backgroundColor:"#ECA76D",shadowColor:"#B45D52",shadowOpacity:.34,shadowRadius:21,shadowOffset:{width:0,height:9}},
  avatar:{width:"100%",height:"100%",borderRadius:90,overflow:"hidden",backgroundColor:"#FFCC91"},
  avatarCamera:{position:"absolute",top:111,left:"61%",width:45,height:45,borderRadius:24,backgroundColor:"#FFFAEF",borderWidth:2,borderColor:"#FFF",alignItems:"center",justifyContent:"center",shadowColor:"#A55747",shadowOpacity:.22,shadowRadius:10,shadowOffset:{width:0,height:4},elevation:5},
- nameRow:{flexDirection:"row",alignItems:"center",gap:12,marginTop:10},personName:{fontSize:32,color:ink,fontWeight:"900",letterSpacing:-.6},
+ nameRow:{flexDirection:"row",alignItems:"center",gap:12,marginTop:10},personName:{fontSize:34,color:ink,fontWeight:"900",letterSpacing:-.6},
  heroHint:{fontSize:12,color:"#58434E",marginTop:3},
  glass:{borderWidth:1.7,borderColor:"rgba(255,255,255,.98)",backgroundColor:"rgba(255,255,255,.32)",borderRadius:27,overflow:"hidden",shadowColor:"#995F68",shadowOpacity:.22,shadowRadius:22,shadowOffset:{width:0,height:9},elevation:5},
  quickGrid:{flexDirection:"row",gap:7,marginTop:2},
- quickCard:{flex:1,borderRadius:25,minHeight:94,borderWidth:1.8,borderColor:"rgba(255,255,255,.98)",alignItems:"center",justifyContent:"center",overflow:"hidden",paddingHorizontal:3,paddingVertical:9,shadowColor:"#A56C68",shadowOpacity:.20,shadowRadius:21,shadowOffset:{width:0,height:8}},
+ quickCard:{flex:1,borderRadius:27,minHeight:106,borderWidth:1.8,borderColor:"rgba(255,255,255,.98)",alignItems:"center",justifyContent:"center",overflow:"hidden",paddingHorizontal:3,paddingVertical:9,shadowColor:"#A56C68",shadowOpacity:.20,shadowRadius:21,shadowOffset:{width:0,height:8}},
  quickShine:{position:"absolute",height:17,top:2,left:8,right:8,borderTopLeftRadius:28,borderTopRightRadius:28,backgroundColor:"rgba(255,255,255,.40)"},
  quickIconBadge:{height:45,width:45,borderRadius:15,backgroundColor:"rgba(255,226,171,.74)",borderColor:"rgba(255,255,255,.87)",borderWidth:1,alignItems:"center",justifyContent:"center",marginBottom:10,shadowColor:"#BC6F41",shadowOpacity:.2,shadowRadius:12,shadowOffset:{width:0,height:5}},
  quickIcon:{alignItems:"center",justifyContent:"center"},
- quickText:{fontSize:11.5,fontWeight:"800",color:ink,textAlign:"center",marginTop:5,lineHeight:14},
+ quickText:{fontSize:13,fontWeight:"700",color:ink,textAlign:"center",marginTop:6,lineHeight:16},
  sectionHeader:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:7},
  sectionIcon:{width:27,height:30,justifyContent:"center",alignItems:"center"},sectionTitle:{fontSize:22,fontWeight:"900",color:ink,letterSpacing:-.7},
  menuRow:{flexDirection:"row",alignItems:"center",minHeight:60,gap:12},
  rowBorder:{borderBottomWidth:1,borderBottomColor:"rgba(163,117,120,.2)"},
  menuIconBadge:{width:39,height:39,backgroundColor:"rgba(255,213,178,.65)",borderRadius:20,alignItems:"center",justifyContent:"center",borderColor:"rgba(255,255,255,.7)",borderWidth:1},
  menuIcon:{alignItems:"center",justifyContent:"center"},
- menuLabel:{flex:1,fontSize:15.5,fontWeight:"600",color:ink},
+ menuLabel:{flex:1,fontSize:16,fontWeight:"600",color:ink},
  arrow:{fontSize:30,color:ink,fontWeight:"300",marginRight:2},
  footer:{alignItems:"center",marginTop:16,gap:9},
  pill:{minHeight:44,minWidth:"61%",paddingHorizontal:23,paddingVertical:10,borderRadius:50,backgroundColor:"rgba(255,255,255,.56)",borderWidth:1.6,borderColor:"rgba(255,255,255,.98)",flexDirection:"row",gap:10,alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.20,shadowRadius:16,shadowOffset:{width:0,height:7}},
  dangerPill:{backgroundColor:"rgba(255,232,232,.68)"},
- pillText:{fontSize:15.5,fontWeight:"800",color:ink},
+ pillText:{fontSize:16,fontWeight:"700",color:ink},
  fieldLabel:{color:ink,fontWeight:"700",marginBottom:9},nameInput:{padding:12,backgroundColor:"#fff",borderRadius:15,borderWidth:1,borderColor:"#F3D2BD",marginBottom:10,color:ink},
  modalBackdrop:{flex:1,justifyContent:"flex-end",backgroundColor:"rgba(50,28,42,.42)"},
  modalPanel:{backgroundColor:"#FFF0E9",borderTopLeftRadius:32,borderTopRightRadius:32,paddingHorizontal:20,paddingTop:22,paddingBottom:35,borderWidth:1.5,borderColor:"#FFF"},
