@@ -1,4 +1,6 @@
 import TabBar from "../src/TabBar";
+import AppMenu from "../src/AppMenu";
+import {BlurView} from "expo-blur";
 import React,{useEffect,useState} from "react";
 import {ActivityIndicator,Alert,Image,ImageBackground,Modal,ScrollView,Share,StyleSheet,Text,TextInput,TouchableOpacity,View} from "react-native";
 import {LinearGradient} from "expo-linear-gradient";
@@ -12,7 +14,7 @@ const ink="#301E2C";
 type Avatar={avatar_id:string;label:string;image_url:string;credit:string};
 
 function Glass({children,style}:{children:React.ReactNode;style?:object}){
- return <View style={[ui.glass,style]}><LinearGradient pointerEvents="none" colors={["rgba(255,255,255,.65)","rgba(255,235,226,.45)","rgba(255,225,239,.58)"]} style={StyleSheet.absoluteFill}/>{children}</View>;
+ return <View style={[ui.glass,style]}><BlurView tint="light" intensity={65} pointerEvents="none" style={StyleSheet.absoluteFill}/><LinearGradient pointerEvents="none" colors={["rgba(255,255,255,.40)","rgba(255,233,219,.25)","rgba(255,221,240,.38)"]} style={StyleSheet.absoluteFill}/>{children}</View>;
 }
 function Section({symbol,title,children}:{symbol:string;title:string;children:React.ReactNode}){
  return <View style={{marginTop:23}}>
@@ -108,7 +110,7 @@ export default function Profile(){
    <LinearGradient colors={["rgba(255,249,239,.79)","rgba(255,232,210,.03)","rgba(255,224,212,.18)","#F3D5D4"]} locations={[0,.24,.72,1]} style={StyleSheet.absoluteFill}/>
   </ImageBackground>
   <ScrollView contentContainerStyle={ui.page} showsVerticalScrollIndicator={false}>
-   <TouchableOpacity accessibilityRole="button" onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={ui.back}><Text style={ui.backText}>‹  Back</Text></TouchableOpacity>
+   <View style={ui.topRow}><TouchableOpacity accessibilityRole="button" onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={ui.back}><Text style={ui.backText}>‹  Back</Text></TouchableOpacity><AppMenu/></View>
    <View style={ui.brand}><Text style={ui.brandSun}>☀️</Text><View><Text style={ui.brandName}>the good side<Text style={{color:"#EA8F28"}}>.</Text></Text><Text style={ui.brandSubtitle}>Your corner of good news.</Text></View></View>
    <View style={ui.hero}>
     <View style={ui.avatarRim}>
@@ -120,6 +122,7 @@ export default function Profile(){
     <View style={ui.nameRow}><Text style={ui.personName}>{signedIn?firstName:"Your corner"}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Edit profile" onPress={()=>signedIn?setEditing(v=>!v):go("/auth")}><Text style={{fontSize:23,color:ink}}>✎</Text></TouchableOpacity></View>
     {!signedIn?<Text style={ui.heroHint}>Create an account to personalize your good news</Text>:null}
    </View>
+   {!signedIn?<Glass style={{padding:16,marginBottom:18}}><Text style={ui.authHeading}>Make your corner yours ✨</Text><Text style={ui.authHelper}>Save favorite stories, select an avatar, and personalize notifications.</Text><View style={ui.authRow}><TouchableOpacity accessibilityRole="button" style={ui.authLight} onPress={()=>go("/auth")}><Text style={ui.authText}>Log in</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" style={ui.authGold} onPress={()=>go("/auth")}><LinearGradient pointerEvents="none" colors={["#FFE3BB","#F2AE67"]} style={StyleSheet.absoluteFill}/><Text style={ui.authText}>Sign up free</Text></TouchableOpacity></View></Glass>:null}
    {editing&&signedIn?<Glass style={{padding:16,marginBottom:18}}>
     <Text style={ui.fieldLabel}>Display name</Text>
     <TextInput accessibilityLabel="Display name" value={name} onChangeText={setName} style={ui.nameInput} maxLength={80}/>
@@ -184,7 +187,8 @@ export default function Profile(){
 }
 const ui=StyleSheet.create({
  sunrise:{position:"absolute",top:0,left:0,right:0,height:510},
- page:{paddingHorizontal:20,paddingTop:58,paddingBottom:140},
+ page:{paddingHorizontal:18,paddingTop:58,paddingBottom:140},
+ topRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
  back:{alignSelf:"flex-start",paddingVertical:7,paddingRight:16},backText:{fontSize:17,color:ink,fontWeight:"600"},
  brand:{marginTop:7,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:9},
  brandSun:{fontSize:37},brandName:{fontSize:30,fontWeight:"900",color:ink,letterSpacing:-1.3},
@@ -195,10 +199,10 @@ const ui=StyleSheet.create({
  avatarCamera:{position:"absolute",top:104,left:"64%",width:43,height:43,borderRadius:24,backgroundColor:"#FFFAEF",borderWidth:2,borderColor:"#FFF",alignItems:"center",justifyContent:"center",shadowColor:"#A55747",shadowOpacity:.22,shadowRadius:10,shadowOffset:{width:0,height:4},elevation:5},
  nameRow:{flexDirection:"row",alignItems:"center",gap:12,marginTop:12},personName:{fontSize:33,color:ink,fontWeight:"900",letterSpacing:-.6},
  heroHint:{fontSize:12,color:"#58434E",marginTop:3},
- glass:{borderWidth:1.5,borderColor:"rgba(255,255,255,.96)",backgroundColor:"rgba(255,244,240,.65)",borderRadius:25,overflow:"hidden",shadowColor:"#96514C",shadowOpacity:.11,shadowRadius:15,shadowOffset:{width:0,height:8},elevation:2},
+ glass:{borderWidth:1.2,borderColor:"rgba(255,255,255,.86)",backgroundColor:"rgba(255,255,255,.38)",borderRadius:26,overflow:"hidden",shadowColor:"#71403B",shadowOpacity:.13,shadowRadius:30,shadowOffset:{width:0,height:12},elevation:3},
  quickGrid:{flexDirection:"row",gap:9},
- quickCard:{flex:1,borderRadius:23,minHeight:105,borderWidth:1.6,borderColor:"rgba(255,255,255,.93)",alignItems:"center",justifyContent:"center",overflow:"hidden",paddingHorizontal:5,paddingVertical:12,shadowColor:"#A76E65",shadowOpacity:.14,shadowRadius:12,shadowOffset:{width:0,height:7}},
- quickIconBadge:{height:48,width:48,borderRadius:19,backgroundColor:"rgba(255,246,235,.6)",borderColor:"rgba(255,255,255,.9)",borderWidth:1,alignItems:"center",justifyContent:"center",marginBottom:8,shadowColor:"#DA8746",shadowOpacity:.3,shadowRadius:10},
+ quickCard:{flex:1,borderRadius:25,minHeight:116,borderWidth:1.2,borderColor:"rgba(255,255,255,.86)",alignItems:"center",justifyContent:"center",overflow:"hidden",paddingHorizontal:5,paddingVertical:16,shadowColor:"#71403B",shadowOpacity:.13,shadowRadius:22,shadowOffset:{width:0,height:12}},
+ quickIconBadge:{height:45,width:45,borderRadius:15,backgroundColor:"rgba(255,226,171,.74)",borderColor:"rgba(255,255,255,.87)",borderWidth:1,alignItems:"center",justifyContent:"center",marginBottom:10,shadowColor:"#BC6F41",shadowOpacity:.2,shadowRadius:12,shadowOffset:{width:0,height:5}},
  quickIcon:{fontSize:28,textShadowColor:"rgba(193,118,72,.3)",textShadowRadius:7},
  quickText:{fontSize:12.5,fontWeight:"800",color:ink,textAlign:"center"},
  sectionHeader:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:7},
@@ -210,7 +214,7 @@ const ui=StyleSheet.create({
  menuLabel:{flex:1,fontSize:15.5,fontWeight:"600",color:ink},
  arrow:{fontSize:30,color:ink,fontWeight:"300",marginRight:2},
  footer:{alignItems:"center",marginTop:23,gap:10},
- pill:{minHeight:44,minWidth:"63%",paddingHorizontal:24,paddingVertical:10,borderRadius:35,backgroundColor:"rgba(255,245,241,.65)",borderWidth:1.5,borderColor:"rgba(255,255,255,.95)",alignItems:"center",justifyContent:"center",shadowColor:"#B5776C",shadowOpacity:.12,shadowRadius:10},
+ pill:{minHeight:48,minWidth:"63%",paddingHorizontal:24,paddingVertical:12,borderRadius:50,backgroundColor:"rgba(255,255,255,.38)",borderWidth:1,borderColor:"rgba(255,255,255,.85)",alignItems:"center",justifyContent:"center",shadowColor:"#71403B",shadowOpacity:.13,shadowRadius:18,shadowOffset:{width:0,height:8}},
  dangerPill:{backgroundColor:"rgba(255,232,232,.68)"},
  pillText:{fontSize:15.5,fontWeight:"800",color:ink},
  fieldLabel:{color:ink,fontWeight:"700",marginBottom:9},nameInput:{padding:12,backgroundColor:"#fff",borderRadius:15,borderWidth:1,borderColor:"#F3D2BD",marginBottom:10,color:ink},
@@ -218,5 +222,7 @@ const ui=StyleSheet.create({
  modalPanel:{backgroundColor:"#FFF0E9",borderTopLeftRadius:32,borderTopRightRadius:32,paddingHorizontal:20,paddingTop:22,paddingBottom:35,borderWidth:1.5,borderColor:"#FFF"},
  modalTitle:{fontSize:24,color:ink,fontWeight:"900"},
  avatarChoice:{width:"47%",borderWidth:1.5,borderColor:"rgba(255,255,255,.95)",backgroundColor:"rgba(255,255,255,.55)",borderRadius:21,padding:9,marginBottom:14},
- choiceImage:{width:"100%",height:130,borderRadius:15}
+ choiceImage:{width:"100%",height:130,borderRadius:15},
+ authHeading:{color:ink,fontSize:20,fontWeight:"800"},authHelper:{color:"#63545d",fontSize:14,lineHeight:20,marginTop:8,marginBottom:14},
+ authRow:{flexDirection:"row",gap:10},authLight:{flex:1,backgroundColor:"rgba(255,255,255,.78)",borderColor:"#fff",borderWidth:1,borderRadius:18,alignItems:"center",paddingVertical:13},authGold:{flex:1,overflow:"hidden",borderColor:"#fff",borderWidth:1,borderRadius:18,alignItems:"center",paddingVertical:13},authText:{fontSize:15,fontWeight:"800",color:ink}
 });
