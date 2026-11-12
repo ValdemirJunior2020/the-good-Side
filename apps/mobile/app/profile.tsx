@@ -1,6 +1,6 @@
 import {BlurView} from "expo-blur";
 import React,{useEffect,useState} from "react";
-import {ActivityIndicator,Alert,Image,ImageBackground,Modal,ScrollView,Share,StyleSheet,Text,TextInput,TouchableOpacity,View,Linking} from "react-native";
+import {ActivityIndicator,Alert,Image,Modal,ScrollView,Share,StyleSheet,Text,TextInput,TouchableOpacity,View,Linking} from "react-native";
 import {LinearGradient} from "expo-linear-gradient";
 import * as WebBrowser from "expo-web-browser";
 import {router} from "expo-router";
@@ -126,7 +126,7 @@ export default function Profile(){
  const openLegal=async(url:string)=>{try{await WebBrowser.openBrowserAsync(url,{presentationStyle:WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,controlsColor:"#A55E36",dismissButtonStyle:"done"})}catch{Alert.alert("Unable to open page","Please visit "+url)}};
  const support=async()=>{const address="mailto:"+supportEmail+"?subject="+encodeURIComponent("The Good Side - Support");try{await Linking.openURL(address)}catch{Alert.alert("Contact Support","Please email "+supportEmail)}};
  return <LinearGradient colors={["#FFF1E3","#F7D1C7","#DED0E5"]} style={{flex:1}}>
-  <ImageBackground source={{uri:SUNRISE}} resizeMode="cover" style={StyleSheet.absoluteFill} pointerEvents="none"/>
+  <Image source={{uri:SUNRISE}} resizeMode="cover" style={StyleSheet.absoluteFill} pointerEvents="none"/>
   <LinearGradient pointerEvents="none" colors={["rgba(255,225,213,.20)","rgba(255,225,213,.18)","rgba(243,197,201,.45)","rgba(239,207,225,.92)"]} locations={[0,.3,.64,1]} style={StyleSheet.absoluteFill}/>
   <ScrollView contentContainerStyle={ui.page} showsVerticalScrollIndicator={false}>
    <View style={ui.topRow}><TouchableOpacity accessibilityRole="button" onPress={()=>router.canGoBack()?router.back():router.replace("/")} style={ui.back}><ArrowLeft size={23} color={ink}/><Text style={ui.backText}>Back</Text></TouchableOpacity></View>
@@ -134,9 +134,10 @@ export default function Profile(){
    <View style={ui.hero}>
     <View style={ui.avatarRim}>
      <LinearGradient colors={["#FFE59A","#F8A068","#DD88B8","#FFD187"]} start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill} pointerEvents="none"/>
-     <ImageBackground source={{uri:avatarUrl}} imageStyle={{borderRadius:110}} style={ui.avatar}>
-      <LinearGradient colors={["rgba(255,212,132,.06)","rgba(83,43,86,.25)"]} style={StyleSheet.absoluteFill}/>
-     </ImageBackground>
+     <View style={ui.avatar}>
+      <Image source={{uri:avatarUrl}} resizeMode="cover" style={[StyleSheet.absoluteFill,{borderRadius:110}]} pointerEvents="none"/>
+      <LinearGradient pointerEvents="none" colors={["rgba(255,212,132,.06)","rgba(83,43,86,.25)"]} style={StyleSheet.absoluteFill}/>
+     </View>
     </View>
     <TouchableOpacity accessibilityRole="button" accessibilityLabel="Choose profile picture" activeOpacity={.75} onPress={()=>void openAvatars()} style={ui.avatarCamera}><Camera size={20} color={ink}/></TouchableOpacity>
     <View style={ui.nameRow}><Text style={ui.personName}>{signedIn?firstName:"Your profile"}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Edit profile" onPress={()=>signedIn?setEditing(v=>!v):go("/auth")}><Pencil size={20} color={ink}/></TouchableOpacity></View>
