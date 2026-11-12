@@ -4,17 +4,20 @@ import {router,usePathname} from "expo-router";
 import {LinearGradient} from "expo-linear-gradient";
 import {BlurView} from "expo-blur";
 import {colors} from "./theme";
-const tabs:[string,string,string][]=[["Home","⌂","/"],["Discover","◇","/search"],["Food","♨","/food"],["Saved","♡","/saved"],["You","person","/profile"]];
+import {House,Compass,ChefHat,Heart,UserRound} from "lucide-react-native";
+const tabs:[string,string][]=[["Home","/"],["Discover","/search"],["Food","/food"],["Saved","/saved"],["You","/profile"]];
+const icons={Home:House,Discover:Compass,Food:ChefHat,Saved:Heart,You:UserRound};
 export default function TabBar(){
  const path=usePathname();
  return <View pointerEvents="box-none" style={styles.outer}>
   <View style={styles.container}>
    {Platform.OS==="ios"?<BlurView tint="light" intensity={75} style={StyleSheet.absoluteFill} pointerEvents="none"/>:null}
-   {tabs.map(([name,icon,href])=>{
+   {tabs.map(([name,href])=>{
     const active=path===href;
+    const IconComponent=icons[name as keyof typeof icons];
     return <TouchableOpacity key={name} accessibilityRole="tab" accessibilityLabel={name} accessibilityState={{selected:active}} onPress={()=>{if(!active)router.push(href as any)}} style={[styles.item,active&&styles.activeItem]} activeOpacity={.8}>
-     {active?<LinearGradient colors={["#FFEEDC","#F8BE83","#E8AA92"]} style={StyleSheet.absoluteFill}/>:null}
-     {name==="You"?<View style={[styles.personBadge,active&&styles.personBadgeActive]}><View style={styles.personHead}/><View style={styles.personShoulders}/></View>:<Text style={[styles.icon,active&&{color:"#A34A0F"}]}>{icon}</Text>}
+     {active?<LinearGradient colors={["#FFE7B1","#F4AA4D"]} style={StyleSheet.absoluteFill} pointerEvents="none"/>:null}
+     <IconComponent size={26} color={active?"#B75D15":"#332832"} strokeWidth={2.1}/>
      <Text style={[styles.label,active&&{color:"#A34A0F",fontWeight:"900"}]}>{name}</Text>
     </TouchableOpacity>;
    })}
