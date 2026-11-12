@@ -80,3 +80,36 @@ byId("email-interest-form").addEventListener("submit",ev=>{
  if(!email)return;location.href="/account.html?email="+encodeURIComponent(email);
 });
 fetchStories();
+
+/* Live RSS is link discovery only; it does not bypass the approved article pipeline. */
+async function loadGoodNewsNetwork(){
+ const box=byId("rss-headlines"),refresh=byId("rss-refresh");
+ if(!box||!refresh)return;
+ refresh.disabled=true;
+ box.replaceChildren(make("p","news-loading","Checking Good News Network…"));
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),14000);
+ try{
+  const response=await fetch("/.netlify/functions/goodnews-rss",{signal:controller.signal,headers:{Accept:"application/json"}});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok||!Array.isArray(data.headlines))throw Error("RSS temporarily unavailable");
+  const cards=data.headlines.map(item=>{
+   const link=allowedLink(item.url);
+   if(!link||new URL(link).hostname.replace(/^www\./,"")!=="goodnewsnetwork.org")return null;
+   const card=make("article","rss-item"),title=make("a","rss-title",item.title);
+   title.href=link;title.target="_blank";title.rel="noopener noreferrer";
+   const details=make("div","rss-item-meta","GOOD NEWS NETWORK");
+   if(item.published){
+    const date=new Date(item.published);
+    if(!Number.isNaN(+date))details.append(make("span","", " · "+date.toLocaleDateString("en-US",{month:"short",day:"numeric"})));
+   }
+   card.append(title,details);
+   return card
+  }).filter(Boolean);
+  box.replaceChildren(...(cards.length?cards:[make("p","news-loading","No recent headlines from this feed.")]));
+ }catch(error){
+  console.warn("RSS headlines not available",error);
+  box.replaceChildren(make("p","news-loading","The external headlines feed is temporarily unavailable. Your approved Good Side news remains accessible below."));
+ }finally{clearTimeout(timer);refresh.disabled=false}
+}
+byId("rss-refresh")?.addEventListener("click",loadGoodNewsNetwork);
+void loadGoodNewsNetwork();
