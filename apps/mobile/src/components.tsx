@@ -4,13 +4,14 @@ import {LinearGradient} from "expo-linear-gradient";
 import {BlurView} from "expo-blur";
 import {colors} from "./theme";
 export function Surface({children,style}:{children:React.ReactNode;style?:ViewStyle}){return <View style={[styles.surface,style]}><BlurView intensity={65} tint="light" pointerEvents="none" style={StyleSheet.absoluteFill}/><LinearGradient pointerEvents="none" colors={["rgba(255,255,255,.39)","rgba(255,241,234,.29)","rgba(255,218,233,.28)"]} style={StyleSheet.absoluteFill}/><View style={{position:"absolute",top:1,left:20,right:20,height:1,backgroundColor:"rgba(255,255,255,.88)"}} pointerEvents="none"/>{children}</View>}
-const GOOD_SIDE_LOGO="https://drive.google.com/thumbnail?id=1CrN_U-yQX3pba5HkbD3cF77xrEWZoZQj&sz=w800";
+// Bundle the exact supplied Drive logo: remote Google Drive image links can fail inside Expo Go.
+const GOOD_SIDE_LOGO=require("../assets/good-side-logo.png");
 export function Brand({small=false}:{small?:boolean}){
  const [imageFailed,setImageFailed]=React.useState(false);
  const width=small?188:235,height=small?58:72;
  if(imageFailed)return <View style={{flexDirection:"row",alignItems:"center",gap:8}}><Text style={{fontSize:small?22:31}}>☀️</Text><Text style={{fontWeight:"800",fontSize:small?19:25,color:colors.ink,letterSpacing:-.6}}>the good side<Text style={{color:colors.orange}}>.</Text></Text></View>;
  return <View accessibilityLabel="The Good Side" style={{width,height,alignItems:"flex-start",justifyContent:"center"}}>
-  <Image source={{uri:GOOD_SIDE_LOGO}} accessibilityLabel="The Good Side logo" resizeMode="contain" onError={()=>setImageFailed(true)}
+  <Image source={GOOD_SIDE_LOGO} accessibilityLabel="The Good Side logo" resizeMode="contain" onError={()=>setImageFailed(true)}
    style={{width,height,shadowColor:"#A65F27",shadowOpacity:.23,shadowRadius:7,shadowOffset:{width:0,height:3}}}/>
  </View>;
 }
