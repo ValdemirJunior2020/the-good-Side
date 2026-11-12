@@ -6,7 +6,7 @@ import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import {api,auth,json} from "../src/client";
 import {emailAuth} from "../src/emailAuth";
-import {getPublicSettings} from "../src/remoteConfig";
+import {getPublicSettings,syncManagedProfile} from "../src/remoteConfig";
 import {Background,Brand,Pill,Surface,styles} from "../src/components";
 import {colors} from "../src/theme";
 
@@ -30,6 +30,7 @@ function GoogleButton(){
    // The API independently verifies Google's signature and audience.
    await auth.signIn(token,{email:payload.email||"",displayName:payload.name||""});
    await api("/me",json({display_name:payload.name||payload.email?.split("@")[0]||"Friend",timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC",preferred_language:"en"}),true);
+   await syncManagedProfile(token,payload.name||payload.email?.split("@")[0]||"Friend").catch(()=>{});
    router.replace("/categories");
   })().catch(async e=>{await auth.signOut();setError(String(e))}).finally(()=>setBusy(false));
  },[response]);
@@ -82,6 +83,7 @@ export default function SignIn(){
    }
    await auth.signInWithEmail(result,name.trim(),mail);
    await api("/me",json({display_name:name.trim()||result.user?.user_metadata?.display_name||mail.split("@")[0],timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC",preferred_language:"en"}),true);
+   await syncManagedProfile(result.access_token,name.trim()||result.user?.user_metadata?.display_name||mail.split("@")[0]).catch(()=>{});
    router.replace("/categories");
   }catch(e){
    const detail=e instanceof Error?e.message:"Sign-in failed.";
