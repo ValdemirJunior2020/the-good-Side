@@ -45,7 +45,7 @@ function Dashboard(){
    activeToken=credential;
    const e=extractEmail(credential);
    try{await api<Stats>("/admin/stats");setUser({email:e});setMessage("")}
-   catch(err){activeToken=null;setMessage("Admin access denied: "+String(err));}
+   catch(err){activeToken=null;window.google?.accounts.id.disableAutoSelect();setMessage("Admin login was not accepted: "+String(err)+". Please select your authorized Google account and try again.");}
   }});
   mount.innerHTML="";
   window.google.accounts.id.renderButton(mount,{theme:"outline",size:"large",shape:"pill",text:"signin_with",width:280});
