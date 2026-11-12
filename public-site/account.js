@@ -195,6 +195,23 @@ const filters=$("topic-filters");
 });
 $("story-search").addEventListener("input",renderDiscover);
 function renderFood(){drawCards("food-cards",state.recipes,recipeCard,"No approved recipes yet. Check back for new ideas.")}
+async function loadNotifications(){
+ try{
+  const response=await request("/me/notifications",{},true);
+  const entries=Array.isArray(response)?response:Array.isArray(response?.items)?response.items:[];
+  const cards=entries.map(n=>{
+   const card=element("article","story-card notification-card");
+   const matching=state.news.find(s=>s.news_id===n.news_id);
+   card.append(element("span","tag",n.delivery_status||"Notification"),element("h3","",matching?.title||"Your good news delivery"));
+   const date=n.sent_at||n.scheduled_at;
+   card.append(element("p","",date?"Scheduled or sent: "+new Date(date).toLocaleString():"Delivery record"));
+   const link=validUrl(matching?.original_url);
+   if(link){const a=element("a","source-link","Read the original story ↗");a.href=link;a.target="_blank";a.rel="noopener noreferrer";card.append(a)}
+   return card
+  });
+  $("notification-cards").replaceChildren(...(cards.length?cards:[element("p","empty-note","No delivery records yet. Your notifications will appear here after the first scheduled send.")]))
+ }catch(e){displayError(e)}
+}
 async function loadSaved(){
  try{
   const [news,recipes]=await Promise.all([request("/me/saved",{},true),request("/me/recipes",{},true)]);
@@ -351,6 +368,7 @@ async function activateView(name){
  if(name==="discover")await loadNews();
  if(name==="food")await loadRecipes();
  if(name==="saved")await loadSaved();
+ if(name==="notifications")await loadNotifications();
  if(name==="profile")await loadProfile();
  if(name==="preferences")await loadPreferences();
  if(name==="history")renderHistory()
