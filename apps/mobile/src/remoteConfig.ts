@@ -23,3 +23,9 @@ export async function getPersonalAvatar(token:string):Promise<string|null>{
  const value=await get<{image_url:string|null}>("my-avatar",token);
  return value.image_url;
 }
+
+export async function clearPersonalAvatar(token:string):Promise<void>{
+ const r=await fetch(ROOT+"?route=my-avatar",{method:"DELETE",headers:{Authorization:"Bearer "+token}});
+ const response=await r.json() as {ok:boolean;error?:string};
+ if(!r.ok||!response.ok)throw Error(response.error||"Unable to clear custom avatar");
+}
