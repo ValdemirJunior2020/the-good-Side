@@ -5,6 +5,7 @@ import {LinearGradient} from "expo-linear-gradient";
 import {router} from "expo-router";
 import {api,auth,put,type Session} from "../src/client";
 import {colors} from "../src/theme";
+import {GoodSideLoader} from "../src/components";
 import LuxuryIcon from "../src/LuxuryIcon";
 import {avatarCatalog} from "../src/avatarCatalog";
 import {getPublicAvatars,getPersonalAvatar,getPublicSettings,clearPersonalAvatar,syncManagedProfile} from "../src/remoteConfig";
@@ -141,7 +142,7 @@ export default function Profile(){
    </View>
    {editing&&signedIn?<Glass style={{padding:16,marginBottom:18}}>
     <Text style={ui.fieldLabel}>Display name</Text>
-    <TextInput accessibilityLabel="Display name" value={name} onChangeText={setName} style={ui.nameInput} maxLength={80}/>
+    <TextInput accessibilityLabel="Display name" selectionColor="#B96F39" cursorColor="#B96F39" placeholder="Your display name" placeholderTextColor="#806D78" value={name} onChangeText={setName} style={[ui.nameInput,{backgroundColor:"#FFFFFF",borderColor:"#C88E78",borderWidth:2,color:"#301E2C",minHeight:52,zIndex:4}]} maxLength={80}/>
     <Action label={busy?"Saving…":"Save profile"} disabled={busy} onPress={saveName}/>
    </Glass>:null}
    <View style={ui.quickGrid}>
@@ -186,7 +187,7 @@ export default function Profile(){
       <TouchableOpacity accessibilityRole="button" onPress={()=>setAvatarPicker(false)} style={{padding:9}}><Text style={{fontSize:25,color:ink}}>×</Text></TouchableOpacity>
      </View>
      <Text style={{color:"#644A57",marginBottom:15}}>Pick an image from our gallery. Your selection is saved in your account, not on your phone or PC.</Text>
-     {avatarLoading&&avatars.length===0?<ActivityIndicator color="#D77F32" size="large" style={{marginVertical:35}}/>:null}
+     {avatarLoading&&avatars.length===0?<GoodSideLoader label="Loading your avatars…"/>:null}
      {avatarError?<Text style={{color:"#A63232",marginBottom:15}}>{avatarError}</Text>:null}
      <ScrollView style={{maxHeight:380}} contentContainerStyle={{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",paddingBottom:18}}>
       {avatars.map(a=><TouchableOpacity key={a.avatar_id} accessibilityRole="button" accessibilityLabel={"Select "+a.label} disabled={busy} onPress={()=>void pickAvatar(a.avatar_id)} style={[ui.avatarChoice,avatarId===a.avatar_id&&{borderColor:"#D17929",borderWidth:3}]}>
