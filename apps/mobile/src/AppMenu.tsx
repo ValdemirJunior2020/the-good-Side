@@ -1,5 +1,6 @@
 import React from "react";
-import {TouchableOpacity,Text,StyleSheet} from "react-native";
+import {TouchableOpacity,StyleSheet} from "react-native";
+import {Menu} from "lucide-react-native";
 import {router} from "expo-router";
 
 /** Open a real Expo Router screen instead of an iOS Modal inside a ScrollView. */
@@ -12,7 +13,7 @@ export default function AppMenu(){
   hitSlop={12}
   onPress={()=>router.push("/menu")}
   style={styles.button}>
-  <Text style={styles.icon}>☰</Text>
+  <Menu size={29} color="#251923" strokeWidth={2.3}/>
  </TouchableOpacity>;
 }
 const styles=StyleSheet.create({
