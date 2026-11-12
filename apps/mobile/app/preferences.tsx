@@ -4,7 +4,7 @@ import{router}from"expo-router";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
-import{api,put}from"../src/client";
+import{api,auth,put}from"../src/client";
 import{Background,Pill,Surface,styles}from"../src/components";
 import{colors,categories}from"../src/theme";
 type Frequency="daily"|"twice_daily"|"three_daily"|"selected_weekdays"|"breaking_only"|"digest_plus_alerts";
@@ -23,9 +23,9 @@ const freq:[string,Frequency][]=[["Once daily","daily"],["Twice daily","twice_da
 const weekdays=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const initial:Pref={selected_categories:"",notification_enabled:false,daily_digest_enabled:true,notification_local_time:"12:00",content_language:"en",notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/New_York",notification_frequency:"daily",notification_times:["12:00"],notification_weekdays:[],quiet_hours_start:"22:00",quiet_hours_end:"07:00",weekend_enabled:true,food_notifications_enabled:false,breaking_alerts_enabled:false,notification_sound_enabled:true};
 export default function Preferences(){
- const[p,setP]=useState<Pref>(initial),[busy,setBusy]=useState(false),[error,setError]=useState(""),[preview,setPreview]=useState("");
+ const[p,setP]=useState<Pref>(initial),[busy,setBusy]=useState(false),[error,setError]=useState(""),[preview,setPreview]=useState(""),[signedIn,setSignedIn]=useState(Boolean(auth.currentUser));
  const refreshPreview=()=>api<{next_at:string|null;timezone:string}>("/me/next-notification",{},true).then(v=>setPreview(v.next_at?new Date(v.next_at).toLocaleString(undefined,{timeZone:v.timezone,dateStyle:"medium",timeStyle:"short"})+" ("+v.timezone+")":"No digest currently scheduled")).catch(()=>setPreview("Preview unavailable"));
- useEffect(()=>{api<Partial<Pref>>("/me/preferences",{},true).then(v=>setP({...initial,...v,notification_timezone:v.notification_timezone||initial.notification_timezone,notification_times:parse(v.notification_times,[v.notification_local_time||"12:00"]),notification_weekdays:parse(v.notification_weekdays,[])})).catch(e=>setError(String(e)));void refreshPreview()},[]);
+ useEffect(()=>{const unsubscribe=auth.subscribe(user=>{setSignedIn(Boolean(user));if(!user){setPreview("Sign in to view your notification schedule");return}api<Partial<Pref>>("/me/preferences",{},true).then(v=>setP({...initial,...v,notification_timezone:v.notification_timezone||initial.notification_timezone,notification_times:parse(v.notification_times,[v.notification_local_time||"12:00"]),notification_weekdays:parse(v.notification_weekdays,[])})).catch(e=>setError(String(e)));void refreshPreview()});void auth.restore();return unsubscribe},[]);
  const set=(key:keyof Pref,value:any)=>setP(prev=>({...prev,[key]:value}));
  const selected=String(p.selected_categories||"").split(",").filter(Boolean);
  const times=parse<string[]>(p.notification_times,["12:00"]);
@@ -37,6 +37,7 @@ export default function Preferences(){
  const validZone=()=>{try{new Intl.DateTimeFormat("en-US",{timeZone:p.notification_timezone});return true}catch{return false}};
  const previewSound=async()=>{try{const permission=await Notifications.requestPermissionsAsync();if(!permission.granted)return Alert.alert("Permission required","Allow notifications to preview the sound.");const custom=Constants.expoConfig?.extra?.hasSignatureSound===true;await Notifications.scheduleNotificationAsync({content:{title:"☀️ The Good Side",body:"Here is a little good for your day.",sound:custom?"ding.wav":"default",data:{preview_sound:true}},trigger:null});if(!custom)Alert.alert("Default sound preview","Copy your ding.wav to apps/mobile/assets and rebuild with EAS to preview the signature sound.")}catch(e){Alert.alert("Unable to play preview",String(e))}};
  const save=async()=>{
+  if(!auth.currentUser)return Alert.alert("Sign in required","Create an account or log in with Google to save preferences.",[{text:"Cancel",style:"cancel"},{text:"Log in / Sign up",onPress:()=>router.push("/auth")}]);
   const deliveryTimes=times.slice(0,slots).map(v=>v.trim());
   if(!validZone())return Alert.alert("Invalid timezone","Enter an IANA timezone such as America/New_York.");
   if(deliveryTimes.some(t=>!clock.test(t))||new Set(deliveryTimes).size!==deliveryTimes.length)return Alert.alert("Invalid times","Enter unique delivery times in HH:MM format.");
@@ -73,6 +74,7 @@ export default function Preferences(){
   <TouchableOpacity onPress={()=>router.back()}><Text style={styles.muted}>← Back</Text></TouchableOpacity>
   <Text style={[styles.title,{marginTop:24}]}>Make good news yours.</Text>
   <Text style={[styles.subtitle,{marginVertical:13}]}>Your interests, your schedule, your peace.</Text>
+  {!signedIn?<Surface style={{marginBottom:16,backgroundColor:"#FFF0DA"}}><Text style={styles.label}>Save your preferences with a free account</Text><Text style={[styles.muted,{marginVertical:10}]}>You are browsing as a guest. Sign in to save interests, notification times and food alerts.</Text><Pill title="Log in / Create account" onPress={()=>router.push("/auth")}/></Surface>:null}
   {error?<Text style={{color:"#AD3535"}}>{error}</Text>:null}
   <Surface style={{marginBottom:14}}><Text style={styles.label}>Notifications</Text>{switchRow("Send me uplifting news","notification_enabled")}{switchRow("Daily digest","daily_digest_enabled")}
    <Text style={[styles.muted,{marginTop:12}]}>Delivery frequency</Text><View style={{flexDirection:"row",flexWrap:"wrap",marginTop:8}}>{freq.map(([label,id])=><React.Fragment key={id}>{choice(label,p.notification_frequency===id,()=>set("notification_frequency",id))}</React.Fragment>)}</View>
@@ -83,9 +85,9 @@ export default function Preferences(){
    {switchRow("Include weekends","weekend_enabled")}<Text style={[styles.muted,{marginTop:10}]}>Selected weekdays</Text><View style={{flexDirection:"row",flexWrap:"wrap",marginTop:8}}>{weekdays.map((d,i)=><React.Fragment key={d}>{choice(d,days.includes(i),()=>set("notification_weekdays",days.includes(i)?days.filter(x=>x!==i):[...days,i]))}</React.Fragment>)}</View>
   </Surface>
   <Surface style={{marginBottom:14}}><Text style={styles.label}>Extra good things</Text>{switchRow("Food & Recipes alerts","food_notifications_enabled")}{switchRow("Breaking positive news","breaking_alerts_enabled")}{switchRow("Play notification sound","notification_sound_enabled")}<TouchableOpacity accessibilityRole="button" onPress={previewSound} style={{padding:13,backgroundColor:"rgba(255,255,255,.85)",borderRadius:16,marginVertical:8}}><Text style={{fontWeight:"800",color:colors.ink}}>♫ Preview notification sound</Text></TouchableOpacity><Text style={styles.muted}>Your signature ding plays after it is bundled in an EAS build. iPhone silent mode and Focus settings are respected.</Text></Surface>
-  <Surface style={{marginBottom:14}}><Text style={styles.label}>Your interests</Text><View style={{flexDirection:"row",flexWrap:"wrap"}}>{categories.map(([label,id,emoji])=><React.Fragment key={id}>{choice(emoji+" "+label,selected.includes(id),()=>toggleInterest(id))}</React.Fragment>)}</View></Surface>
+  <Surface style={{marginBottom:14}}><Text style={styles.label}>Your interests</Text><View style={{flexDirection:"row",flexWrap:"wrap"}}>{categories.filter((c,i,all)=>all.findIndex(v=>v[1]===c[1])===i).map(([label,id,emoji])=><React.Fragment key={id}>{choice(emoji+" "+label,selected.includes(id),()=>toggleInterest(id))}</React.Fragment>)}</View></Surface>
   <Surface style={{marginBottom:18}}><Text style={styles.label}>Language</Text><View style={{flexDirection:"row",flexWrap:"wrap"}}>{([["English","en"],["Português","pt"],["Español","es"]]as const).map(([label,id])=><React.Fragment key={id}>{choice(label,p.content_language===id,()=>set("content_language",id))}</React.Fragment>)}</View></Surface>
   <Surface style={{marginBottom:16}}><Text style={styles.label}>Next expected notification</Text><Text style={styles.subtitle}>{preview||"Loading..."}</Text><Text style={[styles.muted,{marginTop:6}]}>This preview reflects saved settings. Delivery can be delayed by your device or Apple.</Text></Surface>
-  <Pill title={busy?"Saving…":"Save my settings"} disabled={busy} onPress={save}/>
+  <Pill title={busy?"Saving…":signedIn?"Save my settings":"Log in to save settings"} disabled={busy} onPress={signedIn?save:()=>router.push("/auth")}/>
  </ScrollView></Background>
 }
