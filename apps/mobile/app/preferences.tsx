@@ -28,10 +28,10 @@ export default function Preferences(){
  useEffect(()=>{const unsubscribe=auth.subscribe(user=>{setSignedIn(Boolean(user));if(!user){setPreview("Sign in to view your notification schedule");return}api<Partial<Pref>>("/me/preferences",{},true).then(v=>setP({...initial,...v,notification_timezone:v.notification_timezone||initial.notification_timezone,notification_times:parse(v.notification_times,[v.notification_local_time||"12:00"]),notification_weekdays:parse(v.notification_weekdays,[])})).catch(e=>setError(String(e)));void refreshPreview()});void auth.restore();return unsubscribe},[]);
  const set=(key:keyof Pref,value:any)=>setP(prev=>({...prev,[key]:value}));
  const selected=String(p.selected_categories||"").split(",").filter(Boolean);
- const times=parse<string[]>(p.notification_times,["12:00"]);
+ const parsedTimes=parse<string[]>(p.notification_times,["12:00"]);
+ const times=Array.from({length:p.notification_frequency==="three_daily"?3:p.notification_frequency==="twice_daily"?2:1},(_,i)=>parsedTimes[i]||(["12:00","18:00","09:00"][i]));
  const days=parse<number[]>(p.notification_weekdays,[]);
  const slots=p.notification_frequency==="twice_daily"?2:p.notification_frequency==="three_daily"?3:1;
- const addTime=()=>set("notification_times",[...times,"18:00"].slice(0,3));
  const toggleInterest=(c:string)=>set("selected_categories",(selected.includes(c)?selected.filter(x=>x!==c):[...selected,c]).join(","));
  const switchRow=(label:string,key:keyof Pref)=> <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",minHeight:49,gap:10}}><Text style={[styles.subtitle,{flex:1,color:colors.ink}]}>{label}</Text><Switch accessibilityLabel={label} value={enabled(p[key])} onValueChange={v=>set(key,v)} trackColor={{true:colors.orange}}/></View>;
  const validZone=()=>{try{new Intl.DateTimeFormat("en-US",{timeZone:p.notification_timezone});return true}catch{return false}};
@@ -70,7 +70,7 @@ export default function Preferences(){
   }catch(e){Alert.alert("Unable to save",String(e))}finally{setBusy(false)}
  };
  const choice=(label:string,active:boolean,action:()=>void)=> <TouchableOpacity accessibilityRole="button" accessibilityState={{selected:active}} onPress={action} style={{paddingHorizontal:13,paddingVertical:11,margin:3,borderRadius:16,backgroundColor:active?colors.peach:"rgba(255,255,255,.9)",borderWidth:1,borderColor:active?colors.orange:colors.stroke}}><Text style={{color:colors.ink,fontWeight:active?"800":"500"}}>{label}</Text></TouchableOpacity>;
- return <Background><ScrollView contentContainerStyle={{padding:22,paddingTop:58,paddingBottom:110}}>
+ return <Background><ScrollView contentContainerStyle={{padding:22,paddingTop:58,paddingBottom:180}}>
   <TouchableOpacity onPress={()=>router.back()}><Text style={styles.muted}>← Back</Text></TouchableOpacity>
   <Text style={[styles.title,{marginTop:24}]}>Make good news yours.</Text>
   <Text style={[styles.subtitle,{marginVertical:13}]}>Your interests, your schedule, your peace.</Text>
@@ -78,8 +78,22 @@ export default function Preferences(){
   {error?<Text style={{color:"#AD3535"}}>{error}</Text>:null}
   <Surface style={{marginBottom:14}}><Text style={styles.label}>Notifications</Text>{switchRow("Send me uplifting news","notification_enabled")}{switchRow("Daily digest","daily_digest_enabled")}
    <Text style={[styles.muted,{marginTop:12}]}>Delivery frequency</Text><View style={{flexDirection:"row",flexWrap:"wrap",marginTop:8}}>{freq.map(([label,id])=><React.Fragment key={id}>{choice(label,p.notification_frequency===id,()=>set("notification_frequency",id))}</React.Fragment>)}</View>
-   {p.notification_frequency!=="breaking_only"?<><Text style={[styles.muted,{marginTop:16}]}>Delivery times · 24-hour clock</Text>{times.slice(0,slots).map((t,i)=><TextInput key={i} accessibilityLabel={"Delivery time "+(i+1)} placeholder="12:00" keyboardType="numbers-and-punctuation" maxLength={5} style={[styles.input,{marginTop:8}]} value={t} onChangeText={v=>set("notification_times",times.map((x,j)=>j===i?v:x))}/>)}{times.length<slots&&choice("+ Add delivery time",false,addTime)}</>:null}
-   <Text style={styles.muted}>Timezone (IANA)</Text><TextInput autoCapitalize="none" style={[styles.input,{marginTop:8}]} value={p.notification_timezone} onChangeText={v=>set("notification_timezone",v)} placeholder="America/New_York"/>
+   {p.notification_frequency!=="breaking_only"?<View style={{marginTop:16,gap:8}}>
+    <Text style={styles.muted}>Delivery times · 24-hour clock</Text>
+    {times.slice(0,slots).map((t,i)=><View key={i} style={{backgroundColor:"#FFFFFF",borderWidth:1.5,borderColor:"#DDBAA8",borderRadius:15,minHeight:54,justifyContent:"center",overflow:"hidden"}}>
+      <TextInput accessibilityLabel={"Delivery time "+(i+1)} placeholder="12:00" placeholderTextColor="#806E78" keyboardType="numbers-and-punctuation" maxLength={5}
+       style={{height:52,width:"100%",paddingHorizontal:16,paddingVertical:10,fontSize:17,color:"#301E2C",backgroundColor:"#FFFFFF"}}
+       value={t} onChangeText={v=>set("notification_times",times.map((x,j)=>j===i?v:x))}/>
+     </View>)}
+   </View>:null}
+   <View style={{marginTop:16,gap:8}}>
+    <Text style={styles.muted}>Timezone (IANA)</Text>
+    <View style={{backgroundColor:"#FFFFFF",borderWidth:1.5,borderColor:"#DDBAA8",borderRadius:15,minHeight:54,justifyContent:"center",overflow:"hidden"}}>
+     <TextInput autoCapitalize="none" autoCorrect={false} accessibilityLabel="Timezone (IANA)" placeholder="America/New_York" placeholderTextColor="#806E78"
+      style={{height:52,width:"100%",paddingHorizontal:16,paddingVertical:10,fontSize:16,color:"#301E2C",backgroundColor:"#FFFFFF"}}
+      value={p.notification_timezone||""} onChangeText={v=>set("notification_timezone",v)}/>
+    </View>
+   </View>
   </Surface>
   <Surface style={{marginBottom:14}}><Text style={styles.label}>Your quiet time</Text><Text style={styles.muted}>No alerts during these hours, including food and special news.</Text><View style={{flexDirection:"row",gap:10,marginTop:14}}>{(["quiet_hours_start","quiet_hours_end"]as const).map((key,i)=><View key={key} style={{flex:1}}><Text style={styles.muted}>{i===0?"From":"Until"}</Text><TextInput accessibilityLabel={i===0?"Quiet hours start":"Quiet hours end"} maxLength={5} style={styles.input} value={p[key]} onChangeText={v=>set(key,v)}/></View>)}</View>
    {switchRow("Include weekends","weekend_enabled")}<Text style={[styles.muted,{marginTop:10}]}>Selected weekdays</Text><View style={{flexDirection:"row",flexWrap:"wrap",marginTop:8}}>{weekdays.map((d,i)=><React.Fragment key={d}>{choice(d,days.includes(i),()=>set("notification_weekdays",days.includes(i)?days.filter(x=>x!==i):[...days,i]))}</React.Fragment>)}</View>
