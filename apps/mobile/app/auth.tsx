@@ -4,6 +4,8 @@ import Constants from "expo-constants";
 import {router} from "expo-router";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
+import * as AppleAuthentication from "expo-apple-authentication";
+import * as Crypto from "expo-crypto";
 import {api,auth,json} from "../src/client";
 import {emailAuth} from "../src/emailAuth";
 import {getPublicSettings,syncManagedProfile} from "../src/remoteConfig";
@@ -47,6 +49,45 @@ function GoogleButton(){
    <Text style={sx.googleButtonText}>{busy?"Connecting to Google…":"Continue with Google"}</Text>
   </TouchableOpacity>
   {busy?<GoodSideLoader compact label="Connecting securely…"/>:null}
+  {error?<Text style={sx.error}>{error}</Text>:null}
+ </View>;
+}
+function AppleButton(){
+ const [busy,setBusy]=useState(false),[error,setError]=useState("");
+ const signIn=async()=>{
+  if(busy)return;
+  setBusy(true);setError("");
+  try{
+   // Bind the Apple ID token to this request to prevent replay.
+   const rawNonce=Crypto.getRandomBytes(32).reduce((out,b)=>out+b.toString(16).padStart(2,"0"),"");
+   const hashedNonce=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,rawNonce);
+   const credential=await AppleAuthentication.signInAsync({
+    nonce:hashedNonce,
+    requestedScopes:[AppleAuthentication.AppleAuthenticationScope.FULL_NAME,AppleAuthentication.AppleAuthenticationScope.EMAIL]
+   });
+   if(!credential.identityToken)throw Error("Apple did not provide an identity token.");
+   const data=await emailAuth.signInWithAppleIdToken(credential.identityToken,rawNonce);
+   const fullName=[credential.fullName?.givenName,credential.fullName?.familyName].filter(Boolean).join(" ").trim();
+   await auth.signInWithApple(data,fullName);
+   const displayName=fullName||auth.currentUser?.displayName||data.user?.email?.split("@")[0]||"Friend";
+   await api("/me",json({display_name:displayName,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC",preferred_language:"en"}),true);
+   if(fullName){const token=await auth.getFreshToken();if(token)await syncManagedProfile(token,fullName).catch(()=>{});}
+   router.replace("/categories");
+  }catch(e){
+   if(e instanceof Error&&("code" in e)&&e.code==="ERR_REQUEST_CANCELED")return;
+   if(auth.currentUser?.provider==="apple")await auth.signOut();
+   setError(e instanceof Error?e.message:"Apple sign-in failed.");
+  }finally{setBusy(false)}
+ };
+ return <View style={{marginTop:12}}>
+  <AppleAuthentication.AppleAuthenticationButton
+   buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+   buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+   cornerRadius={18}
+   style={{width:"100%",height:56,opacity:busy?.55:1}}
+   onPress={()=>void signIn()}
+  />
+  {busy?<GoodSideLoader compact label="Connecting with Apple…"/>:null}
   {error?<Text style={sx.error}>{error}</Text>:null}
  </View>;
 }
@@ -140,6 +181,7 @@ export default function SignIn(){
     {isExpoGo?"Not supported in Expo Go":"Google iOS OAuth client ID missing from this build"}
    </Text>
   </View>}
+  {Platform.OS==="ios"&&!isExpoGo?<AppleButton/>:null}
   <View style={{marginTop:17}}><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></View>
   <View style={{marginTop:16,flexDirection:"row",justifyContent:"center",gap:16,flexWrap:"wrap"}}><TouchableOpacity accessibilityRole="link" onPress={()=>router.push({pathname:"/legal/[type]",params:{type:"privacy"}})}><Text style={{fontSize:13,color:"#874F37",textDecorationLine:"underline"}}>Privacy Policy</Text></TouchableOpacity><TouchableOpacity accessibilityRole="link" onPress={()=>router.push({pathname:"/legal/[type]",params:{type:"terms"}})}><Text style={{fontSize:13,color:"#874F37",textDecorationLine:"underline"}}>Terms of Use</Text></TouchableOpacity></View>
  </ScrollView></KeyboardAvoidingView></Background>;
