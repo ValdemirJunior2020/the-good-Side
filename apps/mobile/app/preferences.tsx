@@ -57,34 +57,41 @@ export default function Preferences(){
   if(p.notification_frequency==="selected_weekdays"&&days.length===0)return Alert.alert("Choose weekdays","Select the days on which you want good news.");
   setBusy(true);
   try{
-   let allow=enabled(p.notification_enabled);
-   if(allow){
-    const Notifications=loadNotifications();
-    if(!Notifications){
-     allow=false;
-     Alert.alert("Development build required","Your notification times and preferences will be saved, but device push registration is unavailable inside Expo Go.");
-    }else{
-    const permission=await Notifications.requestPermissionsAsync();
-    if(!permission.granted){allow=false;Alert.alert("Permission required","Enable notifications in your iPhone settings when you're ready.");}
-    else if(Platform.OS!=="web"){
-     const projectId=process.env.EXPO_PUBLIC_EXPO_PROJECT_ID||Constants.expoConfig?.extra?.eas?.projectId;
-     if(!projectId)throw Error("EAS project ID is not configured.");
-     const token=(await Notifications.getExpoPushTokenAsync({projectId})).data;
-     let deviceId=await SecureStore.getItemAsync("goodside_device_id");
-     if(!deviceId){deviceId="device-"+Platform.OS+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2);await SecureStore.setItemAsync("goodside_device_id",deviceId)}
-     await api("/me/device",{method:"POST",body:JSON.stringify({device_id:deviceId,platform:Platform.OS,token})},true);
-    }
-    }
-   }
-   const body={selected_categories:selected,notification_enabled:allow,daily_digest_enabled:enabled(p.daily_digest_enabled),notification_local_time:deliveryTimes[0]||"12:00",
+   const requestedNotifications=enabled(p.notification_enabled);
+   const body={selected_categories:selected,notification_enabled:requestedNotifications,daily_digest_enabled:enabled(p.daily_digest_enabled),notification_local_time:deliveryTimes[0]||"12:00",
     notification_times:deliveryTimes,notification_timezone:p.notification_timezone,notification_frequency:p.notification_frequency,
     notification_weekdays:days,quiet_hours_start:p.quiet_hours_start,quiet_hours_end:p.quiet_hours_end,
     weekend_enabled:enabled(p.weekend_enabled),food_notifications_enabled:enabled(p.food_notifications_enabled),
     breaking_alerts_enabled:enabled(p.breaking_alerts_enabled),notification_sound_enabled:enabled(p.notification_sound_enabled),content_language:p.content_language};
+   // Persist preferences first. Push token registration is an independent operation
+   // and must never cause users to lose their selected interests and schedule.
    const saved=await api<Pref>("/me/preferences",put(body),true);
-   setP({...p,...saved,notification_enabled:allow});
-   await refreshPreview();
-   Alert.alert("Saved","Your good news schedule has been updated.");
+   setP(prev=>({...prev,...saved,
+    selected_categories:Array.isArray(saved.selected_categories)?saved.selected_categories.join(","):saved.selected_categories??prev.selected_categories,
+    notification_enabled:requestedNotifications,
+    notification_times:parse(saved.notification_times,deliveryTimes),
+    notification_weekdays:parse(saved.notification_weekdays,days)}));
+   void refreshPreview();
+   if(requestedNotifications){
+    try{
+     const Notifications=loadNotifications();
+     if(!Notifications)throw Error("Push notifications require an installed iOS build.");
+     const permission=await Notifications.requestPermissionsAsync();
+     if(!permission.granted)throw Error("Notifications are disabled in iPhone Settings.");
+     if(Platform.OS!=="web"){
+      const projectId=process.env.EXPO_PUBLIC_EXPO_PROJECT_ID||Constants.expoConfig?.extra?.eas?.projectId;
+      if(!projectId)throw Error("EAS project ID is not configured.");
+      const token=(await Notifications.getExpoPushTokenAsync({projectId})).data;
+      let deviceId=await SecureStore.getItemAsync("goodside_device_id");
+      if(!deviceId){deviceId="device-"+Platform.OS+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2);await SecureStore.setItemAsync("goodside_device_id",deviceId)}
+      await api("/me/device",{method:"POST",body:JSON.stringify({device_id:deviceId,platform:Platform.OS,token})},true);
+     }
+    }catch(pushError){
+     Alert.alert("Settings saved","Your preferences were saved, but push notification setup could not finish: "+(pushError instanceof Error?pushError.message:String(pushError)));
+     return;
+    }
+   }
+   Alert.alert("Saved","Your good news preferences and schedule have been updated.");
   }catch(e){Alert.alert("Unable to save",String(e))}finally{setBusy(false)}
  };
  const choice=(label:string,active:boolean,action:()=>void)=> <TouchableOpacity accessibilityRole="button" accessibilityState={{selected:active}} onPress={action} style={{paddingHorizontal:13,paddingVertical:11,margin:3,borderRadius:16,backgroundColor:active?colors.peach:"rgba(255,255,255,.9)",borderWidth:1,borderColor:active?colors.orange:colors.stroke}}><Text style={{color:colors.ink,fontWeight:active?"800":"500"}}>{label}</Text></TouchableOpacity>;
