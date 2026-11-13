@@ -2,7 +2,6 @@ import {BlurView} from "expo-blur";
 import React,{useEffect,useState} from "react";
 import {ActivityIndicator,Alert,Image,Modal,ScrollView,Share,StyleSheet,Text,TextInput,TouchableOpacity,View,Linking} from "react-native";
 import {LinearGradient} from "expo-linear-gradient";
-import * as WebBrowser from "expo-web-browser";
 import {router} from "expo-router";
 import {api,auth,put,type Session} from "../src/client";
 import {colors} from "../src/theme";
@@ -123,7 +122,7 @@ export default function Profile(){
  const signedIn=Boolean(session);
  const currentAvatar=avatars.find(a=>a.avatar_id===avatarId);
  const avatarUrl=customAvatar||currentAvatar?.image_url||SUNRISE;
- const openLegal=async(url:string)=>{try{await WebBrowser.openBrowserAsync(url,{presentationStyle:WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,controlsColor:"#A55E36",dismissButtonStyle:"done"})}catch{Alert.alert("Unable to open page","Please visit "+url)}};
+ const openLegal=(type:"privacy"|"terms"|"delete-account")=>router.push({pathname:"/legal/[type]",params:{type}});
  const support=async()=>{const address="mailto:"+supportEmail+"?subject="+encodeURIComponent("The Good Side - Support");try{await Linking.openURL(address)}catch{Alert.alert("Contact Support","Please email "+supportEmail)}};
  return <LinearGradient colors={["#FFF1E3","#F7D1C7","#DED0E5"]} style={{flex:1}}>
   <Image source={{uri:SUNRISE}} resizeMode="cover" style={StyleSheet.absoluteFill} pointerEvents="none"/>
@@ -168,7 +167,7 @@ export default function Profile(){
     <MenuRow icon={<BookOpen size={22} color={gold}/>} label="Reading History" last onPress={()=>Alert.alert("Reading history","Reading history is not available in this version yet. Your saved stories are available above.")}/>
    </Section>
    <Section symbol={<ShieldCheck size={23} color={gold}/>} title="Data & Security">
-    <MenuRow icon={<Lock size={22} color={gold}/>} label="Privacy Policy" onPress={()=>void openLegal("https://thegoodsidenews.com/privacy.html")}/><MenuRow icon={<ShieldCheck size={22} color={gold}/>} label="Terms of Use" onPress={()=>void openLegal("https://thegoodsidenews.com/terms.html")}/><MenuRow icon={<Trash2 size={22} color={gold}/>} label="Account deletion help" onPress={()=>void openLegal("https://thegoodsidenews.com/delete-account.html")}/>
+    <MenuRow icon={<Lock size={22} color={gold}/>} label="Privacy Policy" onPress={()=>void openLegal("privacy")}/><MenuRow icon={<ShieldCheck size={22} color={gold}/>} label="Terms of Use" onPress={()=>void openLegal("terms")}/><MenuRow icon={<Trash2 size={22} color={gold}/>} label="Account deletion help" onPress={()=>void openLegal("delete-account")}/>
     <MenuRow icon={<Download size={22} color={gold}/>} label="My Data Export" last onPress={()=>signedIn?void exportData():go("/auth")}/>
    </Section>
    <View style={ui.footer}>
