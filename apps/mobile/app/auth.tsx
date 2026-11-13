@@ -140,7 +140,7 @@ export default function SignIn(){
    </Text>
   </View>}
   <View style={{marginTop:17}}><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></View>
-  <View style={{marginTop:16,flexDirection:"row",justifyContent:"center",gap:16,flexWrap:"wrap"}}><TouchableOpacity accessibilityRole="link" onPress={()=>void WebBrowser.openBrowserAsync("https://thegoodsidenews.com/privacy.html")}><Text style={{fontSize:13,color:"#874F37",textDecorationLine:"underline"}}>Privacy Policy</Text></TouchableOpacity><TouchableOpacity accessibilityRole="link" onPress={()=>void WebBrowser.openBrowserAsync("https://thegoodsidenews.com/terms.html")}><Text style={{fontSize:13,color:"#874F37",textDecorationLine:"underline"}}>Terms of Use</Text></TouchableOpacity></View>
+  <View style={{marginTop:16,flexDirection:"row",justifyContent:"center",gap:16,flexWrap:"wrap"}}><TouchableOpacity accessibilityRole="link" onPress={()=>router.push({pathname:"/legal/[type]",params:{type:"privacy"}})}><Text style={{fontSize:13,color:"#874F37",textDecorationLine:"underline"}}>Privacy Policy</Text></TouchableOpacity><TouchableOpacity accessibilityRole="link" onPress={()=>router.push({pathname:"/legal/[type]",params:{type:"terms"}})}><Text style={{fontSize:13,color:"#874F37",textDecorationLine:"underline"}}>Terms of Use</Text></TouchableOpacity></View>
  </ScrollView></KeyboardAvoidingView></Background>;
 }
 const sx=StyleSheet.create({
