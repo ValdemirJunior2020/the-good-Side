@@ -9,6 +9,7 @@ import {OAuth2Client} from "google-auth-library";
 import {createCipheriv,createDecipheriv,randomBytes,createHash,timingSafeEqual} from "node:crypto";
 import {z} from "zod";
 import {supabaseRecipeAction} from "./recipe-store.js";
+import {recordPushTicket,pollPushReceipts} from "./push-delivery.js";
 import {chooseDigest,localClock,isValidTimezone} from "./schedule.js";
 import {isOn,scheduleDecision,deliveryKey,nextDigestAt} from "./notification-policy.js";
 
@@ -225,6 +226,7 @@ app.post("/admin/broadcast/send",asyncRoute(async(req,res)=>{
    const result=await push.json() as any;
    const ticket=result?.data;
    const ok=push.ok&&ticket?.status==="ok";
+   if(ok&&ticket?.id)await recordPushTicket(String(ticket.id),key,d.user_id,d.device_id);
    await sheet("updateNotificationByKey",{idempotency_key:key,delivery_status:ok?"accepted":"error",sent_at:new Date().toISOString(),error_code:ticket?.details?.error||(!push.ok?"push_http_"+push.status:"")});
    if(ticket?.details?.error==="DeviceNotRegistered")await sheet("disableDevice",{device_id:d.device_id,user_id:d.user_id});
    ok?accepted++:failed++;
@@ -345,6 +347,7 @@ async function digestTick(){
       const token=decrypt(d.push_token_reference);
       const resp=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"The Good Side",body:chosen.title,data:chooseFood?{recipe_id:recipe.recipe_id,sound_enabled:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined}:{news_id:chosen.news_id,sound_enabled:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined},sound:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined?pushSound:null})});
       const result=await resp.json() as any;const ticket=Array.isArray(result?.data)?result.data[0]:result?.data;
+      if(resp.ok&&ticket?.status==="ok"&&ticket?.id)await recordPushTicket(String(ticket.id),key,user.user_id,d.device_id);
       await sheet("updateNotificationByKey",{idempotency_key:key,delivery_status:resp.ok&&ticket?.status==="ok"?"accepted":"error",sent_at:new Date().toISOString(),error_code:ticket?.details?.error||(!resp.ok?"push_http_"+resp.status:"")});
       if(ticket?.details?.error==="DeviceNotRegistered")await sheet("disableDevice",{device_id:d.device_id,user_id:user.user_id});
      }catch(error){
@@ -356,7 +359,27 @@ async function digestTick(){
   }
  }finally{digestRunning=false;}
 }
-if(process.env.ENABLE_PUSH_SCHEDULER==="true"){setInterval(()=>digestTick().catch(console.error),60000);digestTick().catch(console.error);}
+// Expo tickets require a second receipt check to confirm APNs/FCM handoff.
+async function receiptTick(){
+ if(process.env.ENABLE_PUSH_SCHEDULER!=="true"||process.env.RECIPE_STORE!=="supabase")return;
+ try{
+  await pollPushReceipts(async(row,status,errorCode)=>{
+   await sheet("updateNotificationByKey",{
+    idempotency_key:row.idempotency_key,
+    delivery_status:status,
+    sent_at:new Date().toISOString(),
+    error_code:errorCode
+   });
+   if(errorCode==="DeviceNotRegistered")await sheet("disableDevice",{user_id:row.user_id,device_id:row.device_id});
+  });
+ }catch(e){console.error("[push] Receipt poll failed",e instanceof Error?e.message:"unknown")}
+}
+if(process.env.ENABLE_PUSH_SCHEDULER==="true"){
+ setInterval(()=>digestTick().catch(console.error),60000);
+ digestTick().catch(console.error);
+ setInterval(()=>receiptTick().catch(console.error),120000);
+ receiptTick().catch(console.error);
+}
 app.use((error:unknown,_req:Request,res:Response,_next:NextFunction)=>{if(error instanceof z.ZodError)return res.status(400).json({error:"Invalid input",details:error.flatten()});console.error(error);res.status(503).json({error:"Request could not be completed"})});
 app.listen(Number(process.env.PORT||8788),()=>{
  console.log("The Good Side API listening");
