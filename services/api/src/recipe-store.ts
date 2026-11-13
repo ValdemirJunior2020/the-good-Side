@@ -1,7 +1,7 @@
 /**
  * Optional server-side Supabase recipe store.
  * Activate with RECIPE_STORE=supabase, SUPABASE_URL and
- * SUPABASE_SERVICE_ROLE_KEY on the API server only.
+ * SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) on the API server only.
  * Never place a service role / secret key in Expo or Vite variables.
  *
  * Current public.recipes schema stores ingredients/instructions as JSON text.
@@ -19,17 +19,17 @@ const fields = [
 
 function config() {
   const url = process.env.SUPABASE_URL?.replace(/\/$/, "");
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !/^https:\/\//.test(url) || !key)
-    throw Error("Supabase recipe store requires SUPABASE_URL and server-only SUPABASE_SERVICE_ROLE_KEY");
-  return {url, key};
+    throw Error("Supabase recipe store requires SUPABASE_URL and a server-only Supabase secret key");
+  return {url, key, legacy:!key.startsWith("sb_secret_")};
 }
 async function request(path: string, init: RequestInit = {}) {
-  const {url,key}=config();
+  const {url,key,legacy}=config();
   const response=await fetch(url+"/rest/v1/recipes"+path,{
     ...init,
     headers:{
-      apikey:key,Authorization:"Bearer "+key,
+      apikey:key,...(legacy?{Authorization:"Bearer "+key}:{}),
       ...(init.body?{"content-type":"application/json"}:{}),
       ...(init.headers||{})
     },
