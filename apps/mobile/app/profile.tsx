@@ -1,5 +1,6 @@
 import {BlurView} from "expo-blur";
-import React,{useEffect,useState} from "react";
+import React,{useEffect,useRef,useState} from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {ActivityIndicator,Alert,Image,Modal,ScrollView,Share,StyleSheet,Text,TextInput,TouchableOpacity,View,Linking} from "react-native";
 import {LinearGradient} from "expo-linear-gradient";
 import {router} from "expo-router";
@@ -16,6 +17,8 @@ const SUNRISE="https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto
 const gold="#B96117";
 const ink="#301E2C";
 type Avatar={avatar_id:string;label:string;image_url:string;credit:string};
+type SavedAvatar={id:string;url:string};
+const avatarKey=(user:Session)=>"goodside_avatar_v1:"+user.provider+":"+user.email.trim().toLowerCase();
 
 function Glass({children,style}:{children:React.ReactNode;style?:object}){
  return <View style={[ui.glass,style]}>
@@ -47,6 +50,8 @@ export default function Profile(){
  const[editing,setEditing]=useState(false);
  const[busy,setBusy]=useState(false);
  const[avatarId,setAvatarId]=useState("");
+ const[avatarImageUrl,setAvatarImageUrl]=useState("");
+ const avatarChangeRef=useRef(0);
  const[customAvatar,setCustomAvatar]=useState<string|null>(null);
  const[supportEmail,setSupportEmail]=useState("infojr.83@gmail.com");
  const[avatars,setAvatars]=useState<Avatar[]>(avatarCatalog);
@@ -55,18 +60,41 @@ export default function Profile(){
  const[avatarError,setAvatarError]=useState("");
  useEffect(()=>{
   let mounted=true;
+  let sessionGeneration=0;
   const off=auth.subscribe(user=>{
    if(!mounted)return;
+   const generation=++sessionGeneration;
+   const avatarRevision=avatarChangeRef.current;
    setSession(user);setName(user?.displayName||"");
-   if(user){api<{avatar_id?:string}>("/me",{},true).then(record=>{if(mounted)setAvatarId(record?.avatar_id||"")}).catch(()=>{});
-    void auth.getFreshToken().then(token=>token?getPersonalAvatar(token):null).then(url=>{if(mounted)setCustomAvatar(url)}).catch(()=>{});
-    void auth.getFreshToken().then(token=>token?syncManagedProfile(token,user.displayName||user.email.split("@")[0]):null).catch(()=>{});}
-   else{setAvatarId("");setCustomAvatar(null)}
+   if(user){
+    const key=avatarKey(user);
+    // Restore the last confirmed choice immediately, even when the gallery is offline.
+    void AsyncStorage.getItem(key).then(saved=>{
+     if(!mounted||generation!==sessionGeneration||avatarRevision!==avatarChangeRef.current||!saved)return;
+     const choice=JSON.parse(saved) as SavedAvatar;
+     if(choice.id&&choice.url){setAvatarId(choice.id);setAvatarImageUrl(choice.url)}
+    }).catch(()=>{});
+    // The account remains the source of truth; refresh the local fallback from it.
+    void api<{avatar_id?:string}>("/me",{},true).then(record=>{
+     if(!mounted||generation!==sessionGeneration||avatarRevision!==avatarChangeRef.current)return;
+     const id=record?.avatar_id||"";
+     if(id){
+      setAvatarId(id);
+      const candidate=avatars.find(a=>a.avatar_id===id)||avatarCatalog.find(a=>a.avatar_id===id);
+      if(candidate){
+       setAvatarImageUrl(candidate.image_url);
+       void AsyncStorage.setItem(key,JSON.stringify({id,url:candidate.image_url} satisfies SavedAvatar)).catch(()=>{});
+      }
+     }
+    }).catch(()=>{});
+    void auth.getFreshToken().then(token=>token?getPersonalAvatar(token):null).then(url=>{if(mounted&&generation===sessionGeneration&&avatarRevision===avatarChangeRef.current)setCustomAvatar(url)}).catch(()=>{});
+    void auth.getFreshToken().then(token=>token?syncManagedProfile(token,user.displayName||user.email.split("@")[0]):null).catch(()=>{});
+   }else{setAvatarId("");setAvatarImageUrl("");setCustomAvatar(null)}
   });
   void auth.restore();
   getPublicAvatars().then(items=>{if(mounted&&items.length)setAvatars(items)}).catch(()=>{/* Local avatar catalog is an offline fallback. */});
   getPublicSettings().then(settings=>{if(mounted&&settings.support_email)setSupportEmail(settings.support_email)}).catch(()=>{});
-  return ()=>{mounted=false;off()};
+  return ()=>{mounted=false;sessionGeneration++;off()};
  },[]);
  const openAvatars=async()=>{
   if(!session)return go("/auth");
@@ -84,7 +112,10 @@ export default function Profile(){
   try{
    await api("/me",put({avatar_id:id}),true);
    if(customAvatar){const token=await auth.getFreshToken();if(token)await clearPersonalAvatar(token)}
-   setAvatarId(id);setCustomAvatar(null);setAvatarPicker(false);
+   const selected=avatars.find(a=>a.avatar_id===id)||avatarCatalog.find(a=>a.avatar_id===id);
+   avatarChangeRef.current++;
+   setAvatarId(id);setAvatarImageUrl(selected?.image_url||"");setCustomAvatar(null);setAvatarPicker(false);
+   if(session&&selected)await AsyncStorage.setItem(avatarKey(session),JSON.stringify({id,url:selected.image_url} satisfies SavedAvatar)).catch(()=>{});
   }catch(e){Alert.alert("Unable to save avatar","The images are available, but saving your selection still requires the account service. Please try again when the connection is restored.")}
   finally{setBusy(false)}
  };
@@ -121,7 +152,7 @@ export default function Profile(){
  const firstName=(name.trim().split(/\s+/)[0]||"Friend");
  const signedIn=Boolean(session);
  const currentAvatar=avatars.find(a=>a.avatar_id===avatarId);
- const avatarUrl=customAvatar||currentAvatar?.image_url||SUNRISE;
+ const avatarUrl=customAvatar||(avatarId&&avatarImageUrl)||currentAvatar?.image_url||SUNRISE;
  const openLegal=(type:"privacy"|"terms"|"delete-account")=>router.push({pathname:"/legal/[type]",params:{type}});
  const support=async()=>{const address="mailto:"+supportEmail+"?subject="+encodeURIComponent("The Good Side - Support");try{await Linking.openURL(address)}catch{Alert.alert("Contact Support","Please email "+supportEmail)}};
  return <LinearGradient colors={["#FFF1E3","#F7D1C7","#DED0E5"]} style={{flex:1}}>
