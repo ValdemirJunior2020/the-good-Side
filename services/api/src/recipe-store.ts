@@ -7,6 +7,8 @@
  * Current public.recipes schema stores ingredients/instructions as JSON text.
  * The compatibility layer preserves the existing mobile and admin API shape.
  */
+import {randomUUID} from "node:crypto";
+
 type RecipePayload = Record<string, unknown>;
 type RecipeAction = "listRecipes" | "getRecipe" | "upsertRecipe";
 const fields = [
@@ -61,7 +63,7 @@ export async function supabaseRecipeAction(action:RecipeAction,payload:RecipePay
     return rows?.[0]?decodeRecipe(rows[0]):null;
   }
   const now=new Date().toISOString();
-  const id=String(payload.recipe_id||"recipe-"+crypto.randomUUID());
+  const id=String(payload.recipe_id||"recipe-"+randomUUID());
   const record:Record<string,unknown>={recipe_id:id,updated_at:now};
   for(const field of fields){
     if(field==="recipe_id"||field==="created_at"||field==="updated_at")continue;
