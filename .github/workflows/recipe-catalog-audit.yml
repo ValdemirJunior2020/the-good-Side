@@ -1,0 +1,20 @@
+name: Recipe Catalog Audit
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/hybrid-render-local-ai]
+    paths:
+      - 'data/launch-recipes-2026.json'
+      - 'scripts/audit-recipe-catalog.mjs'
+      - '.github/workflows/recipe-catalog-audit.yml'
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check 30 recipe images and live Supabase API
+        run: node scripts/audit-recipe-catalog.mjs
