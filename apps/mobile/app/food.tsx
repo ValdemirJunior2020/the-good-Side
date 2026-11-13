@@ -8,6 +8,7 @@ import {colors} from "../src/theme";
 import {CUISINES,getCountryMeals,getStarterMeals,STARTER_GROUPS,type MealPreview} from "../src/recipeDiscovery";
 
 type Recipe={recipe_id:string;title:string;description:string;prep_minutes:number;cook_minutes:number;servings:number;source_url:string;image_url:string;dietary_tags:string;};
+const SHOW_DEVELOPMENT_MEALS = __DEV__; // TheMealDB free-key preview is never shipped in a production build.
 const hasPhoto=(url:string|undefined)=>typeof url==="string"&&/^https:\/\/[^\s]+$/i.test(url);
 const PICKS="goodside_food_country_picks_v1",CACHE="goodside_starter_meals_v1";
 const tags=STARTER_GROUPS.map(g=>({name:g.title,key:g.key}));
@@ -30,23 +31,24 @@ export default function Food(){
  const load=async()=>{
   setLoading(true);setError("");
   const [real,good,preview]=await Promise.allSettled([
-   api<Recipe[]>("/recipes"),api<{items:News[]}>("/news?category=food&limit=15"),getStarterMeals()
+   api<Recipe[]>("/recipes"),api<{items:News[]}>("/news?category=food&limit=15"),SHOW_DEVELOPMENT_MEALS?getStarterMeals():Promise.resolve([] as MealPreview[])
   ]);
   if(real.status==="fulfilled")setRecipes(real.value.filter(r=>hasPhoto(r.image_url)));
   if(good.status==="fulfilled")setNews(good.value.items||[]);
-  if(preview.status==="fulfilled"){setStarter(preview.value);void AsyncStorage.setItem(CACHE,JSON.stringify(preview.value)).catch(()=>{})}
-  else setError("Fresh recipe images are temporarily unavailable. Saved previews may still work.");
+  if(SHOW_DEVELOPMENT_MEALS && preview.status==="fulfilled"){setStarter(preview.value);void AsyncStorage.setItem(CACHE,JSON.stringify(preview.value)).catch(()=>{})}
+  else if(SHOW_DEVELOPMENT_MEALS && preview.status==="rejected")setError("Development recipe previews are temporarily unavailable.");
+  if(real.status==="rejected")setError("Published recipes could not be loaded. Pull down to retry.");
   setLoading(false);
  };
  useEffect(()=>{
   void AsyncStorage.multiGet([PICKS,CACHE]).then(entries=>{
    try{if(entries[0][1]){const v=JSON.parse(entries[0][1]!);if(Array.isArray(v))setCountries(v.filter(c=>CUISINES.includes(c)))} }catch{}
-   try{if(entries[1][1]){const v=JSON.parse(entries[1][1]!);if(Array.isArray(v))setStarter(v)}}catch{}
+   try{if(SHOW_DEVELOPMENT_MEALS && entries[1][1]){const v=JSON.parse(entries[1][1]!);if(Array.isArray(v))setStarter(v)}}catch{}
   }).catch(()=>{});
   void load();
  },[]);
  useEffect(()=>{
-  if(!countries.length){setCountryMeals([]);return}
+  if(!SHOW_DEVELOPMENT_MEALS || !countries.length){setCountryMeals([]);return}
   let alive=true;setCountryLoading(true);
   void Promise.allSettled(countries.map(getCountryMeals)).then(all=>{
    if(!alive)return;
@@ -84,6 +86,7 @@ export default function Food(){
     </View>
    </Surface></TouchableOpacity>)}
   </View>:null}
+  {SHOW_DEVELOPMENT_MEALS?<>
   <View style={{marginBottom:10}}>
    <Text style={[styles.label,{fontSize:22,marginBottom:3}]}>🌎 Your countries</Text>
    <Text style={[styles.muted,{marginBottom:13}]}>Explore the dishes from your selected places.</Text>
@@ -98,6 +101,8 @@ export default function Food(){
   <View style={{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between"}}>{filtered.map(m=><PreviewCard key={m.id} meal={m}/>)}</View>
   {!loading&&!filtered.length?<Surface style={{marginBottom:14}}><Text style={styles.subtitle}>No recipes loaded in this category yet. Pull down to refresh.</Text></Surface>:null}
   <Text style={[styles.muted,{fontSize:12,marginBottom:22}]}>Preview photographs and recipes are shown from TheMealDB for development testing. A provider license and editorial review are required before public App Store distribution.</Text>
+  </>:null}
+  {!loading&&!recipes.length&&!SHOW_DEVELOPMENT_MEALS?<Surface style={{marginBottom:16,padding:20}}><Text style={[styles.label,{fontSize:19}]}>Fresh recipes are coming ☀️</Text><Text style={[styles.subtitle,{marginTop:8}]}>Our kitchen is preparing full recipes with beautiful, licensed photos. Check back soon for new dishes from your favorite countries.</Text></Surface>:null}
   <Text style={[styles.label,{fontSize:22,marginBottom:10}]}>✨ Food making a difference</Text>
   {news.length===0?<Surface><Text style={styles.subtitle}>Food-related good news will appear here.</Text></Surface>:news.map(item=><TouchableOpacity key={item.news_id} onPress={()=>router.push({pathname:"/article/[id]",params:{id:item.news_id}} as any)}><Surface style={{marginBottom:12}}>
    <Text style={{fontSize:18,fontWeight:"800",color:colors.ink}}>{item.title}</Text><Text numberOfLines={2} style={[styles.subtitle,{marginTop:7}]}>{item.summary}</Text>
