@@ -161,12 +161,12 @@ function broadcastHistory_(p){return records_("NOTIFICATION_LOGS").filter(x=>Str
 
 /* Recipes are distinct from news and must be sourced and editorially approved. */
 function publicRecipe_(r){return Object.fromEntries(headers_("RECIPES").filter(k=>k!=="approval_status").map(k=>[k,r[k]]));}
-function listRecipes_(){return records_("RECIPES").filter(r=>r.approval_status==="approved"&&isHttps_(String(r.source_url||""))).slice(-100).reverse().map(publicRecipe_);}
-function getRecipe_(p){required_(p,"recipe_id");const r=find_("RECIPES","recipe_id",p.recipe_id);return r&&r.approval_status==="approved"&&isHttps_(String(r.source_url||""))?publicRecipe_(r):null;}
+function listRecipes_(){return records_("RECIPES").filter(r=>r.approval_status==="approved"&&isHttps_(String(r.source_url||""))&&isHttps_(String(r.image_url||""))).slice(-100).reverse().map(publicRecipe_);}
+function getRecipe_(p){required_(p,"recipe_id");const r=find_("RECIPES","recipe_id",p.recipe_id);return r&&r.approval_status==="approved"&&isHttps_(String(r.source_url||""))&&isHttps_(String(r.image_url||""))?publicRecipe_(r):null;}
 function upsertRecipe_(p){
- required_(p,"title");required_(p,"source_url");
+ required_(p,"title");required_(p,"source_url");required_(p,"image_url");
  if(!isHttps_(p.source_url))throw Error("Recipe must credit an HTTPS source");
- if(p.image_url&&(!isHttps_(p.image_url)||!String(p.image_license||"").trim()))throw Error("Recipe images require a licensed HTTPS source");
+ if(!isHttps_(p.image_url)||!String(p.image_license||"").trim())throw Error("Every recipe requires a HTTPS image URL and documented image permission");
  if(!Array.isArray(p.ingredients)||!p.ingredients.length||p.ingredients.length>80)throw Error("Ingredients required");
  if(!Array.isArray(p.instructions)||!p.instructions.length||p.instructions.length>80)throw Error("Instructions required");
  const clean=v=>v.map(x=>String(x).slice(0,500));
