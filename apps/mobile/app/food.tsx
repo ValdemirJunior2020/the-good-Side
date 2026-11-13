@@ -87,7 +87,7 @@ export default function Food(){
    <Text style={[styles.muted,{marginBottom:11}]}>Recipes matching your selected countries appear first. Every recipe stays completely inside the app.</Text>
    {prioritizedRecipes.map(r=><TouchableOpacity key={r.recipe_id} onPress={()=>router.push({pathname:"/recipe/[id]",params:{id:r.recipe_id}})}><Surface style={{marginBottom:10,padding:14}}>
     <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
-     <Image source={{uri:r.image_url}} style={{width:96,height:88,borderRadius:16,backgroundColor:"#E6D4C5"}}/>
+     <Image source={{uri:r.image_url}} onError={()=>setRecipes(current=>current.filter(item=>item.recipe_id!==r.recipe_id))} style={{width:96,height:88,borderRadius:16,backgroundColor:"#E6D4C5"}}/>
      <View style={{flex:1}}><Text style={{fontSize:17,fontWeight:"800",color:colors.ink}}>{r.title}</Text><Text numberOfLines={2} style={[styles.muted,{marginTop:6}]}>{r.description}</Text>
      <Text style={{color:"#A56B43",fontWeight:"700",fontSize:12,marginTop:7}}>{Number(r.prep_minutes)+Number(r.cook_minutes)} min · {r.servings} servings</Text></View>
     </View>
