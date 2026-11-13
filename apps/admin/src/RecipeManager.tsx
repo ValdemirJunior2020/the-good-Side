@@ -19,10 +19,65 @@ export function RecipeManager({api}:{api:Api}){
  const [prep,setPrep]=useState("15"),[cook,setCook]=useState("20"),[servings,setServings]=useState("4");
  const [ingredients,setIngredients]=useState(""),[instructions,setInstructions]=useState("");
  const [tags,setTags]=useState(""),[publisher,setPublisher]=useState(""),[sourceUrl,setSourceUrl]=useState("");
+ const [imageUrl,setImageUrl]=useState(""),[imageLicense,setImageLicense]=useState("");
  const [language,setLanguage]=useState<"en"|"pt"|"es">("en");
  const [publication,setPublication]=useState<"pending"|"approved">("pending");
  const [busy,setBusy]=useState(false),[feedback,setFeedback]=useState("");
  const [existing,setExisting]=useState<Recipe[]>([]);
+ const [discoveryCountry,setDiscoveryCountry]=useState("American");
+ const [candidates,setCandidates]=useState<any[]>([]);
+ const [discoveryBusy,setDiscoveryBusy]=useState(false),[importBusy,setImportBusy]=useState(false);
+ const [discoveryMessage,setDiscoveryMessage]=useState("");
+ const cuisines=["American","Brazilian","Italian","Egyptian","Turkish","Moroccan","Mexican","Indian","Japanese","Greek","French","Thai"];
+ const MEALS="https://www.themealdb.com/api/json/v1/1";
+ const fetchMeals=async(path:string)=>{
+  const r=await fetch(MEALS+"/"+path);
+  if(!r.ok)throw Error("Recipe source returned HTTP "+r.status);
+  return (await r.json() as {meals?:any[]}).meals||[];
+ };
+ const discover=async()=>{
+  setDiscoveryBusy(true);setDiscoveryMessage("");
+  try{
+   const list=await fetchMeals("filter.php?a="+encodeURIComponent(discoveryCountry));
+   if(!list.length)throw Error("No meals found for this country.");
+   const selected=list.slice(0,5);
+   const detail=await Promise.all(selected.map(async m=>{
+    const entries=await fetchMeals("lookup.php?i="+encodeURIComponent(String(m.idMeal)));
+    return entries[0];
+   }));
+   setCandidates(detail.filter(Boolean));
+   setDiscoveryMessage("5 recipe candidates ready. Review images, attribution and licensing before publishing.");
+  }catch(e){setDiscoveryMessage(String(e))}finally{setDiscoveryBusy(false)}
+ };
+ const importDrafts=async()=>{
+  if(!candidates.length)return;
+  setImportBusy(true);let imported=0;
+  try{
+   for(const meal of candidates){
+    const ingredients=Array.from({length:20},(_,i)=>{
+     const k=i+1,a=String(meal["strIngredient"+k]||"").trim(),b=String(meal["strMeasure"+k]||"").trim();
+     return a?(b?b+" ":"")+a:"";
+    }).filter(Boolean);
+    const instructions=String(meal.strInstructions||"").split(/\r?\n+/).map((v:string)=>v.trim()).filter(Boolean);
+    if(!ingredients.length||!instructions.length)continue;
+    const id="mealdb-"+String(meal.idMeal);
+    const result=await api<CreateResponse>("/admin/recipes",{method:"POST",body:JSON.stringify({
+     recipe_id:id,title:String(meal.strMeal||"Recipe"),
+     description:"A "+String(meal.strArea||"world")+" "+String(meal.strCategory||"recipe").toLowerCase()+" for your Good Side recipe collection.",
+     prep_minutes:0,cook_minutes:0,servings:4,ingredients:ingredients.slice(0,80),
+     instructions:instructions.slice(0,80).map((v:string)=>v.slice(0,500)),
+     dietary_tags:String(meal.strArea||discoveryCountry),
+     source_name:"TheMealDB",source_url:"https://www.themealdb.com/meal/"+String(meal.idMeal),
+     image_url:String(meal.strMealThumb||""),
+     image_license:"DEVELOPMENT PREVIEW ONLY - publication rights not verified",
+     language:"en",approval_status:"pending"
+    })});
+    if(result.recipe_id)imported++;
+   }
+   setDiscoveryMessage(imported+" recipes sent to the RECIPES sheet as pending drafts. These are NOT publicly published.");
+  }catch(e){setDiscoveryMessage(imported+" imported, then error: "+String(e))}
+  finally{setImportBusy(false)}
+ };
  const refresh=async()=>{setExisting(await api<Recipe[]>("/recipes"))};
  useEffect(()=>{void refresh().catch(e=>setFeedback("Unable to read published recipes: "+String(e)))},[]);
  const save=async(e:React.FormEvent<HTMLFormElement>)=>{
@@ -40,11 +95,11 @@ export function RecipeManager({api}:{api:Api}){
    const out=await api<CreateResponse>("/admin/recipes",{method:"POST",body:JSON.stringify({
     title:title.trim(),description:description.trim(),prep_minutes:prepMinutes,cook_minutes:cookMinutes,servings:servingCount,
     ingredients:ingredientList,instructions:stepList,dietary_tags:tags.trim(),
-    source_name:publisher.trim(),source_url:url.toString(),language,approval_status:publication
+    source_name:publisher.trim(),source_url:url.toString(),image_url:imageUrl.trim()||undefined,image_license:imageLicense.trim(),language,approval_status:publication
    })});
    await refresh();
    setFeedback(out.status==="approved"?"Recipe saved to Google Sheets and published to the iOS Food tab. No push was sent.":"Recipe saved to Google Sheets as pending. Only approved recipes show in the app.");
-   setTitle("");setDescription("");setIngredients("");setInstructions("");setPublisher("");setSourceUrl("");setTags("");
+   setTitle("");setDescription("");setIngredients("");setInstructions("");setPublisher("");setSourceUrl("");setTags("");setImageUrl("");setImageLicense("");
   }catch(err){setFeedback(err instanceof Error?err.message:"Unable to save recipe")}finally{setBusy(false)}
  };
  return <div style={{display:"grid",gap:20}}>
@@ -68,10 +123,34 @@ export function RecipeManager({api}:{api:Api}){
     <label>Dietary tags (optional)<input maxLength={200} value={tags} onChange={e=>setTags(e.target.value)} placeholder="vegetarian, easy, budget"/></label>
     <label>Original recipe publisher<input required minLength={2} maxLength={150} value={publisher} onChange={e=>setPublisher(e.target.value)} placeholder="Budget Bytes"/></label>
     <label>Original recipe URL<input required type="url" pattern="https://.*" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)} placeholder="https://example.com/recipe-name"/></label>
+    <label>Photo URL (optional)<input type="url" value={imageUrl} onChange={e=>setImageUrl(e.target.value)} placeholder="https://licensed-photo.example/recipe.jpg"/></label>
+    <label>Photo license / permission (required when photo is added)<input value={imageLicense} onChange={e=>setImageLicense(e.target.value)} placeholder="Owned image / photographer permission / verified license"/></label>
     <label>Publication status<select value={publication} onChange={e=>setPublication(e.target.value as "pending"|"approved")}><option value="pending">Save as draft (not visible in app)</option><option value="approved">Publish to iOS Food tab now</option></select></label>
     <div className="notice">Use your own factual description and recipe instructions or properly licensed material. Keep original-source attribution. This first version does not import copyrighted text or photographs automatically.</div>
     <button className="primary" type="submit" disabled={busy||!title.trim()||!ingredients.trim()||!instructions.trim()||!sourceUrl.trim()||!publisher.trim()}>{busy?"Saving…":publication==="approved"?"Publish recipe to app →":"Save recipe draft →"}</button>
    </form>
+  </div>
+  <div className="panel form-panel">
+   <h2>☀️ Discover 5 recipes — editorial draft queue</h2>
+   <p className="description">Choose a cuisine. Preview five real dishes with their photos and original source links. Import them as <strong>pending drafts only</strong>; never automatically approve unlicensed images or publisher instructions.</p>
+   <div className="two">
+    <label>Country or cuisine<select value={discoveryCountry} onChange={e=>{setDiscoveryCountry(e.target.value);setCandidates([])}}>
+     {cuisines.map(c=><option key={c} value={c}>{c}</option>)}
+    </select></label>
+    <div style={{alignSelf:"end"}}><button type="button" className="primary" disabled={discoveryBusy} onClick={()=>void discover()}>{discoveryBusy?"Finding recipes…":"Discover 5 today →"}</button></div>
+   </div>
+   {discoveryMessage?<p className="notice" role="status">{discoveryMessage}</p>:null}
+   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(155px,1fr))",gap:14,marginTop:15}}>
+    {candidates.map(m=><article key={m.idMeal} className="source-preview" style={{overflow:"hidden"}}>
+     {m.strMealThumb?<img alt={m.strMeal} loading="lazy" src={m.strMealThumb} style={{width:"100%",height:128,objectFit:"cover",borderRadius:14}}/>:null}
+     <strong>{m.strMeal}</strong><p className="hint">{m.strArea} · {m.strCategory}</p>
+     <a href={"https://www.themealdb.com/meal/"+m.idMeal} target="_blank" rel="noopener noreferrer">Original source ↗</a>
+    </article>)}
+   </div>
+   {candidates.length>0?<button type="button" className="primary" onClick={()=>void importDrafts()} disabled={importBusy} style={{marginTop:18}}>
+     {importBusy?"Saving drafts…":"Import these 5 as pending drafts →"}
+   </button>:null}
+   <p className="hint" style={{marginTop:13}}>This is a free development-only preview of TheMealDB. Public App Store distribution requires appropriate source and image permissions or a supporter license. Your local Ollama automation will use the same review gate.</p>
   </div>
   <div className="panel form-panel">
    <h2>Published recipes</h2><p className="description">{existing.length} recipes currently available to the iPhone Food section.</p>
