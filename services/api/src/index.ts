@@ -22,7 +22,7 @@ if(process.env.NODE_ENV!=="production"&&existsSync(localEnvPath)){
 const required=["GOOGLE_CLIENT_IDS","APPS_SCRIPT_URL","APPS_SCRIPT_SHARED_SECRET"];
 for(const key of required) if(!process.env[key]) throw new Error("Missing configuration: "+key);
 const oauthClient=new OAuth2Client();
-const allowedClients=Array.from(new Set([...(process.env.GOOGLE_CLIENT_IDS||"").split(","),process.env.GOOGLE_ADMIN_WEB_CLIENT_ID||""].map(s=>s.trim()).filter(Boolean)));
+const allowedClients=Array.from(new Set([...(process.env.GOOGLE_CLIENT_IDS||"").split(","),process.env.GOOGLE_ADMIN_WEB_CLIENT_ID||"",process.env.GOOGLE_IOS_CLIENT_ID||""].map(s=>s.trim()).filter(Boolean)));
 const adminEmails=new Set((process.env.ADMIN_GOOGLE_EMAILS||"").split(",").map(s=>s.trim().toLowerCase()).filter(Boolean));
 const app=express();app.disable("x-powered-by");app.set("trust proxy","loopback");app.use(express.json({limit:"64kb"}));
 const allowedOrigins=Array.from(new Set([...(process.env.ALLOWED_ORIGIN||"").split(","),process.env.GOOGLE_ADMIN_ORIGIN||"",...(process.env.PUBLIC_WEB_ORIGINS||"").split(",")].map(s=>s.trim()).filter(Boolean)));
