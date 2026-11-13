@@ -62,11 +62,15 @@ export function RecipeManager({api}:{api:Api}){
    if([...ingredientList,...stepList].some(x=>x.length>500))throw Error("Each ingredient or instruction must be under 500 characters.");
    const prepMinutes=Number(prep),cookMinutes=Number(cook),servingCount=Number(servings);
    if(!Number.isInteger(prepMinutes)||prepMinutes<0||prepMinutes>1440||!Number.isInteger(cookMinutes)||cookMinutes<0||cookMinutes>1440||!Number.isInteger(servingCount)||servingCount<1||servingCount>100)throw Error("Check time and serving values.");
+   if(!imageUrl.trim())throw Error("Every recipe needs an image URL.");
+   const picture=new URL(imageUrl.trim());
+   if(picture.protocol!=="https:"||picture.username||picture.password)throw Error("Photo must have a valid HTTPS URL.");
+   if(!imageLicense.trim())throw Error("Document photo permission or licensing before saving.");
    if(publication==="approved"&&!window.confirm("PUBLISH THIS RECIPE NOW to The Good Side iOS Food tab?\n\n"+title+"\nSource: "+sourceUrl+"\n\nPlease verify the recipe, source attribution, and content permissions first."))return;
    const out=await api<CreateResponse>("/admin/recipes",{method:"POST",body:JSON.stringify({
     title:title.trim(),description:description.trim(),prep_minutes:prepMinutes,cook_minutes:cookMinutes,servings:servingCount,
     ingredients:ingredientList,instructions:stepList,dietary_tags:tags.trim(),
-    source_name:publisher.trim(),source_url:url.toString(),image_url:imageUrl.trim()||undefined,image_license:imageLicense.trim(),language,approval_status:publication
+    source_name:publisher.trim(),source_url:url.toString(),image_url:imageUrl.trim(),image_license:imageLicense.trim(),language,approval_status:publication
    })});
    await refresh();
    setFeedback(out.status==="approved"?"Recipe saved to Google Sheets and published to the iOS Food tab. No push was sent.":"Recipe saved to Google Sheets as pending. Only approved recipes show in the app.");
@@ -94,11 +98,11 @@ export function RecipeManager({api}:{api:Api}){
     <label>Dietary tags (optional)<input maxLength={200} value={tags} onChange={e=>setTags(e.target.value)} placeholder="vegetarian, easy, budget"/></label>
     <label>Original recipe publisher<input required minLength={2} maxLength={150} value={publisher} onChange={e=>setPublisher(e.target.value)} placeholder="Budget Bytes"/></label>
     <label>Original recipe URL<input required type="url" pattern="https://.*" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)} placeholder="https://example.com/recipe-name"/></label>
-    <label>Photo URL (optional)<input type="url" value={imageUrl} onChange={e=>setImageUrl(e.target.value)} placeholder="https://licensed-photo.example/recipe.jpg"/></label>
-    <label>Photo license / permission (required when photo is added)<input value={imageLicense} onChange={e=>setImageLicense(e.target.value)} placeholder="Owned image / photographer permission / verified license"/></label>
+    <label>Recipe image URL (required)<input required type="url" pattern="https://.*" value={imageUrl} onChange={e=>setImageUrl(e.target.value)} placeholder="https://licensed-photo.example/recipe.jpg"/></label>
+    <label>Photo license / permission (required)<input required value={imageLicense} onChange={e=>setImageLicense(e.target.value)} placeholder="Owned image / photographer permission / verified license"/></label>
     <label>Publication status<select value={publication} onChange={e=>setPublication(e.target.value as "pending"|"approved")}><option value="pending">Save as draft (not visible in app)</option><option value="approved">Publish to iOS Food tab now</option></select></label>
-    <div className="notice">Use your own factual description and recipe instructions or properly licensed material. Keep original-source attribution. This first version does not import copyrighted text or photographs automatically.</div>
-    <button className="primary" type="submit" disabled={busy||!title.trim()||!ingredients.trim()||!instructions.trim()||!sourceUrl.trim()||!publisher.trim()}>{busy?"Saving…":publication==="approved"?"Publish recipe to app →":"Save recipe draft →"}</button>
+    <div className="notice">Full ingredients and full cooking directions stay inside the app. Every recipe requires an HTTPS photograph URL and documented rights to display the image and instructions.</div>
+    <button className="primary" type="submit" disabled={busy||!title.trim()||!ingredients.trim()||!instructions.trim()||!sourceUrl.trim()||!publisher.trim()||!imageUrl.trim()||!imageLicense.trim()}>{busy?"Saving…":publication==="approved"?"Publish recipe to app →":"Save recipe draft →"}</button>
    </form>
   </div>
   <div className="panel form-panel">
