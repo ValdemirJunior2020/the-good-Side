@@ -130,6 +130,32 @@ const recipePayload=z.object({
  image_license:z.string().max(150).default(""),language:z.enum(["en","pt","es"]).default("en"),
  approval_status:z.enum(["pending","approved"]).default("pending")
 });
+// Ollama research-worker intake. Never auto-publish AI output or unlicensed photography.
+// Matches the existing worker key, and enforces TheMealDB source provenance.
+app.post("/worker/recipe-candidates",asyncRoute(async(req,res)=>{
+ const key=req.get("x-worker-key")||"";
+ if(!process.env.RESEARCH_WORKER_KEY||!safeEqual(key,process.env.RESEARCH_WORKER_KEY))
+  return res.status(403).json({error:"Unauthorized"});
+ const item=recipePayload.extend({
+  recipe_id:z.string().regex(/^mealdb-\d{3,9}$/),
+  source_name:z.literal("TheMealDB"),
+  image_url:z.string().url(),
+  approval_status:z.literal("pending")
+ }).parse(req.body);
+ const source=new URL(item.source_url),image=new URL(item.image_url);
+ if(source.protocol!=="https:"||source.hostname!=="www.themealdb.com"||
+    image.protocol!=="https:"||!["www.themealdb.com","themealdb.com"].includes(image.hostname)||
+    source.username||source.password||image.username||image.password)
+  return res.status(422).json({error:"Verified TheMealDB HTTPS source and image URL required"});
+ // Once a human has approved a recipe, a bot must never replace its approved content.
+ const approved=await sheet("getRecipe",{recipe_id:item.recipe_id});
+ if(approved)return send(res,{status:"already_approved",recipe_id:item.recipe_id});
+ const result=await sheet("upsertRecipe",{
+  ...item,approval_status:"pending",image_license:"DEVELOPMENT PREVIEW ONLY - rights unverified",
+  actor_id:"ollama-recipe-worker"
+ });
+ send(res,{status:"pending",recipe_id:result.recipe_id,requires_human_approval:true});
+}));
 app.post("/admin/recipes",asyncRoute(async(req,res)=>send(res,await sheet("upsertRecipe",{...recipePayload.parse(req.body),actor_id:req.uid}))));
 app.get("/admin/stats",asyncRoute(async(req,res)=>send(res,await sheet("stats"))));
 app.get("/admin/pending",asyncRoute(async(req,res)=>send(res,await sheet("listPending"))));
