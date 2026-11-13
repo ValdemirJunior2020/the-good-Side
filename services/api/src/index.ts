@@ -98,6 +98,22 @@ app.get("/health/recipes",asyncRoute(async(_req,res)=>{
  const items=await recipeStore("listRecipes");
  res.json({status:"ok",store:process.env.RECIPE_STORE==="supabase"?"supabase":"legacy",published_recipes:Array.isArray(items)?items.length:0});
 }));
+// Read-only deployment readiness signal; does not expose credentials or user records.
+app.get("/health/delivery",asyncRoute(async(_req,res)=>{
+ const scheduler=process.env.ENABLE_PUSH_SCHEDULER==="true";
+ const encryptionReady=Boolean(encryptionKey&&encryptionKey.length===32);
+ let approvedNews=0,newsGatewayReady=false;
+ try{
+  const items=await sheet("listNews",{limit:100,page:1});
+  approvedNews=(items?.items||[]).filter((r:any)=>r.approval_status==="approved").length;
+  newsGatewayReady=true;
+ }catch{}
+ res.json({status:scheduler&&encryptionReady&&newsGatewayReady?"configured":"action_required",
+  scheduler_enabled:scheduler,token_encryption_ready:encryptionReady,news_gateway_ready:newsGatewayReady,
+  approved_news_available:approvedNews,
+  device_delivery_verified:false,
+  note:"Configuration status is not proof of device delivery; production push tickets and receipts require a signed iOS build."});
+}));
 app.get("/news",asyncRoute(async(req,res)=>send(res,await sheet("listNews",newsQuery.parse(req.query)))));
 app.get("/news/:id",asyncRoute(async(req,res)=>send(res,await sheet("getNews",{news_id:req.params.id}))));
 app.get("/avatars",asyncRoute(async(_req,res)=>send(res,await sheet("listAvatars"))));
