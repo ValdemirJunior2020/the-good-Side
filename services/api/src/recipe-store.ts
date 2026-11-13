@@ -59,7 +59,7 @@ export async function supabaseRecipeAction(action:RecipeAction,payload:RecipePay
   if(action==="getRecipe") {
     const id=String(payload.recipe_id||"");
     if(!id)throw Error("Recipe ID required");
-    const rows=await request("?select=*&recipe_id=eq."+encodeURIComponent(id)+"&limit=1");
+    const rows=await request("?select=*&recipe_id=eq."+encodeURIComponent(id)+"&approval_status=eq.approved&limit=1");
     return rows?.[0]?decodeRecipe(rows[0]):null;
   }
   const now=new Date().toISOString();
@@ -71,7 +71,9 @@ export async function supabaseRecipeAction(action:RecipeAction,payload:RecipePay
     record[field]=field==="ingredients"||field==="instructions"
       ?JSON.stringify(payload[field]):payload[field];
   }
-  record.created_at=now;
+  // Preserve original creation timestamps on edits instead of resetting history.
+  const existing=await request("?select=created_at&recipe_id=eq."+encodeURIComponent(id)+"&limit=1");
+  record.created_at=existing?.[0]?.created_at||now;
   // Reject incomplete/unauthorized publication before touching the database.
   if(record.approval_status==="approved"){
     if(typeof record.image_url!=="string"||!record.image_url.startsWith("https://")
