@@ -93,6 +93,11 @@ const prefs=z.object({
 const newsQuery=z.object({category:z.string().max(80).optional(),q:z.string().max(120).optional(),language:z.string().max(5).optional(),country:z.string().max(2).optional(),page:z.coerce.number().int().min(1).max(10000).default(1),limit:z.coerce.number().int().min(1).max(50).default(20)});
 const send=(res:Response,p:unknown)=>res.json({ok:true,data:p});
 app.get("/health",(_req,res)=>res.json({status:"ok"}));
+// Read-only connectivity probe. Never exposes Supabase credentials or unpublished recipes.
+app.get("/health/recipes",asyncRoute(async(_req,res)=>{
+ const items=await recipeStore("listRecipes");
+ res.json({status:"ok",store:process.env.RECIPE_STORE==="supabase"?"supabase":"legacy",published_recipes:Array.isArray(items)?items.length:0});
+}));
 app.get("/news",asyncRoute(async(req,res)=>send(res,await sheet("listNews",newsQuery.parse(req.query)))));
 app.get("/news/:id",asyncRoute(async(req,res)=>send(res,await sheet("getNews",{news_id:req.params.id}))));
 app.get("/avatars",asyncRoute(async(_req,res)=>send(res,await sheet("listAvatars"))));
