@@ -8,7 +8,8 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.thegoodside.app"
+      "bundleIdentifier": "com.thegoodside.app",
+      "icon": "./assets/app-icon.png"
     },
     "android": {
       "package": "com.thegoodside.app"
@@ -24,6 +25,7 @@
     ],
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "icon": "./assets/app-icon.png"
   }
 }
