@@ -11,12 +11,14 @@ const SAVED_DEMOS="goodside_saved_demo_meals_v1";
 const parsed=(value:string[]|string):string[]=>Array.isArray(value)?value:(()=>{try{const a=JSON.parse(value||"[]");return Array.isArray(a)?a:[]}catch{return []}})();
 export default function RecipeDetail(){
  const {id}=useLocalSearchParams<{id:string}>();
- const demo=String(id).startsWith("mealdb-");
+ const demo=__DEV__ && String(id).startsWith("mealdb-");
  const [r,setR]=useState<Recipe|null>(null),[error,setError]=useState(""),[saved,setSaved]=useState(false),[saving,setSaving]=useState(false),[photoFailed,setPhotoFailed]=useState(false);
  useEffect(()=>{
   let alive=true;
   setR(null);setError("");setPhotoFailed(false);
-  if(demo){
+  if(String(id).startsWith("mealdb-") && !__DEV__){
+   setError("This development-only recipe is not included in the public app.");
+  }else if(demo){
    void getMealDetails(String(id)).then(v=>{if(!alive)return;setR({...v,recipe_id:v.id,dietary_tags:"Development preview",image_license:"Provider-managed development preview"});}).catch(e=>{if(alive)setError(String(e))});
    void AsyncStorage.getItem(SAVED_DEMOS).then(v=>{if(alive)setSaved(Boolean(v&&JSON.parse(v).includes(id)))}).catch(()=>{});
   }else{
