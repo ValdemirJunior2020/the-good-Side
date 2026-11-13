@@ -108,13 +108,17 @@ async function main(){
  const localDrafts:Draft[]=[];
  for(const item of candidates){
   if(prepared>=5)break;
+  let stage="recipe details";
   try{
    const response=await jsonFetch(BASE+"/lookup.php?i="+encodeURIComponent(item.idMeal));
    const details=response.meals?.[0] as Meal|undefined;
    if(!details)continue;
+   stage="recipe photo";
    await validateRecipeImage(details.strMealThumb);
+   stage="local Ollama generation";
    const draft=await ollamaDraft(details);
    prepared++;localDrafts.push(draft);
+   stage="Supabase publishing";
    // Ollama makes the editorial decision automatically. Publisher rights
    // cannot be granted by AI, so development-only results remain local.
    if(KEY&&RIGHTS_CONFIRMED){
@@ -131,7 +135,10 @@ async function main(){
     // for publication after the publisher/photo rights are actually obtained.
     localPreview++;
    }
-  }catch(e){console.warn("Recipe skipped:",item.strMeal,String(e))}
+  }catch(e){
+   const cause=e instanceof Error && e.cause?"; cause="+String(e.cause):"";
+   console.warn("Recipe skipped:",item.strMeal,"| stage:",stage,"| error:",String(e)+cause);
+  }
  }
  await mkdir(dirname(STATE),{recursive:true});
  history={processed:[...seen],last_run:new Date().toISOString()};
