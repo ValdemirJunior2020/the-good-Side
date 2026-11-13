@@ -8,6 +8,7 @@ import rateLimit from "express-rate-limit";
 import {OAuth2Client} from "google-auth-library";
 import {createCipheriv,createDecipheriv,randomBytes,createHash,timingSafeEqual} from "node:crypto";
 import {z} from "zod";
+import {supabaseRecipeAction} from "./recipe-store.js";
 import {chooseDigest,localClock,isValidTimezone} from "./schedule.js";
 import {isOn,scheduleDecision,deliveryKey,nextDigestAt} from "./notification-policy.js";
 
@@ -71,6 +72,13 @@ async function sheet(action:string,payload:Record<string,unknown>={}){
  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),15000);
  try{const reply=await fetch(process.env.APPS_SCRIPT_URL!,{method:"POST",headers:{"content-type":"text/plain;charset=utf-8"},body:JSON.stringify({secret:process.env.APPS_SCRIPT_SHARED_SECRET,action,payload}),signal:controller.signal,redirect:"follow"});if(!reply.ok)throw Error("Database unavailable");const out=await reply.json() as {ok:boolean;data?:any;error?:string};if(!out.ok)throw Error(out.error||"Database error");return out.data;}finally{clearTimeout(timer);}
 }
+// Until RECIPE_STORE=supabase is set on the backend, existing Google Sheets
+// recipes remain available. Other app data continues using the existing gateway.
+async function recipeStore(action:"listRecipes"|"getRecipe"|"upsertRecipe",payload:Record<string,unknown>={}){
+ return process.env.RECIPE_STORE==="supabase"
+  ?supabaseRecipeAction(action,payload)
+  :sheet(action,payload);
+}
 const profile=z.object({display_name:z.string().trim().min(1).max(80).optional(),preferred_language:z.enum(["en","pt","es"]).optional(),timezone:z.string().refine(isValidTimezone).optional(),avatar_id:z.string().max(80).optional()});
 const hhmm=z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/);
 const prefs=z.object({
@@ -88,8 +96,8 @@ app.get("/health",(_req,res)=>res.json({status:"ok"}));
 app.get("/news",asyncRoute(async(req,res)=>send(res,await sheet("listNews",newsQuery.parse(req.query)))));
 app.get("/news/:id",asyncRoute(async(req,res)=>send(res,await sheet("getNews",{news_id:req.params.id}))));
 app.get("/avatars",asyncRoute(async(_req,res)=>send(res,await sheet("listAvatars"))));
-app.get("/recipes",asyncRoute(async(req,res)=>send(res,await sheet("listRecipes"))));
-app.get("/recipes/:id",asyncRoute(async(req,res)=>send(res,await sheet("getRecipe",{recipe_id:req.params.id}))));
+app.get("/recipes",asyncRoute(async(req,res)=>send(res,await recipeStore("listRecipes"))));
+app.get("/recipes/:id",asyncRoute(async(req,res)=>send(res,await recipeStore("getRecipe",{recipe_id:req.params.id}))));
 app.use("/me",identity);
 app.get("/me",asyncRoute(async(req,res)=>send(res,await sheet("getUser",{user_id:req.uid}))));
 app.post("/me",asyncRoute(async(req,res)=>send(res,await sheet("syncUser",{user_id:req.uid,email:req.email||"",...profile.parse(req.body)}))));
@@ -158,7 +166,7 @@ app.post("/worker/recipe-candidates",asyncRoute(async(req,res)=>{
   return res.status(422).json({error:"Ollama recipe completeness or quality check failed"});
  const existing=await sheet("getRecipe",{recipe_id:item.recipe_id});
  if(existing)return send(res,{status:"already_approved",recipe_id:item.recipe_id});
- const result=await sheet("upsertRecipe",{
+ const result=await recipeStore("upsertRecipe",{
   ...item,approval_status:"approved",
   image_license:"TheMealDB supporter content; original source attributed",
   actor_id:"ollama-recipe-worker"
