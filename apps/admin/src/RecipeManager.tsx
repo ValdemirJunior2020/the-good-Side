@@ -73,14 +73,14 @@ export function RecipeManager({api}:{api:Api}){
     source_name:publisher.trim(),source_url:url.toString(),image_url:imageUrl.trim(),image_license:imageLicense.trim(),language,approval_status:publication
    })});
    await refresh();
-   setFeedback(out.status==="approved"?"Recipe saved to Google Sheets and published to the iOS Food tab. No push was sent.":"Recipe saved to Google Sheets as pending. Only approved recipes show in the app.");
+   setFeedback(out.status==="approved"?"Recipe published to the active API recipe store and available to the iOS Food tab. No push was sent.":"Recipe saved as a draft in the active API recipe store. Only published recipes show in the app.");
    setTitle("");setDescription("");setIngredients("");setInstructions("");setPublisher("");setSourceUrl("");setTags("");setImageUrl("");setImageLicense("");
   }catch(err){setFeedback(err instanceof Error?err.message:"Unable to save recipe")}finally{setBusy(false)}
  };
  return <div style={{display:"grid",gap:20}}>
   <div className="panel form-panel">
    <h2>Food & Recipe Manager</h2>
-   <p className="description">Save to the existing RECIPES tab. Choose Draft (pending) or Publish to the iOS Food screen. Recipe alerts are a separate feature and are not triggered by this form.</p>
+   <p className="description">Save through the API recipe store (Supabase when configured). Choose Draft (pending) or Publish to the iOS Food screen. Recipe alerts are a separate feature and are not triggered by this form.</p>
    {feedback&&<p role="status" className="notice">{feedback}</p>}
    <form onSubmit={save}>
     <label>Recipe title<input required maxLength={200} minLength={3} value={title} onChange={e=>setTitle(e.target.value)} placeholder="Easy lemon and chickpea bowl"/></label>
@@ -107,7 +107,7 @@ export function RecipeManager({api}:{api:Api}){
   </div>
   <div className="panel form-panel">
    <h2>☀️ Ollama Recipe Autopilot — discover 5 recipes</h2>
-   <p className="description">Choose a cuisine to preview real dishes and source photos. Your local Ollama worker automatically scores recipes and rejects incomplete ones—there is no manual editorial queue. Public publishing remains gated by the recipe provider’s licensing terms.</p>
+   <p className="description">Choose a cuisine to preview real dishes and source photos. Your local Ollama worker automatically scores recipes and rejects incomplete ones—there is no manual editorial queue. This button previews external source candidates; it does not start your Windows Ollama scheduler. Public publishing remains gated by the recipe provider’s licensing terms.</p>
    <div className="two">
     <label>Country or cuisine<select value={discoveryCountry} onChange={e=>{setDiscoveryCountry(e.target.value);setCandidates([])}}>
      {cuisines.map(c=><option key={c} value={c}>{c}</option>)}
