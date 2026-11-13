@@ -29,7 +29,7 @@ const select=(r:any,group:string,country:string):MealPreview=>({
  id:"mealdb-"+String(r.idMeal),title:String(r.strMeal||"Recipe"),
  image_url:String(r.strMealThumb||""),group,country,source_url:"https://www.themealdb.com/meal/"+String(r.idMeal)
 });
-function distinct(items:MealPreview[]):MealPreview[]{return items.filter((m,i,a)=>m.id!=="mealdb-undefined"&&Boolean(m.image_url)&&a.findIndex(other=>other.id===m.id)===i)}
+function distinct(items:MealPreview[]):MealPreview[]{return items.filter((m,i,a)=>m.id!=="mealdb-undefined"&&/^https:\/\/[^\s]+$/i.test(m.image_url)&&a.findIndex(other=>other.id===m.id)===i)}
 export async function getStarterMeals():Promise<MealPreview[]>{
  const responses=await Promise.allSettled(STARTER_GROUPS.map(g=>meals("filter.php?"+g.query)));
  const used=new Set<string>();
@@ -39,7 +39,7 @@ export async function getStarterMeals():Promise<MealPreview[]>{
   const g=STARTER_GROUPS[i];
   for(const raw of r.value){
    const m=select(raw,g.key,g.country);
-   if(!m.image_url||used.has(m.id))continue;
+   if(!/^https:\/\/[^\s]+$/i.test(m.image_url)||used.has(m.id))continue;
    result.push(m);used.add(m.id);
    if(result.filter(x=>x.group===g.key).length>=g.count)break;
   }
@@ -60,11 +60,13 @@ export async function getMealDetails(id:string):Promise<MealDetails>{
   return ingredient?(measure?measure+" ":"")+ingredient:"";
  }).filter(Boolean);
  const instructions=String(raw.strInstructions||"").replace(/\r/g,"").split(/\n+/).map(x=>x.trim()).filter(Boolean);
+ if(!/^https:\/\/[^\s]+$/i.test(String(raw.strMealThumb||"")))throw Error("Recipe image URL missing");
+ if(ingredients.length<1||!instructions.length||instructions.every(v=>v.length<15))throw Error("Complete recipe instructions unavailable");
  const source=String(raw.strSource||"");
  return {...select(raw,"country",String(raw.strArea||"World")),
   description:"A "+String(raw.strArea||"world")+" "+String(raw.strCategory||"recipe").toLowerCase()+" from TheMealDB.",
   ingredients,
-  instructions:instructions.length?instructions:[String(raw.strInstructions||"Instructions available at original source.")],
+  instructions,
   source_name:"TheMealDB",
   source_url:/^https:\/\//.test(source)?source:"https://www.themealdb.com/meal/"+id.slice(7),
   prep_minutes:0,cook_minutes:0,servings:0
