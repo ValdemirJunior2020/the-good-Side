@@ -116,8 +116,8 @@ export default function LegalScreen(){
  const goBack=()=>{if(router.canGoBack())router.back();else router.replace("/profile")};
  return <LinearGradient colors={["#FFF1DF","#F9DDD5","#ECD8EB"]} style={{flex:1}}>
   <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.page,{paddingTop:Math.max(safe.top,18)+14,paddingBottom:Math.max(safe.bottom,18)+155}]}>
-   <Pressable accessibilityRole="button" accessibilityLabel="Back to Profile" onPress={goBack} style={styles.back}>
-    <ArrowLeft color="#54362D" size={23}/><Text style={styles.backText}>Back to Profile</Text>
+   <Pressable accessibilityRole="button" accessibilityLabel="Back to app" onPress={goBack} style={styles.back}>
+    <ArrowLeft color="#54362D" size={23}/><Text style={styles.backText}>Back to app</Text>
    </Pressable>
    <View style={styles.paper}>
     <Text style={styles.eyebrow}>THE GOOD SIDE · INFORMATION</Text>
@@ -131,7 +131,7 @@ export default function LegalScreen(){
      <ExternalLink size={17} color="#8B5032"/><Text style={styles.websiteText}>View official website version</Text>
     </Pressable>
    </View>
-   <Pressable accessibilityRole="button" accessibilityLabel="Back to Profile" onPress={goBack} style={styles.bottomBack}><Text style={styles.bottomBackText}>← Back to Profile</Text></Pressable>
+   <Pressable accessibilityRole="button" accessibilityLabel="Back to app" onPress={goBack} style={styles.bottomBack}><Text style={styles.bottomBackText}>← Back to app</Text></Pressable>
   </ScrollView>
  </LinearGradient>;
 }
