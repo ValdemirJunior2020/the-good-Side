@@ -7,7 +7,8 @@ import {Background,GoodSideLoader,MenuButton,Surface,styles} from "../src/compon
 import {colors} from "../src/theme";
 import {CUISINES,getCountryMeals,getStarterMeals,STARTER_GROUPS,type MealPreview} from "../src/recipeDiscovery";
 
-type Recipe={recipe_id:string;title:string;description:string;prep_minutes:number;cook_minutes:number;servings:number;source_url:string;image_url?:string;dietary_tags:string;};
+type Recipe={recipe_id:string;title:string;description:string;prep_minutes:number;cook_minutes:number;servings:number;source_url:string;image_url:string;dietary_tags:string;};
+const hasPhoto=(url:string|undefined)=>typeof url==="string"&&/^https:\/\/[^\s]+$/i.test(url);
 const PICKS="goodside_food_country_picks_v1",CACHE="goodside_starter_meals_v1";
 const tags=STARTER_GROUPS.map(g=>({name:g.title,key:g.key}));
 function PreviewCard({meal}:{meal:MealPreview}){
@@ -31,7 +32,7 @@ export default function Food(){
   const [real,good,preview]=await Promise.allSettled([
    api<Recipe[]>("/recipes"),api<{items:News[]}>("/news?category=food&limit=15"),getStarterMeals()
   ]);
-  if(real.status==="fulfilled")setRecipes(real.value);
+  if(real.status==="fulfilled")setRecipes(real.value.filter(r=>hasPhoto(r.image_url)));
   if(good.status==="fulfilled")setNews(good.value.items||[]);
   if(preview.status==="fulfilled"){setStarter(preview.value);void AsyncStorage.setItem(CACHE,JSON.stringify(preview.value)).catch(()=>{})}
   else setError("Fresh recipe images are temporarily unavailable. Saved previews may still work.");
@@ -77,7 +78,7 @@ export default function Food(){
   {recipes.length>0?<View style={{marginBottom:19}}><Text style={[styles.label,{fontSize:22}]}>✨ Good Side approved recipes</Text>
    {recipes.map(r=><TouchableOpacity key={r.recipe_id} onPress={()=>router.push({pathname:"/recipe/[id]",params:{id:r.recipe_id}})}><Surface style={{marginBottom:10,padding:14}}>
     <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
-     {r.image_url?<Image source={{uri:r.image_url}} style={{width:96,height:88,borderRadius:16,backgroundColor:"#E6D4C5"}}/>:null}
+     <Image source={{uri:r.image_url}} style={{width:96,height:88,borderRadius:16,backgroundColor:"#E6D4C5"}}/>
      <View style={{flex:1}}><Text style={{fontSize:17,fontWeight:"800",color:colors.ink}}>{r.title}</Text><Text numberOfLines={2} style={[styles.muted,{marginTop:6}]}>{r.description}</Text>
      <Text style={{color:"#A56B43",fontWeight:"700",fontSize:12,marginTop:7}}>{Number(r.prep_minutes)+Number(r.cook_minutes)} min · {r.servings} servings</Text></View>
     </View>
