@@ -126,7 +126,7 @@ const recipePayload=z.object({
  ingredients:z.array(z.string().min(1).max(500)).min(1).max(80),
  instructions:z.array(z.string().min(1).max(500)).min(1).max(80),
  dietary_tags:z.string().max(200).default(""),source_name:z.string().min(2).max(150),
- source_url:z.string().url().startsWith("https://"),image_url:z.string().url().optional(),
+ source_url:z.string().url().startsWith("https://"),image_url:z.string().url().startsWith("https://"),
  image_license:z.string().max(150).default(""),language:z.enum(["en","pt","es"]).default("en"),
  approval_status:z.enum(["pending","approved"]).default("pending")
 });
