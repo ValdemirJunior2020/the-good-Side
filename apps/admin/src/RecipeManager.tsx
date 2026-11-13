@@ -20,6 +20,7 @@ export function RecipeManager({api}:{api:Api}){
  const [ingredients,setIngredients]=useState(""),[instructions,setInstructions]=useState("");
  const [tags,setTags]=useState(""),[publisher,setPublisher]=useState(""),[sourceUrl,setSourceUrl]=useState("");
  const [imageUrl,setImageUrl]=useState(""),[imageLicense,setImageLicense]=useState("");
+ const [imageReady,setImageReady]=useState(false),[imageError,setImageError]=useState(false);
  const [language,setLanguage]=useState<"en"|"pt"|"es">("en");
  const [publication,setPublication]=useState<"pending"|"approved">("pending");
  const [busy,setBusy]=useState(false),[feedback,setFeedback]=useState("");
@@ -63,6 +64,7 @@ export function RecipeManager({api}:{api:Api}){
    const prepMinutes=Number(prep),cookMinutes=Number(cook),servingCount=Number(servings);
    if(!Number.isInteger(prepMinutes)||prepMinutes<0||prepMinutes>1440||!Number.isInteger(cookMinutes)||cookMinutes<0||cookMinutes>1440||!Number.isInteger(servingCount)||servingCount<1||servingCount>100)throw Error("Check time and serving values.");
    if(!imageUrl.trim())throw Error("Every recipe needs an image URL.");
+   if(!imageReady)throw Error("The recipe image must load successfully before saving or publishing.");
    const picture=new URL(imageUrl.trim());
    if(picture.protocol!=="https:"||picture.username||picture.password)throw Error("Photo must have a valid HTTPS URL.");
    if(!imageLicense.trim())throw Error("Document photo permission or licensing before saving.");
@@ -74,7 +76,7 @@ export function RecipeManager({api}:{api:Api}){
    })});
    await refresh();
    setFeedback(out.status==="approved"?"Recipe published to the active API recipe store and available to the iOS Food tab. No push was sent.":"Recipe saved as a draft in the active API recipe store. Only published recipes show in the app.");
-   setTitle("");setDescription("");setIngredients("");setInstructions("");setPublisher("");setSourceUrl("");setTags("");setImageUrl("");setImageLicense("");
+   setTitle("");setDescription("");setIngredients("");setInstructions("");setPublisher("");setSourceUrl("");setTags("");setImageUrl("");setImageLicense("");setImageReady(false);setImageError(false);
   }catch(err){setFeedback(err instanceof Error?err.message:"Unable to save recipe")}finally{setBusy(false)}
  };
  return <div style={{display:"grid",gap:20}}>
@@ -98,11 +100,12 @@ export function RecipeManager({api}:{api:Api}){
     <label>Dietary tags (optional)<input maxLength={200} value={tags} onChange={e=>setTags(e.target.value)} placeholder="vegetarian, easy, budget"/></label>
     <label>Original recipe publisher<input required minLength={2} maxLength={150} value={publisher} onChange={e=>setPublisher(e.target.value)} placeholder="Budget Bytes"/></label>
     <label>Original recipe URL<input required type="url" pattern="https://.*" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)} placeholder="https://example.com/recipe-name"/></label>
-    <label>Recipe image URL (required)<input required type="url" pattern="https://.*" value={imageUrl} onChange={e=>setImageUrl(e.target.value)} placeholder="https://licensed-photo.example/recipe.jpg"/></label>
+    <label>Recipe image URL (required)<input required type="url" pattern="https://.*" value={imageUrl} onChange={e=>{setImageUrl(e.target.value);setImageReady(false);setImageError(false)}} placeholder="https://licensed-photo.example/recipe.jpg"/></label>
+    {/^https:\/\/[^\s]+$/i.test(imageUrl.trim())?<div style={{marginBottom:14}}><img key={imageUrl} src={imageUrl.trim()} alt="Recipe photograph preview" onLoad={()=>{setImageReady(true);setImageError(false)}} onError={()=>{setImageReady(false);setImageError(true)}} style={{width:"100%",maxWidth:320,height:190,objectFit:"cover",borderRadius:16,border:"1px solid #E5D1C9"}}/>{imageError?<p role="alert" style={{color:"#A9534D"}}>Image failed to load. Use a different licensed HTTPS image URL.</p>:imageReady?<p className="hint">✓ Image loaded. Confirm you own or have permission to display this photograph.</p>:<p className="hint">Checking image...</p>}</div>:null}
     <label>Photo license / permission (required)<input required value={imageLicense} onChange={e=>setImageLicense(e.target.value)} placeholder="Owned image / photographer permission / verified license"/></label>
     <label>Publication status<select value={publication} onChange={e=>setPublication(e.target.value as "pending"|"approved")}><option value="pending">Save as draft (not visible in app)</option><option value="approved">Publish to iOS Food tab now</option></select></label>
     <div className="notice">Full ingredients and full cooking directions stay inside the app. Every recipe requires an HTTPS photograph URL and documented rights to display the image and instructions.</div>
-    <button className="primary" type="submit" disabled={busy||!title.trim()||!ingredients.trim()||!instructions.trim()||!sourceUrl.trim()||!publisher.trim()||!imageUrl.trim()||!imageLicense.trim()}>{busy?"Saving…":publication==="approved"?"Publish recipe to app →":"Save recipe draft →"}</button>
+    <button className="primary" type="submit" disabled={busy||!title.trim()||!ingredients.trim()||!instructions.trim()||!sourceUrl.trim()||!publisher.trim()||!imageUrl.trim()||!imageReady||!imageLicense.trim()}>{busy?"Saving…":publication==="approved"?"Publish recipe to app →":"Save recipe draft →"}</button>
    </form>
   </div>
   <div className="panel form-panel">
