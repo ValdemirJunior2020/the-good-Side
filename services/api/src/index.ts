@@ -166,10 +166,10 @@ app.post("/worker/recipe-candidates",asyncRoute(async(req,res)=>{
     !image.pathname.startsWith("/images/media/meals/")||
     source.username||source.password||image.username||image.password)
   return res.status(422).json({error:"Verified TheMealDB HTTPS recipe source and image URL required"});
- if(item.ingredients.length<3||item.instructions.length<3||!item.description.trim()||
+ if(item.prep_minutes<1||item.cook_minutes<1||item.ingredients.length<3||item.instructions.length<3||!item.description.trim()||
     item.instructions.some(step=>step.trim().length<12))
   return res.status(422).json({error:"Ollama recipe completeness or quality check failed"});
- const existing=await sheet("getRecipe",{recipe_id:item.recipe_id});
+ const existing=await recipeStore("getRecipe",{recipe_id:item.recipe_id});
  if(existing)return send(res,{status:"already_approved",recipe_id:item.recipe_id});
  const result=await recipeStore("upsertRecipe",{
   ...item,approval_status:"approved",
@@ -178,7 +178,7 @@ app.post("/worker/recipe-candidates",asyncRoute(async(req,res)=>{
  });
  send(res,{status:"approved",recipe_id:result.recipe_id,auto_approved_by:"ollama",human_approval_required:false});
 }));
-app.post("/admin/recipes",asyncRoute(async(req,res)=>send(res,await sheet("upsertRecipe",{...recipePayload.parse(req.body),actor_id:req.uid}))));
+app.post("/admin/recipes",asyncRoute(async(req,res)=>send(res,await recipeStore("upsertRecipe",{...recipePayload.parse(req.body),actor_id:req.uid}))));
 app.get("/admin/stats",asyncRoute(async(req,res)=>send(res,await sheet("stats"))));
 app.get("/admin/pending",asyncRoute(async(req,res)=>send(res,await sheet("listPending"))));
 app.post("/admin/news",asyncRoute(async(req,res)=>send(res,await sheet("addNews",{...req.body,actor_id:req.uid}))));
