@@ -29,6 +29,9 @@ export const emailAuth={
  refresh(refresh_token:string){
   return authRequest("/token?grant_type=refresh_token",{refresh_token});
  },
+ signInWithAppleIdToken(token:string,nonce:string){
+  return authRequest("/token?grant_type=id_token",{provider:"apple",id_token:token,nonce});
+ },
  resetPassword(email:string){
   return authRequest("/recover?redirect_to="+encodeURIComponent("https://the-good-side-command-center.netlify.app/reset-password.html"),{email:email.trim().toLowerCase()});
  }
