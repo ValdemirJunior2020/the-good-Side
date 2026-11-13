@@ -74,6 +74,8 @@ export default function RecipeDetail(){
    </Surface>
    <Surface style={{marginTop:20,padding:17}}>
     <Text style={{color:"#794C39",fontSize:12,lineHeight:20,fontWeight:"700"}}>Recipe source: {r.source_name||"Publisher"} · Read and cook entirely inside The Good Side.</Text>
+    {!demo&&r.image_license?<Text selectable style={{color:"#795962",fontSize:12,lineHeight:20,marginTop:7}}>Photo credit and license: {r.image_license}</Text>:null}
+    {!demo&&r.source_url?<Text selectable style={{color:"#795962",fontSize:11,lineHeight:18,marginTop:6}}>Photo/source details: {r.source_url}</Text>:null}
     {demo?<Text style={{color:"#795962",fontSize:12,lineHeight:20,marginTop:7}}>Development preview. Saved previews stay on this device. Public release requires verified rights to the recipe photos and source content.</Text>:null}
    </Surface>
   </>:error?null:<GoodSideLoader label="Opening the recipe…"/>}
