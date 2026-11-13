@@ -59,7 +59,7 @@ function AppleButton(){
   setBusy(true);setError("");
   try{
    // Bind the Apple ID token to this request to prevent replay.
-   const rawNonce=Crypto.getRandomBytes(32).reduce((out,b)=>out+b.toString(16).padStart(2,"0"),"");
+   const rawNonce=Array.from(Crypto.getRandomBytes(32),b=>b.toString(16).padStart(2,"0")).join("");
    const hashedNonce=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,rawNonce);
    const credential=await AppleAuthentication.signInAsync({
     nonce:hashedNonce,
