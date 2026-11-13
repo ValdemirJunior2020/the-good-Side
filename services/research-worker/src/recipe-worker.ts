@@ -75,18 +75,18 @@ async function main(){
  const day=Math.floor(Date.now()/86400000);
  const ordered=[...QUERIES.slice(day%QUERIES.length),...QUERIES.slice(0,day%QUERIES.length)];
  const candidates:Meal[]=[];
+ // Rotate across cuisines instead of exhausting the first (usually American) category.
+ const perCuisine:Meal[][]=[];
  for(const q of ordered){
   try{
    const data=await jsonFetch(BASE+"/filter.php?"+q);
    const rows=Array.isArray(data.meals)?data.meals:[];
-   for(const row of rows){
-    const id="mealdb-"+String(row.idMeal||"");
-    if(seen.has(id)||candidates.some(m=>m.idMeal===row.idMeal))continue;
-    candidates.push(row as Meal);
-    if(candidates.length>=20)break;
-   }
+   perCuisine.push(rows.filter((row:Meal)=>row?.idMeal&&!seen.has("mealdb-"+row.idMeal)).slice(0,12) as Meal[]);
   }catch(e){console.warn("Recipe source unavailable:",q,String(e))}
-  if(candidates.length>=20)break;
+ }
+ for(let round=0;round<12&&candidates.length<60;round++)for(const bucket of perCuisine){
+  const row=bucket[round];
+  if(row&&!candidates.some(m=>m.idMeal===row.idMeal))candidates.push(row);
  }
  let prepared=0,published=0,localPreview=0;
  const localDrafts:Draft[]=[];
@@ -110,8 +110,9 @@ async function main(){
     else if(result?.ok&&result.data?.status==="already_approved"){seen.add(draft.recipe_id)}
     else console.warn("Auto-publish rejected:",draft.title);
    }else{
+    // Never mark an unpublished preview as processed: it must remain eligible
+    // for publication after the publisher/photo rights are actually obtained.
     localPreview++;
-    seen.add(draft.recipe_id);
    }
   }catch(e){console.warn("Recipe skipped:",item.strMeal,String(e))}
  }
