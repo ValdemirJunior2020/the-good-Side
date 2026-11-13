@@ -3,7 +3,7 @@ import {mkdir,readFile,writeFile} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
 import {dirname,join} from "node:path";
 
-// Local Ollama researches and writes ORIGINAL, human-reviewable recipe drafts.
+// Ollama automatically edits, scores, and accepts or rejects recipes.
 // Data source: TheMealDB development API. Do not redistribute its photos in a
 // production app without the provider's appropriate rights/supporter key.
 type Meal={idMeal:string;strMeal:string;strArea?:string;strCategory?:string;strMealThumb:string;strInstructions:string;strSource?:string;[key:string]:unknown};
@@ -65,7 +65,7 @@ async function ollamaDraft(meal:Meal):Promise<Draft>{
   source_name:"TheMealDB",source_url:"https://www.themealdb.com/meal/"+meal.idMeal,
   image_url:String(meal.strMealThumb),
   image_license:RIGHTS_CONFIRMED?"TheMealDB supporter content; original source attributed":"DEVELOPMENT PREVIEW ONLY - rights unverified",
-  language:"en",approval_status:"pending"
+  language:"en",approval_status:"approved",quality_score:Number(parsed.quality_score)
  };
 }
 async function main(){
