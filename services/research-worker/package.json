@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "aihot:import": "tsx src/aihot.ts",
     "test": "node --import tsx --test src/*.test.ts",
-    "google:discover": "tsx src/google-news.ts"
+    "google:discover": "tsx src/google-news.ts",
+    "recipes:discover": "tsx src/recipe-worker.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
