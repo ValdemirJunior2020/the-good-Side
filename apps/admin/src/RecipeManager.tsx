@@ -26,7 +26,7 @@ export function RecipeManager({api}:{api:Api}){
  const [existing,setExisting]=useState<Recipe[]>([]);
  const [discoveryCountry,setDiscoveryCountry]=useState("American");
  const [candidates,setCandidates]=useState<any[]>([]);
- const [discoveryBusy,setDiscoveryBusy]=useState(false),[importBusy,setImportBusy]=useState(false);
+ const [discoveryBusy,setDiscoveryBusy]=useState(false);
  const [discoveryMessage,setDiscoveryMessage]=useState("");
  const cuisines=["American","Brazilian","Italian","Egyptian","Turkish","Moroccan","Mexican","Indian","Japanese","Greek","French","Thai"];
  const MEALS="https://www.themealdb.com/api/json/v1/1";
@@ -46,37 +46,8 @@ export function RecipeManager({api}:{api:Api}){
     return entries[0];
    }));
    setCandidates(detail.filter(Boolean));
-   setDiscoveryMessage("5 recipe candidates ready. Review images, attribution and licensing before publishing.");
+   setDiscoveryMessage("5 recipes found. Ollama handles the automatic quality review during the daily worker run. No manual approval required.");
   }catch(e){setDiscoveryMessage(String(e))}finally{setDiscoveryBusy(false)}
- };
- const importDrafts=async()=>{
-  if(!candidates.length)return;
-  setImportBusy(true);let imported=0;
-  try{
-   for(const meal of candidates){
-    const ingredients=Array.from({length:20},(_,i)=>{
-     const k=i+1,a=String(meal["strIngredient"+k]||"").trim(),b=String(meal["strMeasure"+k]||"").trim();
-     return a?(b?b+" ":"")+a:"";
-    }).filter(Boolean);
-    const instructions=String(meal.strInstructions||"").split(/\r?\n+/).map((v:string)=>v.trim()).filter(Boolean);
-    if(!ingredients.length||!instructions.length)continue;
-    const id="mealdb-"+String(meal.idMeal);
-    const result=await api<CreateResponse>("/admin/recipes",{method:"POST",body:JSON.stringify({
-     recipe_id:id,title:String(meal.strMeal||"Recipe"),
-     description:"A "+String(meal.strArea||"world")+" "+String(meal.strCategory||"recipe").toLowerCase()+" for your Good Side recipe collection.",
-     prep_minutes:0,cook_minutes:0,servings:4,ingredients:ingredients.slice(0,80),
-     instructions:instructions.slice(0,80).map((v:string)=>v.slice(0,500)),
-     dietary_tags:String(meal.strArea||discoveryCountry),
-     source_name:"TheMealDB",source_url:"https://www.themealdb.com/meal/"+String(meal.idMeal),
-     image_url:String(meal.strMealThumb||""),
-     image_license:"DEVELOPMENT PREVIEW ONLY - publication rights not verified",
-     language:"en",approval_status:"pending"
-    })});
-    if(result.recipe_id)imported++;
-   }
-   setDiscoveryMessage(imported+" recipes sent to the RECIPES sheet as pending drafts. These are NOT publicly published.");
-  }catch(e){setDiscoveryMessage(imported+" imported, then error: "+String(e))}
-  finally{setImportBusy(false)}
  };
  const refresh=async()=>{setExisting(await api<Recipe[]>("/recipes"))};
  useEffect(()=>{void refresh().catch(e=>setFeedback("Unable to read published recipes: "+String(e)))},[]);
@@ -131,8 +102,8 @@ export function RecipeManager({api}:{api:Api}){
    </form>
   </div>
   <div className="panel form-panel">
-   <h2>☀️ Discover 5 recipes — editorial draft queue</h2>
-   <p className="description">Choose a cuisine. Preview five real dishes with their photos and original source links. Import them as <strong>pending drafts only</strong>; never automatically approve unlicensed images or publisher instructions.</p>
+   <h2>☀️ Ollama Recipe Autopilot — discover 5 recipes</h2>
+   <p className="description">Choose a cuisine to preview real dishes and source photos. Your local Ollama worker automatically scores recipes and rejects incomplete ones—there is no manual editorial queue. Public publishing remains gated by the recipe provider’s licensing terms.</p>
    <div className="two">
     <label>Country or cuisine<select value={discoveryCountry} onChange={e=>{setDiscoveryCountry(e.target.value);setCandidates([])}}>
      {cuisines.map(c=><option key={c} value={c}>{c}</option>)}
@@ -147,10 +118,8 @@ export function RecipeManager({api}:{api:Api}){
      <a href={"https://www.themealdb.com/meal/"+m.idMeal} target="_blank" rel="noopener noreferrer">Original source ↗</a>
     </article>)}
    </div>
-   {candidates.length>0?<button type="button" className="primary" onClick={()=>void importDrafts()} disabled={importBusy} style={{marginTop:18}}>
-     {importBusy?"Saving drafts…":"Import these 5 as pending drafts →"}
-   </button>:null}
-   <p className="hint" style={{marginTop:13}}>This is a free development-only preview of TheMealDB. Public App Store distribution requires appropriate source and image permissions or a supporter license. Your local Ollama automation will use the same review gate.</p>
+   <p className="notice" style={{marginTop:14}}>Automatic Ollama quality threshold: 85/100. Accepted recipes are saved by the local worker; source/image rights are checked separately before public publishing. To run automatically each day, configure the local recipe worker schedule.</p>
+   <p className="hint" style={{marginTop:13}}>This is a development-only preview of TheMealDB. Ollama decides editorial quality automatically. A supporter subscription and verified image rights are required before public App Store distribution.</p>
   </div>
   <div className="panel form-panel">
    <h2>Published recipes</h2><p className="description">{existing.length} recipes currently available to the iPhone Food section.</p>
