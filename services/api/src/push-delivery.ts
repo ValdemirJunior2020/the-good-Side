@@ -54,11 +54,15 @@ export async function pollPushReceipts(onResult:(row:ReceiptRow,status:"provider
    if(!result)continue; // Expo may not have processed this ticket yet.
    const status=result.status==="ok"?"provider_accepted":"error";
    const errorCode=status==="error"?String(result.details?.error||"push_provider_error").slice(0,150):"";
-   await db("?ticket_id=eq."+encodeURIComponent(row.ticket_id),{
-    method:"PATCH",headers:{Prefer:"return=minimal"},
-    body:JSON.stringify({status,error_code:errorCode,checked_at:new Date().toISOString()})
-   });
-   try{await onResult(row,status,errorCode)}catch(e){console.error("[push] Receipt sheet sync failed",e instanceof Error?e.message:"unknown")}
+   // Update the user-facing history before marking this receipt final.
+   // On gateway error, leave it pending so the next poll retries reconciliation.
+   try{
+    await onResult(row,status,errorCode);
+    await db("?ticket_id=eq."+encodeURIComponent(row.ticket_id),{
+     method:"PATCH",headers:{Prefer:"return=minimal"},
+     body:JSON.stringify({status,error_code:errorCode,checked_at:new Date().toISOString()})
+    });
+   }catch(e){console.error("[push] Receipt reconciliation failed",e instanceof Error?e.message:"unknown")}
   }
  }finally{busy=false}
 }
