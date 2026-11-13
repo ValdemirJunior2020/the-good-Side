@@ -23,7 +23,7 @@ const parse=<T,>(v:unknown,fallback:T):T=>{if(Array.isArray(v))return v as T;try
 const clock=/^([01]\d|2[0-3]):[0-5]\d$/;
 const freq:[string,Frequency][]=[["Once daily","daily"],["Twice daily","twice_daily"],["Three times daily","three_daily"],["Selected weekdays","selected_weekdays"],["Breaking only","breaking_only"],["Daily digest + alerts","digest_plus_alerts"]];
 const weekdays=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const initial:Pref={selected_categories:"",notification_enabled:false,daily_digest_enabled:true,notification_local_time:"12:00",content_language:"en",notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/New_York",notification_frequency:"daily",notification_times:["12:00"],notification_weekdays:[],quiet_hours_start:"22:00",quiet_hours_end:"07:00",weekend_enabled:true,food_notifications_enabled:false,breaking_alerts_enabled:false,notification_sound_enabled:true};
+const initial:Pref={selected_categories:"",notification_enabled:true,daily_digest_enabled:true,notification_local_time:"12:00",content_language:"en",notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/New_York",notification_frequency:"daily",notification_times:["12:00"],notification_weekdays:[],quiet_hours_start:"22:00",quiet_hours_end:"07:00",weekend_enabled:true,food_notifications_enabled:false,breaking_alerts_enabled:false,notification_sound_enabled:true};
 export default function Preferences(){
  const[p,setP]=useState<Pref>(initial),[busy,setBusy]=useState(false),[error,setError]=useState(""),[preview,setPreview]=useState(""),[signedIn,setSignedIn]=useState(Boolean(auth.currentUser));
  const refreshPreview=()=>api<{next_at:string|null;timezone:string}>("/me/next-notification",{},true).then(v=>setPreview(v.next_at?new Date(v.next_at).toLocaleString(undefined,{timeZone:v.timezone,dateStyle:"medium",timeStyle:"short"})+" ("+v.timezone+")":"No digest currently scheduled")).catch(()=>setPreview("Preview unavailable"));
@@ -57,7 +57,7 @@ export default function Preferences(){
   if(p.notification_frequency==="selected_weekdays"&&days.length===0)return Alert.alert("Choose weekdays","Select the days on which you want good news.");
   setBusy(true);
   try{
-   const requestedNotifications=enabled(p.notification_enabled);
+   const requestedNotifications=true;
    const body={selected_categories:selected,notification_enabled:requestedNotifications,daily_digest_enabled:enabled(p.daily_digest_enabled),notification_local_time:deliveryTimes[0]||"12:00",
     notification_times:deliveryTimes,notification_timezone:p.notification_timezone,notification_frequency:p.notification_frequency,
     notification_weekdays:days,quiet_hours_start:p.quiet_hours_start,quiet_hours_end:p.quiet_hours_end,
@@ -102,7 +102,7 @@ export default function Preferences(){
   <Text style={[styles.subtitle,{marginVertical:13}]}>Your interests, your schedule, your peace.</Text>
   {!signedIn?<Surface style={{marginBottom:16,backgroundColor:"#FFF0DA"}}><Text style={styles.label}>Save your preferences with a free account</Text><Text style={[styles.muted,{marginVertical:10}]}>You are browsing as a guest. Sign in to save interests, notification times and food alerts.</Text><Pill title="Log in / Create account" onPress={()=>router.push("/auth")}/></Surface>:null}
   {error?<Text style={{color:"#AD3535"}}>{error}</Text>:null}
-  <Surface style={{marginBottom:14}}><Text style={styles.label}>Notifications</Text>{switchRow("Send me uplifting news","notification_enabled")}{switchRow("Daily digest","daily_digest_enabled")}
+  <Surface style={{marginBottom:14}}><Text style={styles.label}>Notifications</Text><Text style={[styles.muted,{marginTop:8,marginBottom:8}]}>Uplifting news is built into your experience. Allow notifications in iPhone Settings to receive them, then customize your delivery schedule below.</Text>{switchRow("Daily digest","daily_digest_enabled")}
    <Text style={[styles.muted,{marginTop:12}]}>Delivery frequency</Text><View style={{flexDirection:"row",flexWrap:"wrap",marginTop:8}}>{freq.map(([label,id])=><React.Fragment key={id}>{choice(label,p.notification_frequency===id,()=>set("notification_frequency",id))}</React.Fragment>)}</View>
    {p.notification_frequency!=="breaking_only"?<View style={{marginTop:16,gap:8}}>
     <Text style={styles.muted}>Delivery times · 24-hour clock</Text>
