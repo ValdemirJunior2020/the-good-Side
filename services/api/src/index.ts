@@ -119,7 +119,7 @@ app.get("/news",asyncRoute(async(req,res)=>send(res,await sheet("listNews",newsQ
 
 /** Live discovery only: RSS links are external Google News results, never automatically approved content. */
 const liveNewsCache=new Map<string,{at:number;items:Array<{title:string;url:string;publisher:string;published_at:string}>}>();
-const xmlText=(text:string)=>text.replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g,"$1").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").trim();
+const xmlText=(value:string)=>value.replace("<![CDATA[","").replace("]]>","").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").trim();
 app.get("/news/search-live",asyncRoute(async(req,res)=>{
  const q=z.string().trim().min(2).max(100).parse(req.query.q);
  const cacheKey=q.toLocaleLowerCase("en");
@@ -130,9 +130,9 @@ app.get("/news/search-live",asyncRoute(async(req,res)=>{
  const response=await fetch(rssUrl,{headers:{"user-agent":"TheGoodSideNews/1.0 (news discovery)","accept":"application/rss+xml,application/xml,text/xml"},signal:AbortSignal.timeout(8500)});
  if(!response.ok)throw Error("Live news search unavailable");
  const xml=(await response.text()).slice(0,500000);
- const items=Array.from(xml.matchAll(/<item>([\\s\\S]*?)<\\/item>/g)).slice(0,20).map(match=>{
-  const part=match[1];
-  const field=(name:string)=>xmlText(part.match(new RegExp("<"+name+"(?:\s[^>]*)?>([\s\S]*?)<\/"+name+">"))?.[1]||"");
+ const items=xml.split("<item>").slice(1,21).map(fragment=>{
+  const part=fragment.split("</item>")[0];
+  const field=(name:string)=>xmlText(part.match(new RegExp("<"+name+"[^>]*>([^]*?)</"+name+">"))?.[1]||"");
   const title=field("title");
   const url=field("link");
   const publisher=field("source")||"External news source";
