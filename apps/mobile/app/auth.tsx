@@ -22,7 +22,7 @@ function GoogleButton(){
  },{scheme:"thegoodside",path:"auth"});
  useEffect(()=>{
   if(response?.type!=="success")return;
-  const token=response.params?.id_token;
+  const token=response.params?.id_token||response.authentication?.idToken;
   if(!token){setError("Google did not return an ID token");return}
   setBusy(true);
   (async()=>{
@@ -67,7 +67,8 @@ export default function SignIn(){
  const iosId=process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
  const androidId=process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
  const googleConfigured=Platform.OS==="ios"?Boolean(iosId):Platform.OS==="android"?Boolean(androidId):Boolean(webId);
- const googleAvailable=googleConfigured&&Constants.appOwnership!=="expo";
+ const isExpoGo=Constants.appOwnership==="expo";
+ const googleAvailable=googleConfigured&&!isExpoGo;
  const recover=async()=>{
   setError("");setMessage("");
   const mail=email.trim().toLowerCase();
@@ -128,15 +129,15 @@ export default function SignIn(){
    <TouchableOpacity
     testID="google-signin-development-build"
     accessibilityRole="button"
-    accessibilityLabel="Continue with Google. Requires installed development build."
+    accessibilityLabel="Google sign-in setup information"
     activeOpacity={0.84}
-    onPress={()=>Alert.alert("Google sign-in","Google sign-in cannot complete inside Expo Go. It will be available in an installed iOS development build with the Google OAuth client configured. You can use email sign-in here.",[{text:"OK"}])}
+    onPress={()=>Alert.alert("Google sign-in",isExpoGo?"Google login requires an installed iOS build; it does not work in Expo Go.":"This iPhone build is missing the Google iOS OAuth client ID. Configure EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID in the EAS preview environment and rebuild. Email login is available now.",[{text:"OK"}])}
     style={sx.googleButton}>
     <Image source={require("../assets/google-g.png")} resizeMode="contain" style={{width:24,height:24,marginRight:12}}/>
     <Text style={sx.googleButtonText}>Continue with Google</Text>
    </TouchableOpacity>
    <Text style={{color:"#704F50",fontSize:12.5,lineHeight:19,textAlign:"center",marginTop:8,paddingHorizontal:12}}>
-    {Constants.appOwnership==="expo"?"Available with the installed iPhone app · Not in Expo Go":"Requires Google OAuth configuration for this build"}
+    {isExpoGo?"Not supported in Expo Go":"Google iOS OAuth client ID missing from this build"}
    </Text>
   </View>}
   <View style={{marginTop:17}}><Pill title="Browse as guest" secondary onPress={()=>router.replace("/")}/></View>
