@@ -14,7 +14,16 @@ Push-Location $worker
 try {
   $env:DOTENV_CONFIG_PATH = $envFile
   Add-Content -Path $log -Value "----- $(Get-Date -Format o): starting recipe editor -----"
-  & npm.cmd run recipes:discover *>> $log
-  if ($LASTEXITCODE -ne 0) { throw "Recipe worker exited with code $LASTEXITCODE" }
+  # Windows PowerShell 5.1 converts native stderr into NativeCommandError when
+  # ErrorActionPreference=Stop. Skipped remote recipes are recoverable warnings.
+  $previousPreference = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = "Continue"
+    & npm.cmd run recipes:discover *>> $log
+    $workerExitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousPreference
+  }
+  if ($workerExitCode -ne 0) { throw "Recipe worker exited with code $workerExitCode. Check $log" }
   Write-Host "Recipe worker completed. Log: $log"
 } finally { Pop-Location }
