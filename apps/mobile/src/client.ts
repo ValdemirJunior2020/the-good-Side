@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {emailAuth,type EmailTokenResponse} from "./emailAuth";
 const API_URL=process.env.EXPO_PUBLIC_API_URL||"";
 const KEY="goodside_google_session"; // Retain existing storage key for migration.
-export type Session={token:string;email:string;displayName:string;provider?:"google"|"email";refreshToken?:string;expiresAt?:number};
+export type Session={token:string;email:string;displayName:string;provider?:"google"|"email"|"apple";refreshToken?:string;expiresAt?:number};
 let current:Session|null=null;
 let loaded=false;
 const listeners=new Set<(session:Session|null)=>void>();
@@ -15,7 +15,7 @@ async function storeSession(session:Session|null){
  else await SecureStore.deleteItemAsync(KEY);
 }
 async function renewSession(){
- if(!current||current.provider!=="email"||!current.refreshToken)return current?.token||null;
+ if(!current||current.provider!=="email"&&current.provider!=="apple"||!current.refreshToken)return current?.token||null;
  if(current.expiresAt&&Date.now()<current.expiresAt-60_000)return current.token;
  const data=await emailAuth.refresh(current.refreshToken);
  if(!data.access_token||!data.refresh_token)throw Error("Email session expired. Please sign in again.");
@@ -29,7 +29,7 @@ export const auth={
   if(loaded)return;loaded=true;
   try{const value=Platform.OS==="web"?await AsyncStorage.getItem(KEY):await SecureStore.getItemAsync(KEY);
    if(value)current=JSON.parse(value) as Session;
-   if(current?.provider==="email")await renewSession();
+   if(current?.provider==="email"||current?.provider==="apple")await renewSession();
   }catch{current=null;await storeSession(null).catch(()=>{})}emit()
  },
  async signIn(token:string,user:{email:string;displayName:string}){
@@ -40,6 +40,12 @@ export const auth={
   current={token:data.access_token,refreshToken:data.refresh_token,expiresAt:Date.now()+(data.expires_in||3600)*1000,provider:"email",
    email:data.user?.email||email,displayName:displayName||data.user?.user_metadata?.display_name||data.user?.user_metadata?.full_name||""};
   await storeSession(current);emit()
+ },
+ async signInWithApple(data:EmailTokenResponse,displayName=""){
+  if(!data.access_token||!data.refresh_token)throw Error("Apple sign-in did not create a session.");
+  current={token:data.access_token,refreshToken:data.refresh_token,expiresAt:Date.now()+(data.expires_in||3600)*1000,provider:"apple",
+   email:data.user?.email||"",displayName:displayName||data.user?.user_metadata?.display_name||data.user?.user_metadata?.full_name||""};
+  await storeSession(current);emit();
  },
  async getFreshToken(){return renewSession()},
  async signOut(){current=null;await storeSession(null);emit()}
