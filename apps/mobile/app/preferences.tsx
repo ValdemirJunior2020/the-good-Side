@@ -1,6 +1,6 @@
 import React,{useEffect,useState} from "react";
 import{ScrollView,Text,View,Switch,TouchableOpacity,Alert,TextInput,Platform}from"react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+
 import{router}from"expo-router";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
@@ -38,7 +38,16 @@ export default function Preferences(){
  const slots=p.notification_frequency==="twice_daily"?2:p.notification_frequency==="three_daily"?3:1;
  const asDate=(time:string)=>{const d=new Date();const valid=clock.test(time)?time:"12:00";const [h,m]=valid.split(":").map(Number);d.setHours(h,m,0,0);return d};
  const humanTime=(time:string)=>asDate(time).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
- const onPickedTime=(date:Date)=>{if(editingTime===null)return;const hh=String(date.getHours()).padStart(2,"0");const mm=String(date.getMinutes()).padStart(2,"0");set("notification_times",times.map((v,i)=>i===editingTime?hh+":"+mm:v))};
+ const updateClockPart=(part:"hour"|"minute"|"period",value:number|string)=>{
+  if(editingTime===null)return;
+  const date=asDate(times[editingTime]||"12:00");
+  const oldHour=date.getHours();
+  if(part==="hour"){const h=Number(value)%12;date.setHours(h+(oldHour>=12?12:0))}
+  else if(part==="minute")date.setMinutes(Number(value));
+  else date.setHours((oldHour%12)+(value==="PM"?12:0));
+  const updated=String(date.getHours()).padStart(2,"0")+":"+String(date.getMinutes()).padStart(2,"0");
+  set("notification_times",times.map((v,i)=>i===editingTime?updated:v));
+ };
  const toggleInterest=(c:string)=>set("selected_categories",(selected.includes(c)?selected.filter(x=>x!==c):[...selected,c]).join(","));
  const switchRow=(label:string,key:keyof Pref)=> <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",minHeight:49,gap:10}}><Text style={[styles.subtitle,{flex:1,color:colors.ink}]}>{label}</Text><Switch accessibilityLabel={label} value={enabled(p[key])} onValueChange={v=>set(key,v)} trackColor={{true:colors.orange}}/></View>;
  const validZone=()=>{try{new Intl.DateTimeFormat("en-US",{timeZone:p.notification_timezone});return true}catch{return false}};
@@ -114,10 +123,15 @@ export default function Preferences(){
     {times.slice(0,slots).map((t,i)=><TouchableOpacity key={i} accessibilityRole="button" accessibilityLabel={"Choose delivery time "+(i+1)} onPress={()=>setEditingTime(i)} style={{backgroundColor:"#FFFFFF",borderWidth:1.5,borderColor:"#DDBAA8",borderRadius:15,minHeight:54,flexDirection:"row",alignItems:"center",justifyContent:"space-between",paddingHorizontal:16}}>
       <Text style={{fontSize:18,fontWeight:"700",color:"#301E2C"}}>{humanTime(t)}</Text><Text style={{fontSize:14,color:colors.orange,fontWeight:"700"}}>Change time ◷</Text>
      </TouchableOpacity>)}
-     {editingTime!==null?<View style={{borderRadius:18,backgroundColor:"rgba(255,255,255,.9)",padding:10}}>
+     {editingTime!==null?<View style={{borderRadius:18,backgroundColor:"rgba(255,255,255,.9)",padding:12,gap:12}}>
        <Text style={[styles.label,{textAlign:"center"}]}>Choose a delivery time</Text>
-       <DateTimePicker mode="time" display={Platform.OS==="ios"?"spinner":"default"} value={asDate(times[editingTime]||"12:00")} onChange={(_event,date)=>{if(date)onPickedTime(date);if(Platform.OS!=="ios")setEditingTime(null)}} />
-       {Platform.OS==="ios"?<Pill title="Done" onPress={()=>setEditingTime(null)}/>:null}
+       <Text style={{textAlign:"center",color:colors.ink,fontWeight:"800",fontSize:26}}>{humanTime(times[editingTime]||"12:00")}</Text>
+       <Text style={styles.muted}>Hour</Text>
+       <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">{Array.from({length:12},(_,i)=>i+1).map(h=><TouchableOpacity key={h} onPress={()=>updateClockPart("hour",h)} style={{marginRight:6,minWidth:48,padding:12,alignItems:"center",borderRadius:14,backgroundColor:((asDate(times[editingTime]||"12:00").getHours()%12)||12)===h?colors.peach:"#FFFFFF"}}><Text style={{fontWeight:"800",color:colors.ink}}>{h}</Text></TouchableOpacity>)}</ScrollView>
+       <Text style={styles.muted}>Minutes</Text>
+       <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">{Array.from({length:12},(_,i)=>i*5).map(m=><TouchableOpacity key={m} onPress={()=>updateClockPart("minute",m)} style={{marginRight:6,minWidth:48,padding:12,alignItems:"center",borderRadius:14,backgroundColor:asDate(times[editingTime]||"12:00").getMinutes()===m?colors.peach:"#FFFFFF"}}><Text style={{fontWeight:"800",color:colors.ink}}>{String(m).padStart(2,"0")}</Text></TouchableOpacity>)}</ScrollView>
+       <View style={{flexDirection:"row",gap:10}}>{(["AM","PM"] as const).map(period=><TouchableOpacity key={period} onPress={()=>updateClockPart("period",period)} style={{flex:1,alignItems:"center",padding:14,borderRadius:15,backgroundColor:(asDate(times[editingTime]||"12:00").getHours()>=12?"PM":"AM")===period?colors.peach:"#FFFFFF"}}><Text style={{fontWeight:"900",color:colors.ink}}>{period}</Text></TouchableOpacity>)}</View>
+       <Pill title="Done" onPress={()=>setEditingTime(null)}/>
       </View>:null}
    </View>:null}
    <Text style={[styles.muted,{marginTop:14}]}>Times shown in your timezone: {p.notification_timezone||"Device timezone"}</Text>
