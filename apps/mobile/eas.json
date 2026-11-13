@@ -14,14 +14,16 @@
       "distribution": "internal",
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://the-good-side-api.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://the-good-side-api.onrender.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1090749452629-7fg2atlhp6nqsa7f76i2dha5ijkb6tvm.apps.googleusercontent.com"
       }
     },
     "production": {
       "autoIncrement": true,
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://the-good-side-api.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://the-good-side-api.onrender.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1090749452629-7fg2atlhp6nqsa7f76i2dha5ijkb6tvm.apps.googleusercontent.com"
       }
     }
   },
