@@ -19,10 +19,23 @@ const fields = [
 
 function config() {
   const url = process.env.SUPABASE_URL?.replace(/\/$/, "");
-  const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const modern = process.env.SUPABASE_SECRET_KEY?.trim();
+  const fallback = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  // A publishable or legacy anon key cannot write protected recipe records.
+  // Fail closed rather than suggesting unsafe public table grants.
+  if (modern && !modern.startsWith("sb_secret_"))
+    throw Error("SUPABASE_SECRET_KEY must be a server-side sb_secret_ key, not a publishable/anon key");
+  let key = modern || fallback;
   if (!url || !/^https:\/\//.test(url) || !key)
     throw Error("Supabase recipe store requires SUPABASE_URL and a server-only Supabase secret key");
-  return {url, key, legacy:!key.startsWith("sb_secret_")};
+  const legacy=!key.startsWith("sb_secret_");
+  if (legacy) {
+    try {
+      const claims=JSON.parse(Buffer.from(key.split(".")[1],"base64url").toString("utf8"));
+      if(claims.role!=="service_role")throw Error("role");
+    } catch {throw Error("Legacy Supabase key must be the server-only service_role JWT, never anon");}
+  }
+  return {url, key, legacy};
 }
 async function request(path: string, init: RequestInit = {}) {
   const {url,key,legacy}=config();
