@@ -81,7 +81,7 @@ async function recipeStore(action:"listRecipes"|"getRecipe"|"upsertRecipe",paylo
   :sheet(action,payload);
 }
 const profile=z.object({display_name:z.string().trim().min(1).max(80).optional(),preferred_language:z.enum(["en","pt","es"]).optional(),timezone:z.string().refine(isValidTimezone).optional(),avatar_id:z.string().max(80).optional()});
-const hhmm=z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/);
+const hhmm=z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const prefs=z.object({
  notification_frequency:z.enum(["daily","twice_daily","three_daily","selected_weekdays","breaking_only","digest_plus_alerts"]).optional(),
  notification_times:z.array(hhmm).min(1).max(3).refine(v=>new Set(v).size===v.length).optional(),
