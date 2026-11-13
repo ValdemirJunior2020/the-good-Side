@@ -132,7 +132,7 @@ app.get("/news/search-live",asyncRoute(async(req,res)=>{
  const xml=(await response.text()).slice(0,500000);
  const items=Array.from(xml.matchAll(/<item>([\\s\\S]*?)<\\/item>/g)).slice(0,20).map(match=>{
   const part=match[1];
-  const field=(name:string)=>xmlText(part.match(new RegExp("<"+name+"(?:\\\\s[^>]*)?>([\\\\s\\\\S]*?)<\\\\/"+name+">"))?.[1]||"");
+  const field=(name:string)=>xmlText(part.match(new RegExp("<"+name+"(?:\s[^>]*)?>([\s\S]*?)<\/"+name+">"))?.[1]||"");
   const title=field("title");
   const url=field("link");
   const publisher=field("source")||"External news source";
