@@ -87,7 +87,7 @@ const prefs=z.object({
  notification_times:z.array(hhmm).min(1).max(3).refine(v=>new Set(v).size===v.length).optional(),
  notification_timezone:z.string().refine(isValidTimezone).optional(),
  notification_weekdays:z.array(z.number().int().min(0).max(6)).max(7).optional(),
- quiet_hours_start:hhmm.optional(),quiet_hours_end:hhmm.optional(),
+ quiet_hours_start:z.union([hhmm,z.literal("")]).optional(),quiet_hours_end:z.union([hhmm,z.literal("")]).optional(),
  weekend_enabled:z.boolean().optional(),food_notifications_enabled:z.boolean().optional(),
  breaking_alerts_enabled:z.boolean().optional(),notification_sound_enabled:z.boolean().optional(),
  selected_categories:z.array(z.string().min(1).max(80)).max(30).optional(),preferred_countries:z.array(z.string().max(2)).max(30).optional(),notification_enabled:z.boolean().optional(),notification_local_time:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),daily_digest_enabled:z.boolean().optional(),content_language:z.enum(["en","pt","es"]).optional()});
@@ -380,7 +380,7 @@ if(process.env.ENABLE_PUSH_SCHEDULER==="true"){
  setInterval(()=>receiptTick().catch(console.error),120000);
  receiptTick().catch(console.error);
 }
-app.use((error:unknown,_req:Request,res:Response,_next:NextFunction)=>{if(error instanceof z.ZodError)return res.status(400).json({error:"Invalid input",details:error.flatten()});console.error(error);res.status(503).json({error:"Request could not be completed"})});
+app.use((error:unknown,_req:Request,res:Response,_next:NextFunction)=>{if(error instanceof z.ZodError){const fields=Array.from(new Set(error.issues.map(issue=>String(issue.path[0]||"preferences"))));return res.status(400).json({error:"Invalid settings: "+fields.join(", "),details:error.flatten()});}console.error(error);res.status(503).json({error:"Request could not be completed"})});
 app.listen(Number(process.env.PORT||8788),()=>{
  console.log("The Good Side API listening");
  // Smoke-test the currently configured recipe backend at deployment time.
