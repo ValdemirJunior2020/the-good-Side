@@ -331,4 +331,13 @@ async function digestTick(){
 }
 if(process.env.ENABLE_PUSH_SCHEDULER==="true"){setInterval(()=>digestTick().catch(console.error),60000);digestTick().catch(console.error);}
 app.use((error:unknown,_req:Request,res:Response,_next:NextFunction)=>{if(error instanceof z.ZodError)return res.status(400).json({error:"Invalid input",details:error.flatten()});console.error(error);res.status(503).json({error:"Request could not be completed"})});
-app.listen(Number(process.env.PORT||8788),()=>console.log("The Good Side API listening"));
+app.listen(Number(process.env.PORT||8788),()=>{
+ console.log("The Good Side API listening");
+ // Smoke-test the currently configured recipe backend at deployment time.
+ // No credentials, recipe content, or user details are logged.
+ void recipeStore("listRecipes").then(items=>{
+  console.log("[recipes] storage_ready",JSON.stringify({store:process.env.RECIPE_STORE==="supabase"?"supabase":"legacy",published:Array.isArray(items)?items.length:0}));
+ }).catch(error=>{
+  console.error("[recipes] storage_unavailable",error instanceof Error?error.message.replace(/(sb_secret_|eyJ)[^\\s\\"]+/g,"[redacted]"):"unknown");
+ });
+});
