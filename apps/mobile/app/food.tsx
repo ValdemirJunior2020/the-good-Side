@@ -62,6 +62,12 @@ export default function Food(){
   setCountries(next);void AsyncStorage.setItem(PICKS,JSON.stringify(next)).catch(()=>{});
  };
  const filtered=useMemo(()=>filter==="all"?starter:starter.filter(x=>x.group===filter),[starter,filter]);
+ // User-selected cuisines rank approved recipes first; all other licensed recipes remain discoverable.
+ const prioritizedRecipes=useMemo(()=>{
+  const preferred=new Set(countries.map(c=>c.toLowerCase()));
+  const matches=(r:Recipe)=>String(r.dietary_tags||"").toLowerCase().split(/[,;|]/).some(tag=>preferred.has(tag.trim()));
+  return [...recipes].sort((a,b)=>Number(matches(b))-Number(matches(a)));
+ },[recipes,countries]);
  return <Background><ScrollView contentContainerStyle={{paddingHorizontal:20,paddingTop:65,paddingBottom:170,width:"100%",maxWidth:650,alignSelf:"center"}} refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void load()}/>}>
   <View style={{alignItems:"flex-end",marginBottom:10}}><MenuButton/></View>
   <Text style={[styles.title,{fontSize:32,lineHeight:39}]}>The good kitchen <Text style={{color:"#B96B35"}}>☀</Text></Text>
@@ -78,7 +84,8 @@ export default function Food(){
   {loading?<GoodSideLoader label="Setting your recipe table…"/>:null}
   {error?<Text style={{color:"#A9534D",fontSize:13,marginBottom:12}}>{error}</Text>:null}
   {recipes.length>0?<View style={{marginBottom:19}}><Text style={[styles.label,{fontSize:22}]}>✨ Good Side approved recipes</Text>
-   {recipes.map(r=><TouchableOpacity key={r.recipe_id} onPress={()=>router.push({pathname:"/recipe/[id]",params:{id:r.recipe_id}})}><Surface style={{marginBottom:10,padding:14}}>
+   <Text style={[styles.muted,{marginBottom:11}]}>Recipes matching your selected countries appear first. Every recipe stays completely inside the app.</Text>
+   {prioritizedRecipes.map(r=><TouchableOpacity key={r.recipe_id} onPress={()=>router.push({pathname:"/recipe/[id]",params:{id:r.recipe_id}})}><Surface style={{marginBottom:10,padding:14}}>
     <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
      <Image source={{uri:r.image_url}} style={{width:96,height:88,borderRadius:16,backgroundColor:"#E6D4C5"}}/>
      <View style={{flex:1}}><Text style={{fontSize:17,fontWeight:"800",color:colors.ink}}>{r.title}</Text><Text numberOfLines={2} style={[styles.muted,{marginTop:6}]}>{r.description}</Text>
