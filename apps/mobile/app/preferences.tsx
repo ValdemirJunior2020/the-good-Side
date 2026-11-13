@@ -1,5 +1,6 @@
 import React,{useEffect,useState} from "react";
 import{ScrollView,Text,View,Switch,TouchableOpacity,Alert,TextInput,Platform}from"react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import{router}from"expo-router";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
@@ -23,8 +24,9 @@ const parse=<T,>(v:unknown,fallback:T):T=>{if(Array.isArray(v))return v as T;try
 const clock=/^([01]\d|2[0-3]):[0-5]\d$/;
 const freq:[string,Frequency][]=[["Once daily","daily"],["Twice daily","twice_daily"],["Three times daily","three_daily"],["Selected weekdays","selected_weekdays"],["Breaking only","breaking_only"],["Daily digest + alerts","digest_plus_alerts"]];
 const weekdays=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const initial:Pref={selected_categories:"",notification_enabled:true,daily_digest_enabled:true,notification_local_time:"12:00",content_language:"en",notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/New_York",notification_frequency:"daily",notification_times:["12:00"],notification_weekdays:[],quiet_hours_start:"22:00",quiet_hours_end:"07:00",weekend_enabled:true,food_notifications_enabled:false,breaking_alerts_enabled:false,notification_sound_enabled:true};
+const initial:Pref={selected_categories:"",notification_enabled:true,daily_digest_enabled:true,notification_local_time:"12:00",content_language:"en",notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/New_York",notification_frequency:"daily",notification_times:["12:00"],notification_weekdays:[],quiet_hours_start:"",quiet_hours_end:"",weekend_enabled:true,food_notifications_enabled:false,breaking_alerts_enabled:true,notification_sound_enabled:true};
 export default function Preferences(){
+ const [editingTime,setEditingTime]=useState<number|null>(null);
  const[p,setP]=useState<Pref>(initial),[busy,setBusy]=useState(false),[error,setError]=useState(""),[preview,setPreview]=useState(""),[signedIn,setSignedIn]=useState(Boolean(auth.currentUser));
  const refreshPreview=()=>api<{next_at:string|null;timezone:string}>("/me/next-notification",{},true).then(v=>setPreview(v.next_at?new Date(v.next_at).toLocaleString(undefined,{timeZone:v.timezone,dateStyle:"medium",timeStyle:"short"})+" ("+v.timezone+")":"No digest currently scheduled")).catch(()=>setPreview("Preview unavailable"));
  useEffect(()=>{const unsubscribe=auth.subscribe(user=>{setSignedIn(Boolean(user));if(!user){setPreview("Sign in to view your notification schedule");return}api<Partial<Pref>>("/me/preferences",{},true).then(v=>setP({...initial,...v,notification_timezone:v.notification_timezone||initial.notification_timezone,notification_times:parse(v.notification_times,[v.notification_local_time||"12:00"]),notification_weekdays:parse(v.notification_weekdays,[])})).catch(e=>setError(String(e)));void refreshPreview()});void auth.restore();return unsubscribe},[]);
@@ -34,6 +36,9 @@ export default function Preferences(){
  const times=Array.from({length:p.notification_frequency==="three_daily"?3:p.notification_frequency==="twice_daily"?2:1},(_,i)=>parsedTimes[i]||(["12:00","18:00","09:00"][i]));
  const days=parse<number[]>(p.notification_weekdays,[]);
  const slots=p.notification_frequency==="twice_daily"?2:p.notification_frequency==="three_daily"?3:1;
+ const asDate=(time:string)=>{const d=new Date();const valid=clock.test(time)?time:"12:00";const [h,m]=valid.split(":").map(Number);d.setHours(h,m,0,0);return d};
+ const humanTime=(time:string)=>asDate(time).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+ const onPickedTime=(date:Date)=>{if(editingTime===null)return;const hh=String(date.getHours()).padStart(2,"0");const mm=String(date.getMinutes()).padStart(2,"0");set("notification_times",times.map((v,i)=>i===editingTime?hh+":"+mm:v))};
  const toggleInterest=(c:string)=>set("selected_categories",(selected.includes(c)?selected.filter(x=>x!==c):[...selected,c]).join(","));
  const switchRow=(label:string,key:keyof Pref)=> <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",minHeight:49,gap:10}}><Text style={[styles.subtitle,{flex:1,color:colors.ink}]}>{label}</Text><Switch accessibilityLabel={label} value={enabled(p[key])} onValueChange={v=>set(key,v)} trackColor={{true:colors.orange}}/></View>;
  const validZone=()=>{try{new Intl.DateTimeFormat("en-US",{timeZone:p.notification_timezone});return true}catch{return false}};
@@ -53,16 +58,16 @@ export default function Preferences(){
   const deliveryTimes=times.slice(0,slots).map(v=>v.trim());
   if(!validZone())return Alert.alert("Invalid timezone","Enter an IANA timezone such as America/New_York.");
   if(deliveryTimes.some(t=>!clock.test(t))||new Set(deliveryTimes).size!==deliveryTimes.length)return Alert.alert("Invalid times","Enter unique delivery times in HH:MM format.");
-  if((p.quiet_hours_start&&!clock.test(p.quiet_hours_start))||(p.quiet_hours_end&&!clock.test(p.quiet_hours_end)))return Alert.alert("Invalid quiet hours","Use HH:MM for both times.");
+  
   if(p.notification_frequency==="selected_weekdays"&&days.length===0)return Alert.alert("Choose weekdays","Select the days on which you want good news.");
   setBusy(true);
   try{
    const requestedNotifications=true;
    const body={selected_categories:selected,notification_enabled:requestedNotifications,daily_digest_enabled:enabled(p.daily_digest_enabled),notification_local_time:deliveryTimes[0]||"12:00",
     notification_times:deliveryTimes,notification_timezone:p.notification_timezone,notification_frequency:p.notification_frequency,
-    notification_weekdays:days,quiet_hours_start:p.quiet_hours_start,quiet_hours_end:p.quiet_hours_end,
+    notification_weekdays:days,quiet_hours_start:"",quiet_hours_end:"",
     weekend_enabled:enabled(p.weekend_enabled),food_notifications_enabled:enabled(p.food_notifications_enabled),
-    breaking_alerts_enabled:enabled(p.breaking_alerts_enabled),notification_sound_enabled:enabled(p.notification_sound_enabled),content_language:p.content_language};
+    breaking_alerts_enabled:true,notification_sound_enabled:enabled(p.notification_sound_enabled),content_language:p.content_language};
    // Persist preferences first. Push token registration is an independent operation
    // and must never cause users to lose their selected interests and schedule.
    const saved=await api<Pref>("/me/preferences",put(body),true);
@@ -106,25 +111,19 @@ export default function Preferences(){
    <Text style={[styles.muted,{marginTop:12}]}>Delivery frequency</Text><View style={{flexDirection:"row",flexWrap:"wrap",marginTop:8}}>{freq.map(([label,id])=><React.Fragment key={id}>{choice(label,p.notification_frequency===id,()=>set("notification_frequency",id))}</React.Fragment>)}</View>
    {p.notification_frequency!=="breaking_only"?<View style={{marginTop:16,gap:8}}>
     <Text style={styles.muted}>Delivery times · 24-hour clock</Text>
-    {times.slice(0,slots).map((t,i)=><View key={i} style={{backgroundColor:"#FFFFFF",borderWidth:1.5,borderColor:"#DDBAA8",borderRadius:15,minHeight:54,justifyContent:"center",overflow:"hidden"}}>
-      <TextInput accessibilityLabel={"Delivery time "+(i+1)} placeholder="12:00" placeholderTextColor="#806E78" keyboardType="numbers-and-punctuation" maxLength={5}
-       style={{height:52,width:"100%",paddingHorizontal:16,paddingVertical:10,fontSize:17,color:"#301E2C",backgroundColor:"#FFFFFF"}}
-       value={t} onChangeText={v=>set("notification_times",times.map((x,j)=>j===i?v:x))}/>
-     </View>)}
+    {times.slice(0,slots).map((t,i)=><TouchableOpacity key={i} accessibilityRole="button" accessibilityLabel={"Choose delivery time "+(i+1)} onPress={()=>setEditingTime(i)} style={{backgroundColor:"#FFFFFF",borderWidth:1.5,borderColor:"#DDBAA8",borderRadius:15,minHeight:54,flexDirection:"row",alignItems:"center",justifyContent:"space-between",paddingHorizontal:16}}>
+      <Text style={{fontSize:18,fontWeight:"700",color:"#301E2C"}}>{humanTime(t)}</Text><Text style={{fontSize:14,color:colors.orange,fontWeight:"700"}}>Change time ◷</Text>
+     </TouchableOpacity>)}
+     {editingTime!==null?<View style={{borderRadius:18,backgroundColor:"rgba(255,255,255,.9)",padding:10}}>
+       <Text style={[styles.label,{textAlign:"center"}]}>Choose a delivery time</Text>
+       <DateTimePicker mode="time" display={Platform.OS==="ios"?"spinner":"default"} value={asDate(times[editingTime]||"12:00")} onChange={(_event,date)=>{if(date)onPickedTime(date);if(Platform.OS!=="ios")setEditingTime(null)}} />
+       {Platform.OS==="ios"?<Pill title="Done" onPress={()=>setEditingTime(null)}/>:null}
+      </View>:null}
    </View>:null}
-   <View style={{marginTop:16,gap:8}}>
-    <Text style={styles.muted}>Timezone (IANA)</Text>
-    <View style={{backgroundColor:"#FFFFFF",borderWidth:1.5,borderColor:"#DDBAA8",borderRadius:15,minHeight:54,justifyContent:"center",overflow:"hidden"}}>
-     <TextInput autoCapitalize="none" autoCorrect={false} accessibilityLabel="Timezone (IANA)" placeholder="America/New_York" placeholderTextColor="#806E78"
-      style={{height:52,width:"100%",paddingHorizontal:16,paddingVertical:10,fontSize:16,color:"#301E2C",backgroundColor:"#FFFFFF"}}
-      value={p.notification_timezone||""} onChangeText={v=>set("notification_timezone",v)}/>
-    </View>
-   </View>
+   <Text style={[styles.muted,{marginTop:14}]}>Times shown in your timezone: {p.notification_timezone||"Device timezone"}</Text>
   </Surface>
-  <Surface style={{marginBottom:14}}><Text style={styles.label}>Your quiet time</Text><Text style={styles.muted}>No alerts during these hours, including food and special news.</Text><View style={{flexDirection:"row",gap:10,marginTop:14}}>{(["quiet_hours_start","quiet_hours_end"]as const).map((key,i)=><View key={key} style={{flex:1}}><Text style={styles.muted}>{i===0?"From":"Until"}</Text><TextInput accessibilityLabel={i===0?"Quiet hours start":"Quiet hours end"} maxLength={5} style={styles.input} selectionColor="#B96F39" cursorColor="#B96F39" value={p[key]} onChangeText={v=>set(key,v)}/></View>)}</View>
-   {switchRow("Include weekends","weekend_enabled")}<Text style={[styles.muted,{marginTop:10}]}>Selected weekdays</Text><View style={{flexDirection:"row",flexWrap:"wrap",marginTop:8}}>{weekdays.map((d,i)=><React.Fragment key={d}>{choice(d,days.includes(i),()=>set("notification_weekdays",days.includes(i)?days.filter(x=>x!==i):[...days,i]))}</React.Fragment>)}</View>
-  </Surface>
-  <Surface style={{marginBottom:14}}><Text style={styles.label}>Extra good things</Text>{switchRow("Food & Recipes alerts","food_notifications_enabled")}{switchRow("Breaking positive news","breaking_alerts_enabled")}{switchRow("Play notification sound","notification_sound_enabled")}<TouchableOpacity accessibilityRole="button" onPress={previewSound} style={{padding:13,backgroundColor:"rgba(255,255,255,.85)",borderRadius:16,marginVertical:8}}><Text style={{fontWeight:"800",color:colors.ink}}>♫ Preview notification sound</Text></TouchableOpacity><Text style={styles.muted}>Your signature ding plays after it is bundled in an EAS build. iPhone silent mode and Focus settings are respected.</Text></Surface>
+  <Surface style={{marginBottom:14}}><Text style={styles.label}>Which days?</Text>{switchRow("Include weekends","weekend_enabled")}<Text style={[styles.muted,{marginTop:10}]}>Selected weekdays</Text><View style={{flexDirection:"row",flexWrap:"wrap",marginTop:8}}>{weekdays.map((d,i)=><React.Fragment key={d}>{choice(d,days.includes(i),()=>set("notification_weekdays",days.includes(i)?days.filter(x=>x!==i):[...days,i]))}</React.Fragment>)}</View></Surface>
+  <Surface style={{marginBottom:14}}><Text style={styles.label}>Extra good things</Text><View style={{paddingVertical:8}}><Text style={[styles.subtitle,{fontWeight:"700"}]}>Breaking positive news · Always on ✓</Text><Text style={styles.muted}>News alerts are enabled when iPhone notifications are allowed.</Text></View>{switchRow("Food & Recipes alerts","food_notifications_enabled")}{switchRow("Play notification sound","notification_sound_enabled")}<TouchableOpacity accessibilityRole="button" onPress={previewSound} style={{padding:13,backgroundColor:"rgba(255,255,255,.85)",borderRadius:16,marginVertical:8}}><Text style={{fontWeight:"800",color:colors.ink}}>♫ Preview notification sound</Text></TouchableOpacity><Text style={styles.muted}>Your signature ding plays after it is bundled in an EAS build. iPhone silent mode and Focus settings are respected.</Text></Surface>
   <Surface style={{marginBottom:14}}><Text style={styles.label}>Your interests</Text><View style={{flexDirection:"row",flexWrap:"wrap"}}>{categories.filter((c,i,all)=>all.findIndex(v=>v[1]===c[1])===i).map(([label,id,emoji])=><React.Fragment key={id}>{choice(emoji+" "+label,selected.includes(id),()=>toggleInterest(id))}</React.Fragment>)}</View></Surface>
   <Surface style={{marginBottom:18}}><Text style={styles.label}>Language</Text><View style={{flexDirection:"row",flexWrap:"wrap"}}>{([["English","en"],["Português","pt"],["Español","es"]]as const).map(([label,id])=><React.Fragment key={id}>{choice(label,p.content_language===id,()=>set("content_language",id))}</React.Fragment>)}</View></Surface>
   <Surface style={{marginBottom:16}}><Text style={styles.label}>Next expected notification</Text>{preview?<Text style={styles.subtitle}>{preview}</Text>:<GoodSideLoader compact label="Checking next delivery…"/>}<Text style={[styles.muted,{marginTop:6}]}>This preview reflects saved settings. Delivery can be delayed by your device or Apple.</Text></Surface>
