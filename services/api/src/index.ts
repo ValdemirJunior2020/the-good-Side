@@ -130,8 +130,9 @@ const recipePayload=z.object({
  image_license:z.string().max(150).default(""),language:z.enum(["en","pt","es"]).default("en"),
  approval_status:z.enum(["pending","approved"]).default("pending")
 });
-// Ollama research-worker intake. Never auto-publish AI output or unlicensed photography.
-// Matches the existing worker key, and enforces TheMealDB source provenance.
+// Ollama handles editorial accept/reject without manual approval.
+// Publishing with third-party recipe artwork requires verified production
+// subscription AND image rights. AI quality is NOT an image license.
 app.post("/worker/recipe-candidates",asyncRoute(async(req,res)=>{
  const key=req.get("x-worker-key")||"";
  if(!process.env.RESEARCH_WORKER_KEY||!safeEqual(key,process.env.RESEARCH_WORKER_KEY))
@@ -140,21 +141,29 @@ app.post("/worker/recipe-candidates",asyncRoute(async(req,res)=>{
   recipe_id:z.string().regex(/^mealdb-\d{3,9}$/),
   source_name:z.literal("TheMealDB"),
   image_url:z.string().url(),
-  approval_status:z.literal("pending")
+  approval_status:z.literal("approved"),
+  quality_score:z.number().int().min(85).max(100)
  }).parse(req.body);
+ if(process.env.RECIPE_PROVIDER_RELEASE_AUTHORIZED!=="true"||process.env.RECIPE_IMAGE_RIGHTS_CONFIRMED!=="true")
+  return res.status(409).json({error:"Publication blocked until TheMealDB production/supporter and image rights are confirmed"});
  const source=new URL(item.source_url),image=new URL(item.image_url);
  if(source.protocol!=="https:"||source.hostname!=="www.themealdb.com"||
+    !source.pathname.endsWith("/"+item.recipe_id.slice(7))||
     image.protocol!=="https:"||!["www.themealdb.com","themealdb.com"].includes(image.hostname)||
+    !image.pathname.startsWith("/images/media/meals/")||
     source.username||source.password||image.username||image.password)
-  return res.status(422).json({error:"Verified TheMealDB HTTPS source and image URL required"});
- // Once a human has approved a recipe, a bot must never replace its approved content.
- const approved=await sheet("getRecipe",{recipe_id:item.recipe_id});
- if(approved)return send(res,{status:"already_approved",recipe_id:item.recipe_id});
+  return res.status(422).json({error:"Verified TheMealDB HTTPS recipe source and image URL required"});
+ if(item.ingredients.length<3||item.instructions.length<3||!item.description.trim()||
+    item.instructions.some(step=>step.trim().length<12))
+  return res.status(422).json({error:"Ollama recipe completeness or quality check failed"});
+ const existing=await sheet("getRecipe",{recipe_id:item.recipe_id});
+ if(existing)return send(res,{status:"already_approved",recipe_id:item.recipe_id});
  const result=await sheet("upsertRecipe",{
-  ...item,approval_status:"pending",image_license:"DEVELOPMENT PREVIEW ONLY - rights unverified",
+  ...item,approval_status:"approved",
+  image_license:"TheMealDB supporter content; original source attributed",
   actor_id:"ollama-recipe-worker"
  });
- send(res,{status:"pending",recipe_id:result.recipe_id,requires_human_approval:true});
+ send(res,{status:"approved",recipe_id:result.recipe_id,auto_approved_by:"ollama",human_approval_required:false});
 }));
 app.post("/admin/recipes",asyncRoute(async(req,res)=>send(res,await sheet("upsertRecipe",{...recipePayload.parse(req.body),actor_id:req.uid}))));
 app.get("/admin/stats",asyncRoute(async(req,res)=>send(res,await sheet("stats"))));
