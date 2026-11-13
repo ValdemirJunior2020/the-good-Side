@@ -24,6 +24,22 @@ async function jsonFetch(url:string,init:RequestInit={},timeout=18000):Promise<a
   return await response.json();
  }finally{clearTimeout(timer)}
 }
+async function validateRecipeImage(url:string):Promise<void>{
+ if(!/^https:\/\//i.test(url))throw Error("Recipe has no valid HTTPS image URL");
+ const u=new URL(url);
+ if(!["www.themealdb.com","themealdb.com"].includes(u.hostname)||!u.pathname.startsWith("/images/media/meals/"))
+  throw Error("Recipe image is not from the licensed source");
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
+ try{
+  let response=await fetch(u.toString(),{method:"HEAD",signal:controller.signal,redirect:"follow"});
+  if(!response.ok||!response.headers.get("content-type")?.toLowerCase().startsWith("image/")){
+   response=await fetch(u.toString(),{method:"GET",headers:{Range:"bytes=0-1"},signal:controller.signal,redirect:"follow"});
+   await response.body?.cancel();
+  }
+  if(!response.ok||!response.headers.get("content-type")?.toLowerCase().startsWith("image/"))
+   throw Error("Image URL did not return a valid photo");
+ }finally{clearTimeout(timeout)}
+}
 function ingredients(m:Meal){
  const rows:string[]=[];
  for(let i=1;i<=20;i++){
@@ -96,6 +112,7 @@ async function main(){
    const response=await jsonFetch(BASE+"/lookup.php?i="+encodeURIComponent(item.idMeal));
    const details=response.meals?.[0] as Meal|undefined;
    if(!details)continue;
+   await validateRecipeImage(details.strMealThumb);
    const draft=await ollamaDraft(details);
    prepared++;localDrafts.push(draft);
    // Ollama makes the editorial decision automatically. Publisher rights
