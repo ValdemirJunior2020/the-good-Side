@@ -7,7 +7,7 @@ import {dirname,join} from "node:path";
 // Data source: TheMealDB development API. Do not redistribute its photos in a
 // production app without the provider's appropriate rights/supporter key.
 type Meal={idMeal:string;strMeal:string;strArea?:string;strCategory?:string;strMealThumb:string;strInstructions:string;strSource?:string;[key:string]:unknown};
-type Draft={recipe_id:string;title:string;description:string;prep_minutes:number;cook_minutes:number;servings:number;ingredients:string[];instructions:string[];dietary_tags:string;source_name:"TheMealDB";source_url:string;image_url:string;image_license:string;language:"en";approval_status:"approved"};
+type Draft={recipe_id:string;title:string;description:string;prep_minutes:number;cook_minutes:number;servings:number;ingredients:string[];instructions:string[];dietary_tags:string;source_name:"TheMealDB";source_url:string;image_url:string;image_license:string;language:"en";approval_status:"approved";quality_score:number};
 const BASE="https://www.themealdb.com/api/json/v1/1";
 const API=(process.env.API_URL||"http://localhost:8788").replace(/\/$/,"");
 const OLLAMA=(process.env.OLLAMA_URL||"http://127.0.0.1:11434").replace(/\/$/,"");
