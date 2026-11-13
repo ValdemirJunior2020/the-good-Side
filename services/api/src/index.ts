@@ -304,10 +304,21 @@ async function digestTick(){
     const selected=String(user.selected_categories||"").split(",").filter(Boolean);
     const foodEnabled=isOn(user.food_notifications_enabled);
     // Recipes share the user's existing delivery slots, never creating an extra alert.
-    const recipePool=foodEnabled?await sheet("listRecipes"):[] as any[];
-    const recipe=(recipePool||[]).find((r:any)=>!already.has("recipe:"+r.recipe_id));
-    const article=recipe?null:chooseDigest(news.items||[],selected,already);
-    const chosen=recipe?{news_id:"recipe:"+recipe.recipe_id,title:recipe.title,original_url:recipe.source_url}:article;
+    // Food is stored in Supabase, not the legacy Sheets recipe table.
+    // Keep good news as the first daily notification; when opted into 2+ slots,
+    // use later slots for a recipe. On quiet news days, a recipe is a fallback.
+    const recipePool=foodEnabled?await recipeStore("listRecipes"):[];
+    const recipe=Array.isArray(recipePool)
+      ?recipePool.find((r:any)=>r?.approval_status==="approved"&&!already.has("recipe:"+r.recipe_id)):null;
+    const article=chooseDigest(news.items||[],selected,already);
+    const userTimes=String(user.notification_times||"");
+    let parsedTimes:string[]=[];
+    try{const v=JSON.parse(userTimes);if(Array.isArray(v))parsedTimes=v.filter(x=>typeof x==="string").sort()}catch{}
+    const laterSlot=parsedTimes.length>1&&decision.time!==parsedTimes[0];
+    const chooseFood=Boolean(foodEnabled&&recipe&&(!article||laterSlot));
+    const chosen=chooseFood
+      ?{news_id:"recipe:"+recipe.recipe_id,title:recipe.title,original_url:recipe.source_url}
+      :article;
     if(!chosen)continue;
     for(const d of devices) {
      if(!isOn(d.enabled))continue;
@@ -316,7 +327,7 @@ async function digestTick(){
      if(claim?.duplicate)continue;
      try {
       const token=decrypt(d.push_token_reference);
-      const resp=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"The Good Side",body:chosen.title,data:recipe?{recipe_id:recipe.recipe_id,sound_enabled:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined}:{news_id:chosen.news_id,sound_enabled:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined},sound:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined?pushSound:null})});
+      const resp=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({to:token,title:"The Good Side",body:chosen.title,data:chooseFood?{recipe_id:recipe.recipe_id,sound_enabled:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined}:{news_id:chosen.news_id,sound_enabled:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined},sound:isOn(user.notification_sound_enabled)||user.notification_sound_enabled===undefined?pushSound:null})});
       const result=await resp.json() as any;const ticket=Array.isArray(result?.data)?result.data[0]:result?.data;
       await sheet("updateNotificationByKey",{idempotency_key:key,delivery_status:resp.ok&&ticket?.status==="ok"?"accepted":"error",sent_at:new Date().toISOString(),error_code:ticket?.details?.error||(!resp.ok?"push_http_"+resp.status:"")});
       if(ticket?.details?.error==="DeviceNotRegistered")await sheet("disableDevice",{device_id:d.device_id,user_id:user.user_id});
