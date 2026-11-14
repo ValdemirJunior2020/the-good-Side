@@ -155,6 +155,19 @@ app.get("/me",asyncRoute(async(req,res)=>send(res,await sheet("getUser",{user_id
 app.post("/me",asyncRoute(async(req,res)=>send(res,await sheet("syncUser",{user_id:req.uid,email:req.email||"",...profile.parse(req.body)}))));
 app.put("/me",asyncRoute(async(req,res)=>send(res,await sheet("updateUser",{user_id:req.uid,...profile.parse(req.body)}))));
 app.get("/me/preferences",asyncRoute(async(req,res)=>send(res,await sheet("getPreferences",{user_id:req.uid}))));
+// Personalized feed: never replace a reader's selected topics with unrelated articles.
+app.get("/me/news",asyncRoute(async(req,res)=>{
+ const pref=await sheet("getPreferences",{user_id:req.uid});
+ const raw=pref?.selected_categories;
+ const selected=Array.isArray(raw)?raw.map(String):typeof raw==="string"?raw.split(",").map(x=>x.trim()).filter(Boolean):[];
+ const interests=new Set(selected.map(x=>x.toLowerCase()));
+ const all=await sheet("listNews",{limit:50,page:1});
+ const approved=(all?.items||[]) as Array<{news_id:string;category:string;source_published_at:string}>;
+ const filtered=interests.size?approved.filter(item=>interests.has(String(item.category||"").toLowerCase())):approved;
+ const requested=z.coerce.number().int().min(1).max(50).default(30).parse(req.query.limit);
+ send(res,{items:filtered.slice(0,requested),selected_categories:selected,personalized:interests.size>0,matched:filtered.length});
+}));
+
 app.get("/me/next-notification",asyncRoute(async(req,res)=>{const pref=await sheet("getPreferences",{user_id:req.uid});const user=await sheet("getUser",{user_id:req.uid});const zone=pref.notification_timezone||user?.timezone||"UTC";const at=nextDigestAt(new Date(),{...pref,timezone:zone});send(res,{next_at:at?at.toISOString():null,timezone:zone});}));
 app.put("/me/preferences",asyncRoute(async(req,res)=>send(res,await sheet("setPreferences",{user_id:req.uid,...prefs.parse(req.body)}))));
 app.get("/me/saved",asyncRoute(async(req,res)=>send(res,await sheet("listSaved",{user_id:req.uid}))));
