@@ -60,7 +60,10 @@ export default function Preferences(){
  const refreshPreview=()=>api<{next_at:string|null;timezone:string}>("/me/next-notification",{},true).then(v=>setPreview(v.next_at?new Date(v.next_at).toLocaleString(undefined,{timeZone:v.timezone,dateStyle:"medium",timeStyle:"short"})+" ("+v.timezone+")":"No digest currently scheduled")).catch(()=>setPreview("Preview unavailable"));
  useEffect(()=>{const unsubscribe=auth.subscribe(user=>{setSignedIn(Boolean(user));if(!user){setPreview("Sign in to view your notification schedule");return}api<Partial<Pref>>("/me/preferences",{},true).then(v=>setP({...initial,...v,notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||initial.notification_timezone,notification_frequency:v.notification_frequency==="breaking_only"?"daily":v.notification_frequency==="digest_plus_alerts"?"daily":v.notification_frequency||"daily",notification_times:cleanTimes(v.notification_times,v.notification_local_time,v.notification_frequency==="three_daily"?3:v.notification_frequency==="twice_daily"?2:1),notification_weekdays:parse(v.notification_weekdays,[])})).catch(e=>setError(String(e)));void refreshPreview()});void auth.restore();return unsubscribe},[]);
  const set=(key:keyof Pref,value:any)=>setP(prev=>({...prev,[key]:value}));
- const selected=String(p.selected_categories||"").split(",").filter(Boolean);
+ const rawCategories=p.selected_categories as unknown;
+ const selected=Array.isArray(rawCategories)?rawCategories.map(String):
+  typeof rawCategories==="string"&&rawCategories.trim().startsWith("[")
+   ?parse<string[]>(rawCategories,[]):typeof rawCategories==="string"?rawCategories.split(",").filter(Boolean):[];
  const parsedTimes=cleanTimes(p.notification_times,p.notification_local_time,p.notification_frequency==="three_daily"?3:p.notification_frequency==="twice_daily"?2:1);
  const times=Array.from({length:p.notification_frequency==="three_daily"?3:p.notification_frequency==="twice_daily"?2:1},(_,i)=>parsedTimes[i]||(["12:00","18:00","09:00"][i]));
  const days=parse<number[]>(p.notification_weekdays,[]);
