@@ -43,19 +43,23 @@ async function identity(req:Authed,res:Response,next:NextFunction){
   // Admin access is deliberately Google-only regardless of the account email.
   let claimedIssuer="";
   try{claimedIssuer=JSON.parse(Buffer.from(token.split(".")[1]||"","base64url").toString("utf8")).iss||""}catch{}
-  if(claimedIssuer===process.env.SUPABASE_AUTH_URL+"/auth/v1"&&process.env.SUPABASE_PUBLISHABLE_KEY){
+  if(claimedIssuer===process.env.SUPABASE_AUTH_URL+"/auth/v1"){
+   if(!process.env.SUPABASE_PUBLISHABLE_KEY)return void res.status(503).json({error:"Account verification is temporarily unavailable. Please retry."});
    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
    try{
     const response=await fetch(process.env.SUPABASE_AUTH_URL+"/auth/v1/user",{
      headers:{apikey:process.env.SUPABASE_PUBLISHABLE_KEY,Authorization:"Bearer "+token},signal:controller.signal
     });
-    if(response.ok){
-     const user=await response.json() as {id?:string;email?:string;email_confirmed_at?:string;confirmed_at?:string};
-     if(user.id&&user.email&&(user.email_confirmed_at||user.confirmed_at)){
-      req.uid="supabase:"+user.id;req.email=user.email;req.admin=false;
-      return next();
-     }
+    if(response.status===401||response.status===403)return void res.status(401).json({error:"Your account needs to reconnect.",code:"AUTH_RETRY"});
+    if(!response.ok)return void res.status(503).json({error:"Account verification is temporarily unavailable. Please retry."});
+    const user=await response.json() as {id?:string;email?:string;email_confirmed_at?:string;confirmed_at?:string};
+    if(user.id&&user.email&&(user.email_confirmed_at||user.confirmed_at)){
+     req.uid="supabase:"+user.id;req.email=user.email;req.admin=false;
+     return next();
     }
+    return void res.status(401).json({error:"Please verify your email address to continue."});
+   }catch{
+    return void res.status(503).json({error:"Account verification is temporarily unavailable. Please retry."});
    }finally{clearTimeout(timer)}
   }
   const ticket=await oauthClient.verifyIdToken({idToken:token,audience:allowedClients});
@@ -64,7 +68,7 @@ async function identity(req:Authed,res:Response,next:NextFunction){
   req.uid="google:"+user.sub;req.email=user.email;
   req.admin=adminEmails.has(user.email.toLowerCase());
   next();
- }catch{res.status(401).json({error:"Sign-in session expired or invalid. Sign in again."});}
+ }catch{res.status(401).json({error:"Please reconnect your account to continue."});}
 }
 
 function encrypt(value:string){if(!encryptionKey||encryptionKey.length!==32)throw Error("Push encryption key not configured");const iv=randomBytes(12);const cipher=createCipheriv("aes-256-gcm",encryptionKey,iv);const result=Buffer.concat([cipher.update(value,"utf8"),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),result]).toString("base64");}
