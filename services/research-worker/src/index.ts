@@ -17,7 +17,7 @@ const text=(s:unknown):string=>{
  }
  return "";
 };
-const positiveTerms=/\b(rescue|rescued|restor|recovery|recover|breakthrough|discovery|saved|saving|success|successful|improv|innov|protect|conserv|volunteer|kindness|hope|help|helping|community|wildlife|ocean|health|research|science|treatment|education|clean|renewable|milestone|support)\b/i;
+const positiveTerms=/\b(rescue|rescued|restoration|restored|recovery|recovering|breakthrough|discovery|saved|saving|success|successful|improved|innovation|innovative|protecting|protected|conservation|volunteer|kindness|hope|helping|community|wildlife|ocean|health|research|science|treatment|education|clean|renewable|milestone|support)\b/i;
 const negativeTerms=/\b(killed|murder|massacre|scandal|election campaign|stock price|shares surge)\b/i;
 const queuePath=join(dirname(fileURLToPath(import.meta.url)),"..","data","news-review-queue.json");
 type Lead={publisher:string;title:string;url:string;published_at:string;category:string};
