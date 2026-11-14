@@ -342,7 +342,7 @@ app.post("/worker/candidates",asyncRoute(async(req,res)=>{
  if(record?.duplicate){
   const existing=await sheet("adminGetNews",{news_id:record.news_id});
   if(existing?.approval_status==="rejected")return send(res,{...record,approval:"rejected"});
-  if(existing?.approval_status==="approved")return send(res,{...record,approval:"approved"});
+  if(existing?.approval_status==="approved")return send(res,{...record,approval:"already_approved"});
  }
  const published=await sheet("setNewsStatus",{news_id:record.news_id,status:"approved",actor_id:"ollama-auto-editor"});
  send(res,{...record,approval:published.status});
