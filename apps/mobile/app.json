@@ -8,7 +8,9 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.thegoodside.app"
+      "bundleIdentifier": "com.thegoodside.app",
+      "icon": "./assets/app-icon.png",
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.thegoodside.app"
@@ -20,10 +22,12 @@
         {
           "color": "#F2A34C"
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "icon": "./assets/app-icon.png"
   }
 }

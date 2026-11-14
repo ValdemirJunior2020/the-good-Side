@@ -19,10 +19,37 @@ export function RecipeManager({api}:{api:Api}){
  const [prep,setPrep]=useState("15"),[cook,setCook]=useState("20"),[servings,setServings]=useState("4");
  const [ingredients,setIngredients]=useState(""),[instructions,setInstructions]=useState("");
  const [tags,setTags]=useState(""),[publisher,setPublisher]=useState(""),[sourceUrl,setSourceUrl]=useState("");
+ const [imageUrl,setImageUrl]=useState(""),[imageLicense,setImageLicense]=useState("");
+ const [imageReady,setImageReady]=useState(false),[imageError,setImageError]=useState(false);
  const [language,setLanguage]=useState<"en"|"pt"|"es">("en");
  const [publication,setPublication]=useState<"pending"|"approved">("pending");
  const [busy,setBusy]=useState(false),[feedback,setFeedback]=useState("");
  const [existing,setExisting]=useState<Recipe[]>([]);
+ const [discoveryCountry,setDiscoveryCountry]=useState("American");
+ const [candidates,setCandidates]=useState<any[]>([]);
+ const [discoveryBusy,setDiscoveryBusy]=useState(false);
+ const [discoveryMessage,setDiscoveryMessage]=useState("");
+ const cuisines=["American","Brazilian","Italian","Egyptian","Turkish","Moroccan","Mexican","Indian","Japanese","Greek","French","Thai"];
+ const MEALS="https://www.themealdb.com/api/json/v1/1";
+ const fetchMeals=async(path:string)=>{
+  const r=await fetch(MEALS+"/"+path);
+  if(!r.ok)throw Error("Recipe source returned HTTP "+r.status);
+  return (await r.json() as {meals?:any[]}).meals||[];
+ };
+ const discover=async()=>{
+  setDiscoveryBusy(true);setDiscoveryMessage("");
+  try{
+   const list=await fetchMeals("filter.php?a="+encodeURIComponent(discoveryCountry));
+   if(!list.length)throw Error("No meals found for this country.");
+   const selected=list.slice(0,5);
+   const detail=await Promise.all(selected.map(async m=>{
+    const entries=await fetchMeals("lookup.php?i="+encodeURIComponent(String(m.idMeal)));
+    return entries[0];
+   }));
+   setCandidates(detail.filter(Boolean));
+   setDiscoveryMessage("5 recipes found. Ollama handles the automatic quality review during the daily worker run. No manual approval required.");
+  }catch(e){setDiscoveryMessage(String(e))}finally{setDiscoveryBusy(false)}
+ };
  const refresh=async()=>{setExisting(await api<Recipe[]>("/recipes"))};
  useEffect(()=>{void refresh().catch(e=>setFeedback("Unable to read published recipes: "+String(e)))},[]);
  const save=async(e:React.FormEvent<HTMLFormElement>)=>{
@@ -36,21 +63,26 @@ export function RecipeManager({api}:{api:Api}){
    if([...ingredientList,...stepList].some(x=>x.length>500))throw Error("Each ingredient or instruction must be under 500 characters.");
    const prepMinutes=Number(prep),cookMinutes=Number(cook),servingCount=Number(servings);
    if(!Number.isInteger(prepMinutes)||prepMinutes<0||prepMinutes>1440||!Number.isInteger(cookMinutes)||cookMinutes<0||cookMinutes>1440||!Number.isInteger(servingCount)||servingCount<1||servingCount>100)throw Error("Check time and serving values.");
+   if(!imageUrl.trim())throw Error("Every recipe needs an image URL.");
+   if(!imageReady)throw Error("The recipe image must load successfully before saving or publishing.");
+   const picture=new URL(imageUrl.trim());
+   if(picture.protocol!=="https:"||picture.username||picture.password)throw Error("Photo must have a valid HTTPS URL.");
+   if(!imageLicense.trim())throw Error("Document photo permission or licensing before saving.");
    if(publication==="approved"&&!window.confirm("PUBLISH THIS RECIPE NOW to The Good Side iOS Food tab?\n\n"+title+"\nSource: "+sourceUrl+"\n\nPlease verify the recipe, source attribution, and content permissions first."))return;
    const out=await api<CreateResponse>("/admin/recipes",{method:"POST",body:JSON.stringify({
     title:title.trim(),description:description.trim(),prep_minutes:prepMinutes,cook_minutes:cookMinutes,servings:servingCount,
     ingredients:ingredientList,instructions:stepList,dietary_tags:tags.trim(),
-    source_name:publisher.trim(),source_url:url.toString(),language,approval_status:publication
+    source_name:publisher.trim(),source_url:url.toString(),image_url:imageUrl.trim(),image_license:imageLicense.trim(),language,approval_status:publication
    })});
    await refresh();
-   setFeedback(out.status==="approved"?"Recipe saved to Google Sheets and published to the iOS Food tab. No push was sent.":"Recipe saved to Google Sheets as pending. Only approved recipes show in the app.");
-   setTitle("");setDescription("");setIngredients("");setInstructions("");setPublisher("");setSourceUrl("");setTags("");
+   setFeedback(out.status==="approved"?"Recipe published to the active API recipe store and available to the iOS Food tab. No push was sent.":"Recipe saved as a draft in the active API recipe store. Only published recipes show in the app.");
+   setTitle("");setDescription("");setIngredients("");setInstructions("");setPublisher("");setSourceUrl("");setTags("");setImageUrl("");setImageLicense("");setImageReady(false);setImageError(false);
   }catch(err){setFeedback(err instanceof Error?err.message:"Unable to save recipe")}finally{setBusy(false)}
  };
  return <div style={{display:"grid",gap:20}}>
   <div className="panel form-panel">
    <h2>Food & Recipe Manager</h2>
-   <p className="description">Save to the existing RECIPES tab. Choose Draft (pending) or Publish to the iOS Food screen. Recipe alerts are a separate feature and are not triggered by this form.</p>
+   <p className="description">Save through the API recipe store (Supabase when configured). Choose Draft (pending) or Publish to the iOS Food screen. Recipe alerts are a separate feature and are not triggered by this form.</p>
    {feedback&&<p role="status" className="notice">{feedback}</p>}
    <form onSubmit={save}>
     <label>Recipe title<input required maxLength={200} minLength={3} value={title} onChange={e=>setTitle(e.target.value)} placeholder="Easy lemon and chickpea bowl"/></label>
@@ -68,10 +100,33 @@ export function RecipeManager({api}:{api:Api}){
     <label>Dietary tags (optional)<input maxLength={200} value={tags} onChange={e=>setTags(e.target.value)} placeholder="vegetarian, easy, budget"/></label>
     <label>Original recipe publisher<input required minLength={2} maxLength={150} value={publisher} onChange={e=>setPublisher(e.target.value)} placeholder="Budget Bytes"/></label>
     <label>Original recipe URL<input required type="url" pattern="https://.*" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)} placeholder="https://example.com/recipe-name"/></label>
+    <label>Recipe image URL (required)<input required type="url" pattern="https://.*" value={imageUrl} onChange={e=>{setImageUrl(e.target.value);setImageReady(false);setImageError(false)}} placeholder="https://licensed-photo.example/recipe.jpg"/></label>
+    {/^https:\/\/[^\s]+$/i.test(imageUrl.trim())?<div style={{marginBottom:14}}><img key={imageUrl} src={imageUrl.trim()} alt="Recipe photograph preview" onLoad={()=>{setImageReady(true);setImageError(false)}} onError={()=>{setImageReady(false);setImageError(true)}} style={{width:"100%",maxWidth:320,height:190,objectFit:"cover",borderRadius:16,border:"1px solid #E5D1C9"}}/>{imageError?<p role="alert" style={{color:"#A9534D"}}>Image failed to load. Use a different licensed HTTPS image URL.</p>:imageReady?<p className="hint">✓ Image loaded. Confirm you own or have permission to display this photograph.</p>:<p className="hint">Checking image...</p>}</div>:null}
+    <label>Photo license / permission (required)<input required value={imageLicense} onChange={e=>setImageLicense(e.target.value)} placeholder="Owned image / photographer permission / verified license"/></label>
     <label>Publication status<select value={publication} onChange={e=>setPublication(e.target.value as "pending"|"approved")}><option value="pending">Save as draft (not visible in app)</option><option value="approved">Publish to iOS Food tab now</option></select></label>
-    <div className="notice">Use your own factual description and recipe instructions or properly licensed material. Keep original-source attribution. This first version does not import copyrighted text or photographs automatically.</div>
-    <button className="primary" type="submit" disabled={busy||!title.trim()||!ingredients.trim()||!instructions.trim()||!sourceUrl.trim()||!publisher.trim()}>{busy?"Saving…":publication==="approved"?"Publish recipe to app →":"Save recipe draft →"}</button>
+    <div className="notice">Full ingredients and full cooking directions stay inside the app. Every recipe requires an HTTPS photograph URL and documented rights to display the image and instructions.</div>
+    <button className="primary" type="submit" disabled={busy||!title.trim()||!ingredients.trim()||!instructions.trim()||!sourceUrl.trim()||!publisher.trim()||!imageUrl.trim()||!imageReady||!imageLicense.trim()}>{busy?"Saving…":publication==="approved"?"Publish recipe to app →":"Save recipe draft →"}</button>
    </form>
+  </div>
+  <div className="panel form-panel">
+   <h2>☀️ Ollama Recipe Autopilot — discover 5 recipes</h2>
+   <p className="description">Choose a cuisine to preview real dishes and source photos. Your local Ollama worker automatically scores recipes and rejects incomplete ones—there is no manual editorial queue. This button previews external source candidates; it does not start your Windows Ollama scheduler. Public publishing remains gated by the recipe provider’s licensing terms.</p>
+   <div className="two">
+    <label>Country or cuisine<select value={discoveryCountry} onChange={e=>{setDiscoveryCountry(e.target.value);setCandidates([])}}>
+     {cuisines.map(c=><option key={c} value={c}>{c}</option>)}
+    </select></label>
+    <div style={{alignSelf:"end"}}><button type="button" className="primary" disabled={discoveryBusy} onClick={()=>void discover()}>{discoveryBusy?"Finding recipes…":"Discover 5 today →"}</button></div>
+   </div>
+   {discoveryMessage?<p className="notice" role="status">{discoveryMessage}</p>:null}
+   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(155px,1fr))",gap:14,marginTop:15}}>
+    {candidates.map(m=><article key={m.idMeal} className="source-preview" style={{overflow:"hidden"}}>
+     {m.strMealThumb?<img alt={m.strMeal} loading="lazy" src={m.strMealThumb} style={{width:"100%",height:128,objectFit:"cover",borderRadius:14}}/>:null}
+     <strong>{m.strMeal}</strong><p className="hint">{m.strArea} · {m.strCategory}</p>
+     <a href={"https://www.themealdb.com/meal/"+m.idMeal} target="_blank" rel="noopener noreferrer">Original source ↗</a>
+    </article>)}
+   </div>
+   <p className="notice" style={{marginTop:14}}>Automatic Ollama quality threshold: 85/100. Accepted recipes are saved by the local worker; source/image rights are checked separately before public publishing. To run automatically each day, configure the local recipe worker schedule.</p>
+   <p className="hint" style={{marginTop:13}}>This is a development-only preview of TheMealDB. Ollama decides editorial quality automatically. A supporter subscription and verified image rights are required before public App Store distribution.</p>
   </div>
   <div className="panel form-panel">
    <h2>Published recipes</h2><p className="description">{existing.length} recipes currently available to the iPhone Food section.</p>

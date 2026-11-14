@@ -1,0 +1,16 @@
+{
+  "name": "The Good Side — Positive News",
+  "short_name": "Good Side",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff9f7",
+  "theme_color": "#f5d9d7",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
