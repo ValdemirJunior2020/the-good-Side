@@ -9,24 +9,28 @@ import {Background,Brand,Pill,Surface,GoodSideLoader,MenuButton,styles} from "..
 import SunriseBackdrop from "../src/SunriseBackdrop";
 import {getPublicSettings} from "../src/remoteConfig";
 import {colors,categories} from "../src/theme";
-const newsCacheKey=(category:string)=>"goodside_news_cache_v1_"+(category||"all");
+const newsCacheKey=(category:string,userId:string)=>"goodside_news_cache_v2_"+encodeURIComponent(userId||"public")+"_"+(category||"all");
 export default function Home(){
  const [liveWelcome,setLiveWelcome]=useState("Real stories. Brighter perspectives."),[feedEnabled,setFeedEnabled]=useState(true);
  const [loading,setLoading]=useState(true),[feedLoading,setFeedLoading]=useState(true),[refreshing,setRefreshing]=useState(false),[news,setNews]=useState<News[]>([]),[error,setError]=useState(""),[logged,setLogged]=useState(false),[category,setCategory]=useState("");
  const load=async(c=category)=>{
   setFeedLoading(true);setError("");
-  const cacheKey=newsCacheKey(c);
+  // An authenticated reader sees only their selected topics in the default feed.
+  // Caches are per account to avoid mixing two readers' interests on one phone.
+  const user=auth.currentUser;
+  const personalized=Boolean(user&&!c);
+  const cacheKey=newsCacheKey(c,user?.email||"public");
   try{
    const cached=await AsyncStorage.getItem(cacheKey);
    if(cached){const rows=JSON.parse(cached) as News[];if(Array.isArray(rows))setNews(rows)}
   }catch{}
   try{
-   const result=await api<{items:News[]}>("/news?limit=30"+(c?"&category="+encodeURIComponent(c):""));
+   const result=await api<{items:News[]}>(personalized?"/me/news?limit=30":"/news?limit=30"+(c?"&category="+encodeURIComponent(c):""),{},personalized);
    const fresh=(result.items||[]).filter((item,i,all)=>Boolean(item.news_id)&&all.findIndex(other=>other.news_id===item.news_id)===i);
    setNews(fresh);void AsyncStorage.setItem(cacheKey,JSON.stringify(fresh.slice(0,30))).catch(()=>{});
   }catch(e){setError("Cannot refresh news right now. Previously downloaded stories may still be available.")}finally{setFeedLoading(false)}
  };
- useEffect(()=>{const unsub=auth.subscribe(user=>{setLogged(Boolean(user));setLoading(false)});void auth.restore();load();getPublicSettings().then(s=>{if(s.welcome_message)setLiveWelcome(s.welcome_message);if(s.news_feed_enabled)setFeedEnabled(s.news_feed_enabled!=="false")}).catch(()=>{});return unsub},[]);
+ useEffect(()=>{const unsub=auth.subscribe(user=>{setLogged(Boolean(user));setLoading(false);void load("")});void auth.restore();getPublicSettings().then(s=>{if(s.welcome_message)setLiveWelcome(s.welcome_message);if(s.news_feed_enabled)setFeedEnabled(s.news_feed_enabled!=="false")}).catch(()=>{});return unsub},[]);
  const refresh=async()=>{setRefreshing(true);await load();setRefreshing(false)};
  return <Background><SunriseBackdrop/><ScrollView contentContainerStyle={{padding:20,paddingTop:80,paddingBottom:185,width:"100%",maxWidth:540,alignSelf:"center"}} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh}/>}>
   <View style={{alignItems:"flex-start"}}><Brand small/></View><View style={{alignItems:"flex-end",marginTop:36,marginBottom:10}}><MenuButton/></View>{!logged?<View style={{flexDirection:"row",gap:9,marginTop:15}}><TouchableOpacity accessibilityRole="button" onPress={()=>router.push("/auth")} style={{flex:1,paddingVertical:12,borderRadius:30,alignItems:"center",backgroundColor:"rgba(255,255,255,.55)",borderColor:"rgba(255,255,255,.98)",borderWidth:1.5}}><Text style={{fontWeight:"800",color:colors.ink}}>Log in</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" onPress={()=>router.push("/auth")} style={{flex:1,paddingVertical:12,borderRadius:30,alignItems:"center",backgroundColor:"rgba(255,208,162,.68)",borderColor:"rgba(255,255,255,.98)",borderWidth:1.5}}><Text style={{fontWeight:"800",color:colors.ink}}>Create free account</Text></TouchableOpacity></View>:<TouchableOpacity accessibilityRole="button" onPress={()=>router.push("/profile")} style={{alignSelf:"flex-start",marginTop:12,padding:12,borderRadius:28,backgroundColor:"rgba(255,255,255,.55)",borderWidth:1.5,borderColor:"#fff"}}><Text style={{fontWeight:"800",color:colors.ink}}>My profile →</Text></TouchableOpacity>}
