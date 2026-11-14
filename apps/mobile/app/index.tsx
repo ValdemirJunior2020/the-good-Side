@@ -1,8 +1,8 @@
-import React,{useEffect,useState} from "react";
+import React,{useCallback,useEffect,useState} from "react";
 import {ScrollView,View,Text,TouchableOpacity,RefreshControl,StyleSheet,Linking} from "react-native";
 import {LinearGradient} from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {router} from "expo-router";
+import {router,useFocusEffect} from "expo-router";
 
 import {api,auth,type News} from "../src/client";
 import {Background,Brand,Pill,Surface,GoodSideLoader,MenuButton,styles} from "../src/components";
@@ -73,6 +73,7 @@ export default function Home(){
  };
  useEffect(()=>{const unsub=auth.subscribe(user=>{setLogged(Boolean(user));setLoading(false);void load("");void discover()});void auth.restore();getPublicSettings().then(s=>{if(s.welcome_message)setLiveWelcome(s.welcome_message);if(s.news_feed_enabled)setFeedEnabled(s.news_feed_enabled!=="false")}).catch(()=>{});return unsub},[]);
  const refresh=async()=>{setRefreshing(true);await Promise.all([load(),discover()]);setRefreshing(false)};
+ useFocusEffect(useCallback(()=>{if(auth.currentUser){void load("");void discover()}},[]));
  return <Background><SunriseBackdrop/><ScrollView contentContainerStyle={{padding:20,paddingTop:80,paddingBottom:185,width:"100%",maxWidth:540,alignSelf:"center"}} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh}/>}>
   <View style={{alignItems:"flex-start"}}><Brand small/></View><View style={{alignItems:"flex-end",marginTop:36,marginBottom:10}}><MenuButton/></View>{!logged?<View style={{flexDirection:"row",gap:9,marginTop:15}}><TouchableOpacity accessibilityRole="button" onPress={()=>router.push("/auth")} style={{flex:1,paddingVertical:12,borderRadius:30,alignItems:"center",backgroundColor:"rgba(255,255,255,.55)",borderColor:"rgba(255,255,255,.98)",borderWidth:1.5}}><Text style={{fontWeight:"800",color:colors.ink}}>Log in</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" onPress={()=>router.push("/auth")} style={{flex:1,paddingVertical:12,borderRadius:30,alignItems:"center",backgroundColor:"rgba(255,208,162,.68)",borderColor:"rgba(255,255,255,.98)",borderWidth:1.5}}><Text style={{fontWeight:"800",color:colors.ink}}>Create free account</Text></TouchableOpacity></View>:<TouchableOpacity accessibilityRole="button" onPress={()=>router.push("/profile")} style={{alignSelf:"flex-start",marginTop:12,padding:12,borderRadius:28,backgroundColor:"rgba(255,255,255,.55)",borderWidth:1.5,borderColor:"#fff"}}><Text style={{fontWeight:"800",color:colors.ink}}>My profile →</Text></TouchableOpacity>}
   <Text style={[styles.title,{marginTop:33,fontSize:34,lineHeight:41}]}>There's good in{"\n"}the world. <Text style={{color:colors.orange}}>Find it.</Text></Text>
