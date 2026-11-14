@@ -10,7 +10,7 @@ import {createCipheriv,createDecipheriv,randomBytes,createHash,timingSafeEqual} 
 import {z} from "zod";
 import {supabaseRecipeAction} from "./recipe-store.js";
 import {recordPushTicket,pollPushReceipts} from "./push-delivery.js";
-import {chooseDigest,localClock,isValidTimezone} from "./schedule.js";
+import {chooseDigest,canonicalCategory,localClock,isValidTimezone} from "./schedule.js";
 import {isOn,scheduleDecision,deliveryKey,nextDigestAt} from "./notification-policy.js";
 
 // Local npm-workspace dev runs can inherit stale root-level env vars.
@@ -172,7 +172,7 @@ app.get("/me/news",asyncRoute(async(req,res)=>{
  const interests=new Set(selected.map(x=>x.toLowerCase()));
  const all=await sheet("listNews",{limit:50,page:1});
  const approved=(all?.items||[]) as Array<{news_id:string;category:string;source_published_at:string}>;
- const filtered=interests.size?approved.filter(item=>interests.has(String(item.category||"").toLowerCase())):approved;
+ const filtered=interests.size?approved.filter(item=>interests.has(canonicalCategory(item.category))):approved;
  const requested=z.coerce.number().int().min(1).max(50).default(30).parse(req.query.limit);
  send(res,{items:filtered.slice(0,requested),selected_categories:selected,personalized:interests.size>0,matched:filtered.length});
 }));
