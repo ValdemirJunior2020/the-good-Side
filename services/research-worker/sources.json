@@ -6,6 +6,30 @@
     "status": "approved"
   },
   {
+    "publisher": "NOAA",
+    "feed": "https://www.noaa.gov/rss.xml",
+    "category": "environment",
+    "status": "approved"
+  },
+  {
+    "publisher": "USGS",
+    "feed": "https://www.usgs.gov/news/national-news-release/feed",
+    "category": "nature",
+    "status": "approved"
+  },
+  {
+    "publisher": "NIH",
+    "feed": "https://www.nih.gov/news-releases/feed.xml",
+    "category": "health",
+    "status": "approved"
+  },
+  {
+    "publisher": "USDA ARS",
+    "feed": "https://www.ars.usda.gov/rss/news/",
+    "category": "food",
+    "status": "review_feed"
+  },
+  {
     "publisher": "Positive News",
     "feed": "https://www.positive.news/feed/",
     "category": "world-progress",
