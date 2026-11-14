@@ -83,7 +83,7 @@ export default function Home(){
   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom:18}}>{[["All",""],...categories.map(c=>[c[0],c[1]])].filter((c,i,all)=>all.findIndex(x=>x[1]===c[1])===i).map(c=><TouchableOpacity key={c[1]} onPress={()=>{setCategory(c[1]);load(c[1]);}} style={{marginRight:8,paddingHorizontal:15,paddingVertical:11,borderRadius:30,backgroundColor:category===c[1]?"rgba(223,147,79,.92)":"rgba(255,255,255,.62)",borderColor:"rgba(255,255,255,.95)",borderWidth:1}}><Text style={{color:category===c[1]?"#fff":colors.ink,fontWeight:"600"}}>{c[0]}</Text></TouchableOpacity>)}</ScrollView>
   {feedLoading?<GoodSideLoader label="Finding today’s good news…"/>:null}
   {error?<Surface><Text style={styles.subtitle}>{error}</Text><Pill title="Try again" onPress={refresh}/></Surface>:null}
-  {!news.length&&!feedLoading&&!error?<Surface><Text style={styles.subtitle}>No approved stories yet. Every article is checked before publication.</Text></Surface>:null}
+  {!news.length&&!feedLoading&&!error?<Surface><Text style={styles.subtitle}>{logged&&interests.length?"No approved stories in your chosen topics yet. Browse the external discoveries below or update your interests.":"No approved stories yet. Every article is checked before publication."}</Text></Surface>:null}
   {feedEnabled?news.map((item,index)=><TouchableOpacity key={item.news_id+"-"+index} onPress={()=>router.push({pathname:"/article/[id]",params:{id:item.news_id}} as any)}><Surface style={{marginBottom:15,minHeight:150}}><Text style={{color:colors.orange,fontWeight:"700",fontSize:12,textTransform:"uppercase"}}>{item.category||"Good news"}</Text><Text style={{color:colors.ink,fontSize:20,fontWeight:"700",marginTop:8,lineHeight:27}}>{item.title}</Text><Text numberOfLines={3} style={[styles.subtitle,{marginTop:8}]}>{item.summary}</Text><Text style={[styles.muted,{marginTop:14}]}>{item.publisher} · {item.source_published_at?new Date(item.source_published_at).toLocaleDateString():""}</Text></Surface></TouchableOpacity>):<Surface><Text style={styles.subtitle}>The Good Side news feed is temporarily paused. Check back later.</Text></Surface>}
   {logged&&interests.length>0&&discoveries.length>0?<View style={{marginTop:20,marginBottom:8}}>
    <Text style={[styles.label,{fontSize:21,marginBottom:7}]}>🔎 From your interests</Text>
@@ -91,7 +91,7 @@ export default function Home(){
    {discoveries.map((item,i)=><TouchableOpacity key={item.url+"-"+i} onPress={()=>void Linking.openURL(item.url)} accessibilityRole="link"><Surface style={{marginBottom:11,padding:15}}>
     <Text style={{color:colors.orange,fontWeight:"800",fontSize:12}}>{categories.find(c=>c[1]===item.interest)?.[0]||item.interest} · External news</Text>
     <Text style={{fontSize:16,fontWeight:"700",color:colors.ink,marginTop:7}}>{item.title}</Text>
-    <Text style={[styles.muted,{marginTop:8}]}>{item.publisher} · Open publisher ↗</Text>
+    <Text style={[styles.muted,{marginTop:8}]}>{item.publisher} · Open external article ↗</Text>
    </Surface></TouchableOpacity>)}
   </View>:null}
   <View style={{marginTop:14}}><Pill title="♡ Saved stories" secondary onPress={()=>router.push((logged?"/saved":"/auth") as any)}/></View>
