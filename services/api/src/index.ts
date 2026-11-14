@@ -386,15 +386,16 @@ async function digestTick(){
     if(!decision.due)continue;
     const devices=await sheet("listDevices",{user_id:user.user_id});
     if(!devices?.length)continue;
-    const news=await sheet("listNews",{limit:50,page:1});
+    const news=await sheet("listNews",{limit:100,page:1});
     const seen=await sheet("digestSeen",{user_id:user.user_id,date:decision.date});
     const already=new Set<string>(seen?.news_ids||[]);
     const selected=selectedNewsInterests(user.selected_categories);
     const foodEnabled=isOn(user.food_notifications_enabled);
-    // Recipes share the user's existing delivery slots, never creating an extra alert.
+    // Recipes share configured slots; they must not crowd out good news.
+    // Single slot: news (recipe fallback). Two slots: news, food.
+    // Three slots: news, food, news. A news slot without matching
+    // fresh news is skipped, never replaced by another recipe.
     // Food is stored in Supabase, not the legacy Sheets recipe table.
-    // Keep good news as the first daily notification; when opted into 2+ slots,
-    // use later slots for a recipe. On quiet news days, a recipe is a fallback.
     const recipePool=foodEnabled?await recipeStore("listRecipes"):[];
     const recipe=Array.isArray(recipePool)
       ?recipePool.find((r:any)=>r?.approval_status==="approved"&&!already.has("recipe:"+r.recipe_id)):null;
@@ -402,8 +403,9 @@ async function digestTick(){
     const userTimes=String(user.notification_times||"");
     let parsedTimes:string[]=[];
     try{const v=JSON.parse(userTimes);if(Array.isArray(v))parsedTimes=v.filter(x=>typeof x==="string").sort()}catch{}
-    const laterSlot=parsedTimes.length>1&&decision.time!==parsedTimes[0];
-    const chooseFood=Boolean(foodEnabled&&recipe&&(!article||laterSlot));
+    const slotIndex=parsedTimes.indexOf(decision.time);
+    const recipeSlot=parsedTimes.length>1&&slotIndex===1;
+    const chooseFood=Boolean(foodEnabled&&recipe&&(recipeSlot||(!article&&parsedTimes.length===1)));
     const chosen=chooseFood
       ?{news_id:"recipe:"+recipe.recipe_id,title:recipe.title,original_url:recipe.source_url}
       :article;
