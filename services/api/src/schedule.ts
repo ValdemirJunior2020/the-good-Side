@@ -1,8 +1,10 @@
 export type DigestCandidate = {news_id:string; title:string; category:string; approval_status:string; confidence_score:string; source_published_at:string};
 export function chooseDigest(articles:DigestCandidate[], interests:string[], previouslySent:Set<string>) {
   const approved=articles.filter(a=>a.approval_status==="approved" && !previouslySent.has(a.news_id));
-  const matching=approved.filter(a=>interests.includes(a.category));
-  const pool=matching.length?matching:approved;
+  // Respect explicit interests: never substitute unrelated news just to fill a slot.
+  // No selected topics means the reader has opted into the general digest.
+  const normalized=new Set(interests.map(v=>v.trim().toLowerCase()).filter(Boolean));
+  const pool=normalized.size?approved.filter(a=>normalized.has(String(a.category||"").toLowerCase())):approved;
   return [...pool].sort((a,b)=>Number(b.confidence_score||0)-Number(a.confidence_score||0)||Date.parse(b.source_published_at||"0")-Date.parse(a.source_published_at||"0"))[0]||null;
 }
 export function localClock(instant:Date,tz:string) {
