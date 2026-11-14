@@ -14,23 +14,52 @@ async function storeSession(session:Session|null){
  else if(session)await SecureStore.setItemAsync(KEY,JSON.stringify(session));
  else await SecureStore.deleteItemAsync(KEY);
 }
-async function renewSession(){
- if(!current||current.provider!=="email"&&current.provider!=="apple"||!current.refreshToken)return current?.token||null;
- if(current.expiresAt&&Date.now()<current.expiresAt-60_000)return current.token;
- const data=await emailAuth.refresh(current.refreshToken);
- if(!data.access_token||!data.refresh_token)throw Error("Email session expired. Please sign in again.");
- current={...current,token:data.access_token,refreshToken:data.refresh_token,expiresAt:Date.now()+(data.expires_in||3600)*1000};
- await storeSession(current);emit();return current.token;
+let refreshing:Promise<string|null>|null=null;
+function refreshInvalid(error:unknown){
+ const msg=error instanceof Error?error.message.toLowerCase():"";
+ return /invalid refresh token|refresh token not found|refresh_token_not_found|refresh token already used|session not found|invalid_grant/.test(msg);
+}
+// Deduplicate concurrent refreshes: rotating a refresh token more than once can invalidate the session.
+async function renewSession(force=false):Promise<string|null>{
+ if(!current)return null;
+ if(current.provider!=="email"&&current.provider!=="apple")return current.token;
+ if(!current.refreshToken)return current.token;
+ if(!force&&current.expiresAt&&Date.now()<current.expiresAt-90_000)return current.token;
+ if(refreshing)return refreshing;
+ refreshing=(async()=>{
+  const old=current;
+  if(!old?.refreshToken)return null;
+  try{
+   const data=await emailAuth.refresh(old.refreshToken);
+   if(!data.access_token||!data.refresh_token)throw Error("Could not refresh your account.");
+   // Do not overwrite a session if the user signed out or switched accounts while the request was in flight.
+   if(current!==old)return current?.token||null;
+   current={...old,token:data.access_token,refreshToken:data.refresh_token,expiresAt:Date.now()+(data.expires_in||3600)*1000};
+   await storeSession(current);
+   // Refreshing credentials is not a profile change: avoid reloading in-progress preference edits.
+   return current.token;
+  }catch(error){
+   // An offline device or temporary auth-server error is NOT a reason to delete stored credentials.
+   if(refreshInvalid(error))throw Error("Please sign in again to reconnect your account.");
+   throw Error("Couldn't connect to your account. Check your connection and retry.");
+  }
+ })();
+ try{return await refreshing}finally{refreshing=null}
 }
 export const auth={
  get currentUser(){return current},
  subscribe(fn:(s:Session|null)=>void){listeners.add(fn);fn(current);return()=>{listeners.delete(fn)}},
  async restore(){
   if(loaded)return;loaded=true;
-  try{const value=Platform.OS==="web"?await AsyncStorage.getItem(KEY):await SecureStore.getItemAsync(KEY);
+  try{
+   const value=Platform.OS==="web"?await AsyncStorage.getItem(KEY):await SecureStore.getItemAsync(KEY);
    if(value)current=JSON.parse(value) as Session;
-   if(current?.provider==="email"||current?.provider==="apple")await renewSession();
-  }catch{current=null;await storeSession(null).catch(()=>{})}emit()
+  }catch{
+   // Storage read failed: don't delete credentials or silently sign the user out.
+  }
+  emit();
+  // Refresh independently so a temporarily unreachable auth server doesn't erase the session.
+  if(current?.provider==="email"||current?.provider==="apple")void renewSession().catch(()=>{});
  },
  async signIn(token:string,user:{email:string;displayName:string}){
   current={token,email:user.email,displayName:user.displayName,provider:"google"};await storeSession(current);emit()
@@ -47,16 +76,34 @@ export const auth={
    email:data.user?.email||"",displayName:displayName||data.user?.user_metadata?.display_name||data.user?.user_metadata?.full_name||""};
   await storeSession(current);emit();
  },
- async getFreshToken(){return renewSession()},
+ async getFreshToken(force=false){return renewSession(force)},
  async signOut(){current=null;await storeSession(null);emit()}
 };
 export type News={news_id:string;title:string;summary:string;full_summary:string;category:string;publisher:string;original_url:string;image_url:string;source_published_at:string;country:string;language:string};
 export async function api<T>(path:string,options:RequestInit={},authenticated=false):Promise<T>{
  if(!API_URL)throw Error("Set EXPO_PUBLIC_API_URL to the HTTPS Node API gateway. Do not use Apps Script directly.");
- const session=auth.currentUser;if(authenticated&&!session)throw Error("Sign in to continue");
- const token=authenticated?await auth.getFreshToken():null;
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
- try{const result=await fetch(API_URL+path,{...options,headers:{"Content-Type":"application/json",...(authenticated&&session?{Authorization:"Bearer "+token}:{}),...(options.headers||{})},signal:controller.signal});const response=await result.json();if(!result.ok||!response.ok)throw Error(response.error||"Request failed");return response.data as T}finally{clearTimeout(timer)}
+ if(authenticated&&!auth.currentUser)throw Error("Sign in to continue");
+ const request=async(token:string|null):Promise<{status:number;body:any}>=>{
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+  try{
+   const result=await fetch(API_URL+path,{...options,headers:{"Content-Type":"application/json",...(authenticated&&token?{Authorization:"Bearer "+token}:{}),...(options.headers||{})},signal:controller.signal});
+   return {status:result.status,body:await result.json()};
+  }finally{clearTimeout(timer)}
+ };
+ const first=await request(authenticated?await auth.getFreshToken():null);
+ if(first.status!==401||!authenticated){
+  if(first.status>=400||!first.body.ok)throw Error(first.body.error||"Request failed");
+  return first.body.data as T;
+ }
+ // If the access token expired between checks, refresh and retry exactly once.
+ if(auth.currentUser?.provider==="email"||auth.currentUser?.provider==="apple"){
+  const fresh=await auth.getFreshToken(true);
+  const retry=await request(fresh);
+  if(retry.status>=400||!retry.body.ok)throw Error(retry.body.error||"Couldn't save your settings. Please retry.");
+  return retry.body.data as T;
+ }
+ // Google OAuth ID tokens cannot be silently renewed by this authentication flow.
+ throw Error("Please reconnect your Google account to save changes.");
 }
 export const json=(value:unknown)=>({method:"POST",body:JSON.stringify(value)});
 export const put=(value:unknown)=>({method:"PUT",body:JSON.stringify(value)});
