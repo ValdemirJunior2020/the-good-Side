@@ -22,7 +22,18 @@ export default function RecipeDetail(){
    void getMealDetails(String(id)).then(v=>{if(!alive)return;setR({...v,recipe_id:v.id,dietary_tags:"Development preview",image_license:"Provider-managed development preview"});}).catch(e=>{if(alive)setError(String(e))});
    void AsyncStorage.getItem(SAVED_DEMOS).then(v=>{if(alive)setSaved(Boolean(v&&JSON.parse(v).includes(id)))}).catch(()=>{});
   }else{
-   void api<Recipe>("/recipes/"+encodeURIComponent(String(id))).then(v=>{if(!alive)return;if(!v||!/^https:\/\/[^\s]+$/i.test(v.image_url)||!parsed(v.ingredients).length||!parsed(v.instructions).length){setError("This recipe is missing its photo or complete instructions and cannot be displayed.");return}setR(v)}).catch(e=>{if(alive)setError(String(e))});
+   // Keep complete, previously opened recipes on the reader's own device.
+   const cacheKey="goodside_full_recipe_v1_"+String(id);
+   const valid=(v:Recipe)=>Boolean(v&&/^https:\/\/[^\s]+$/i.test(v.image_url)&&parsed(v.ingredients).length&&parsed(v.instructions).length);
+   void (async()=>{
+    try{const cached=await AsyncStorage.getItem(cacheKey);if(cached){const row=JSON.parse(cached) as Recipe;if(alive&&valid(row))setR(row)}}catch{}
+    try{
+     const fresh=await api<Recipe>("/recipes/"+encodeURIComponent(String(id)));
+     if(!valid(fresh)){if(alive)setError("This recipe is missing its photo or complete instructions and cannot be displayed.");return}
+     if(alive){setR(fresh);setError("")}
+     await AsyncStorage.setItem(cacheKey,JSON.stringify(fresh));
+    }catch{if(alive)setError("Could not refresh this recipe. A previously opened copy may still be available offline.")}
+   })();
    if(auth.currentUser)void api<Recipe[]>("/me/recipes",{},true).then(items=>{if(alive)setSaved(items.some(x=>x.recipe_id===id))}).catch(()=>{});
   }
   return ()=>{alive=false};
