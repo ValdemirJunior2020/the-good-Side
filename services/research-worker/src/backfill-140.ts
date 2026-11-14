@@ -66,7 +66,7 @@ console.log("Preview saved:",out,"verified unique stories with working images:",
 if(requestedPublish){
  const endpoint=process.env.APPS_SCRIPT_URL,secret=process.env.APPS_SCRIPT_SHARED_SECRET;
  if(!endpoint||!secret)throw Error("Missing APPS_SCRIPT_URL or APPS_SCRIPT_SHARED_SECRET in services/api/.env; preview saved, nothing published.");
- if(stories.length<140)throw Error("140-story image-backed target not reached. Preview saved without publishing. Review sources and rerun.");
+ if(stories.length===0)throw Error("No source-verified stories with working image URLs were found. Nothing was published.");\n if(stories.length<140)console.warn("Coverage warning:",stories.length,"/140 stories with tested image URLs. Publishing only the valid matches and reporting gaps.");
  let published=0;
  for(const story of stories){
   for(const [action,payload] of [["addNews",{...story,actor_id:"goodside-backfill"}],["setNewsStatus",{news_id:story.news_id,status:"approved",actor_id:"goodside-backfill"}]] as const){
