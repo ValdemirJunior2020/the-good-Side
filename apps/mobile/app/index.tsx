@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from "react";
 import {ScrollView,View,Text,TouchableOpacity,RefreshControl,StyleSheet} from "react-native";
 import {LinearGradient} from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {router} from "expo-router";
 
 import {api,auth,type News} from "../src/client";
@@ -8,10 +9,23 @@ import {Background,Brand,Pill,Surface,GoodSideLoader,MenuButton,styles} from "..
 import SunriseBackdrop from "../src/SunriseBackdrop";
 import {getPublicSettings} from "../src/remoteConfig";
 import {colors,categories} from "../src/theme";
+const newsCacheKey=(category:string)=>"goodside_news_cache_v1_"+(category||"all");
 export default function Home(){
  const [liveWelcome,setLiveWelcome]=useState("Real stories. Brighter perspectives."),[feedEnabled,setFeedEnabled]=useState(true);
  const [loading,setLoading]=useState(true),[feedLoading,setFeedLoading]=useState(true),[refreshing,setRefreshing]=useState(false),[news,setNews]=useState<News[]>([]),[error,setError]=useState(""),[logged,setLogged]=useState(false),[category,setCategory]=useState("");
- const load=async(c=category)=>{setFeedLoading(true);try{setError("");const result=await api<{items:News[]}>("/news?limit=30"+(c?"&category="+encodeURIComponent(c):""));setNews((result.items||[]).filter((item,i,all)=>Boolean(item.news_id)&&all.findIndex(other=>other.news_id===item.news_id)===i))}catch(e){setError(e instanceof Error?e.message:"Connection error")}finally{setFeedLoading(false)}};
+ const load=async(c=category)=>{
+  setFeedLoading(true);setError("");
+  const cacheKey=newsCacheKey(c);
+  try{
+   const cached=await AsyncStorage.getItem(cacheKey);
+   if(cached){const rows=JSON.parse(cached) as News[];if(Array.isArray(rows))setNews(rows)}
+  }catch{}
+  try{
+   const result=await api<{items:News[]}>("/news?limit=30"+(c?"&category="+encodeURIComponent(c):""));
+   const fresh=(result.items||[]).filter((item,i,all)=>Boolean(item.news_id)&&all.findIndex(other=>other.news_id===item.news_id)===i);
+   setNews(fresh);void AsyncStorage.setItem(cacheKey,JSON.stringify(fresh.slice(0,30))).catch(()=>{});
+  }catch(e){setError("Cannot refresh news right now. Previously downloaded stories may still be available.")}finally{setFeedLoading(false)}
+ };
  useEffect(()=>{const unsub=auth.subscribe(user=>{setLogged(Boolean(user));setLoading(false)});void auth.restore();load();getPublicSettings().then(s=>{if(s.welcome_message)setLiveWelcome(s.welcome_message);if(s.news_feed_enabled)setFeedEnabled(s.news_feed_enabled!=="false")}).catch(()=>{});return unsub},[]);
  const refresh=async()=>{setRefreshing(true);await load();setRefreshing(false)};
  return <Background><SunriseBackdrop/><ScrollView contentContainerStyle={{padding:20,paddingTop:80,paddingBottom:185,width:"100%",maxWidth:540,alignSelf:"center"}} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh}/>}>
