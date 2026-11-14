@@ -22,6 +22,35 @@ const loadNotifications=():typeof import("expo-notifications")|null=>
 const enabled=(v:unknown)=>v===true||v==="true"||v==="TRUE";
 const parse=<T,>(v:unknown,fallback:T):T=>{if(Array.isArray(v))return v as T;try{return typeof v==="string"?JSON.parse(v) as T:fallback}catch{return fallback}};
 const clock=/^([01]\d|2[0-3]):[0-5]\d$/;
+
+const normalizeTime=(value:unknown):string|null=>{
+ if(typeof value!=="string")return null;
+ const input=value.trim();
+ // Spreadsheet time cells can be serialized with an 1899-12-30 date.
+ const dateTime=input.match(/(?:^|[T\s])([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?(?:\.\d+)?(?:Z|[+-]\d\d:?\d\d)?$/);
+ if(dateTime)return dateTime[1]+":"+dateTime[2];
+ const hhmm=input.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+ if(hhmm)return hhmm[1].padStart(2,"0")+":"+hhmm[2];
+ const ampm=input.match(/^(1[0-2]|0?[1-9]):([0-5]\d)\s*(AM|PM)$/i);
+ if(ampm){const hour=(Number(ampm[1])%12)+(ampm[3].toUpperCase()==="PM"?12:0);return String(hour).padStart(2,"0")+":"+ampm[2]}
+ return null;
+};
+const timeDefaults=["12:00","18:00","09:00"];
+const cleanTimes=(value:unknown,first:unknown,count:number):string[]=>{
+ const raw=parse<unknown>(value,[]);
+ const list=Array.isArray(raw)?raw:typeof raw==="string"?[raw]:[];
+ const chosen:string[]=[];
+ for(let i=0;i<count;i++){
+  const preferred=normalizeTime(list[i])||(i===0?normalizeTime(first):null)||timeDefaults[i]||"12:00";
+  let candidate=preferred;
+  if(chosen.includes(candidate)){
+   const [h,m]=candidate.split(":").map(Number);
+   for(let offset=1;offset<24;offset++){const alternative=String((h+offset)%24).padStart(2,"0")+":"+String(m).padStart(2,"0");if(!chosen.includes(alternative)){candidate=alternative;break}}
+  }
+  chosen.push(candidate);
+ }
+ return chosen;
+};
 const freq:[string,Frequency][]=[["Once daily","daily"],["Twice daily","twice_daily"],["Three times daily","three_daily"],["Selected weekdays","selected_weekdays"]];
 const weekdays=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const initial:Pref={selected_categories:"",notification_enabled:true,daily_digest_enabled:true,notification_local_time:"12:00",content_language:"en",notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/New_York",notification_frequency:"daily",notification_times:["12:00"],notification_weekdays:[],quiet_hours_start:"",quiet_hours_end:"",weekend_enabled:true,food_notifications_enabled:false,breaking_alerts_enabled:true,notification_sound_enabled:true};
@@ -29,10 +58,10 @@ export default function Preferences(){
  const [editingTime,setEditingTime]=useState<number|null>(null);
  const[p,setP]=useState<Pref>(initial),[busy,setBusy]=useState(false),[error,setError]=useState(""),[preview,setPreview]=useState(""),[signedIn,setSignedIn]=useState(Boolean(auth.currentUser));
  const refreshPreview=()=>api<{next_at:string|null;timezone:string}>("/me/next-notification",{},true).then(v=>setPreview(v.next_at?new Date(v.next_at).toLocaleString(undefined,{timeZone:v.timezone,dateStyle:"medium",timeStyle:"short"})+" ("+v.timezone+")":"No digest currently scheduled")).catch(()=>setPreview("Preview unavailable"));
- useEffect(()=>{const unsubscribe=auth.subscribe(user=>{setSignedIn(Boolean(user));if(!user){setPreview("Sign in to view your notification schedule");return}api<Partial<Pref>>("/me/preferences",{},true).then(v=>setP({...initial,...v,notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||initial.notification_timezone,notification_frequency:v.notification_frequency==="breaking_only"?"daily":v.notification_frequency==="digest_plus_alerts"?"daily":v.notification_frequency||"daily",notification_times:parse(v.notification_times,[v.notification_local_time||"12:00"]),notification_weekdays:parse(v.notification_weekdays,[])})).catch(e=>setError(String(e)));void refreshPreview()});void auth.restore();return unsubscribe},[]);
+ useEffect(()=>{const unsubscribe=auth.subscribe(user=>{setSignedIn(Boolean(user));if(!user){setPreview("Sign in to view your notification schedule");return}api<Partial<Pref>>("/me/preferences",{},true).then(v=>setP({...initial,...v,notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||initial.notification_timezone,notification_frequency:v.notification_frequency==="breaking_only"?"daily":v.notification_frequency==="digest_plus_alerts"?"daily":v.notification_frequency||"daily",notification_times:cleanTimes(v.notification_times,v.notification_local_time,v.notification_frequency==="three_daily"?3:v.notification_frequency==="twice_daily"?2:1),notification_weekdays:parse(v.notification_weekdays,[])})).catch(e=>setError(String(e)));void refreshPreview()});void auth.restore();return unsubscribe},[]);
  const set=(key:keyof Pref,value:any)=>setP(prev=>({...prev,[key]:value}));
  const selected=String(p.selected_categories||"").split(",").filter(Boolean);
- const parsedTimes=parse<string[]>(p.notification_times,["12:00"]);
+ const parsedTimes=cleanTimes(p.notification_times,p.notification_local_time,p.notification_frequency==="three_daily"?3:p.notification_frequency==="twice_daily"?2:1);
  const times=Array.from({length:p.notification_frequency==="three_daily"?3:p.notification_frequency==="twice_daily"?2:1},(_,i)=>parsedTimes[i]||(["12:00","18:00","09:00"][i]));
  const days=parse<number[]>(p.notification_weekdays,[]);
  const slots=p.notification_frequency==="twice_daily"?2:p.notification_frequency==="three_daily"?3:1;
@@ -64,10 +93,10 @@ export default function Preferences(){
  };
  const save=async()=>{
   if(!auth.currentUser)return Alert.alert("Sign in required","Create an account or log in with Google to save preferences.",[{text:"Cancel",style:"cancel"},{text:"Log in / Sign up",onPress:()=>router.push("/auth")}]);
-  const deliveryTimes=times.slice(0,slots).map(v=>v.trim());
+  const deliveryTimes=cleanTimes(times,p.notification_local_time,slots);
   const deviceZone=Intl.DateTimeFormat().resolvedOptions().timeZone||p.notification_timezone||"America/New_York";
   if(!validZone())return Alert.alert("Invalid timezone","Enter an IANA timezone such as America/New_York.");
-  if(deliveryTimes.some(t=>!clock.test(t))||new Set(deliveryTimes).size!==deliveryTimes.length)return Alert.alert("Invalid times","Enter unique delivery times in HH:MM format.");
+  if(deliveryTimes.some(t=>!clock.test(t)))return Alert.alert("Invalid times","Please choose your delivery times again.");
   
   if(p.notification_frequency==="selected_weekdays"&&days.length===0)return Alert.alert("Choose weekdays","Select the days on which you want good news.");
   setBusy(true);
@@ -84,7 +113,7 @@ export default function Preferences(){
    setP(prev=>({...prev,...saved,
     selected_categories:Array.isArray(saved.selected_categories)?saved.selected_categories.join(","):saved.selected_categories??prev.selected_categories,
     notification_enabled:requestedNotifications,
-    notification_times:parse(saved.notification_times,deliveryTimes),
+    notification_times:cleanTimes(saved.notification_times,deliveryTimes[0],slots),
     notification_weekdays:parse(saved.notification_weekdays,days)}));
    void refreshPreview();
    if(requestedNotifications){
