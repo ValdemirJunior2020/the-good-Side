@@ -91,6 +91,16 @@ const prefs=z.object({
  weekend_enabled:z.boolean().optional(),food_notifications_enabled:z.boolean().optional(),
  breaking_alerts_enabled:z.boolean().optional(),notification_sound_enabled:z.boolean().optional(),
  selected_categories:z.array(z.string().min(1).max(80)).max(30).optional(),preferred_countries:z.array(z.string().max(2)).max(30).optional(),notification_enabled:z.boolean().optional(),notification_local_time:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),daily_digest_enabled:z.boolean().optional(),content_language:z.enum(["en","pt","es"]).optional()});
+const selectedNewsInterests=(value:unknown):string[]=>{
+ let raw:unknown=value;
+ if(typeof raw==="string"){
+  const trimmed=raw.trim();
+  if(trimmed.startsWith("["))try{raw=JSON.parse(trimmed)}catch{raw=trimmed.split(",")}
+  else raw=trimmed.split(",");
+ }
+ const names=Array.isArray(raw)?raw:[];
+ return [...new Set(names.map(v=>String(v).trim().toLowerCase()).filter(Boolean))];
+};
 const newsQuery=z.object({category:z.string().max(80).optional(),q:z.string().max(120).optional(),language:z.string().max(5).optional(),country:z.string().max(2).optional(),page:z.coerce.number().int().min(1).max(10000).default(1),limit:z.coerce.number().int().min(1).max(50).default(20)});
 const send=(res:Response,p:unknown)=>res.json({ok:true,data:p});
 app.get("/health",(_req,res)=>res.json({status:"ok"}));
@@ -158,8 +168,7 @@ app.get("/me/preferences",asyncRoute(async(req,res)=>send(res,await sheet("getPr
 // Personalized feed: never replace a reader's selected topics with unrelated articles.
 app.get("/me/news",asyncRoute(async(req,res)=>{
  const pref=await sheet("getPreferences",{user_id:req.uid});
- const raw=pref?.selected_categories;
- const selected=Array.isArray(raw)?raw.map(String):typeof raw==="string"?raw.split(",").map(x=>x.trim()).filter(Boolean):[];
+ const selected=selectedNewsInterests(pref?.selected_categories);
  const interests=new Set(selected.map(x=>x.toLowerCase()));
  const all=await sheet("listNews",{limit:50,page:1});
  const approved=(all?.items||[]) as Array<{news_id:string;category:string;source_published_at:string}>;
@@ -376,7 +385,7 @@ async function digestTick(){
     const news=await sheet("listNews",{limit:50,page:1});
     const seen=await sheet("digestSeen",{user_id:user.user_id,date:decision.date});
     const already=new Set<string>(seen?.news_ids||[]);
-    const selected=String(user.selected_categories||"").split(",").filter(Boolean);
+    const selected=selectedNewsInterests(user.selected_categories);
     const foodEnabled=isOn(user.food_notifications_enabled);
     // Recipes share the user's existing delivery slots, never creating an extra alert.
     // Food is stored in Supabase, not the legacy Sheets recipe table.
