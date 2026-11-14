@@ -195,6 +195,7 @@ export default function Profile(){
    </Section>
    <Section symbol={<Layers3 size={23} color={gold}/>} title="Activity">
     <MenuRow icon={<Bookmark size={22} color={gold}/>} label="Saved Stories" onPress={()=>go(signedIn?"/saved":"/auth")}/>
+    <MenuRow icon={<Bell size={22} color={gold}/>} label="Notification History" onPress={()=>go(signedIn?"/notification-history":"/auth")}/>
     <MenuRow icon={<BookOpen size={22} color={gold}/>} label="Reading History" last onPress={()=>Alert.alert("Reading history","Reading history is not available in this version yet. Your saved stories are available above.")}/>
    </Section>
    <Section symbol={<ShieldCheck size={23} color={gold}/>} title="Data & Security">
