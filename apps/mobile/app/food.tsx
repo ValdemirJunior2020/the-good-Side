@@ -10,7 +10,7 @@ import {CUISINES,getCountryMeals,getStarterMeals,STARTER_GROUPS,type MealPreview
 type Recipe={recipe_id:string;title:string;description:string;prep_minutes:number;cook_minutes:number;servings:number;source_url:string;image_url:string;dietary_tags:string;};
 const SHOW_DEVELOPMENT_MEALS = __DEV__; // TheMealDB free-key preview is never shipped in a production build.
 const hasPhoto=(url:string|undefined)=>typeof url==="string"&&/^https:\/\/[^\s]+$/i.test(url);
-const PICKS="goodside_food_country_picks_v1",CACHE="goodside_starter_meals_v1";
+const PICKS="goodside_food_country_picks_v1",CACHE="goodside_starter_meals_v1",APPROVED_CACHE="goodside_approved_recipe_list_v1";
 const tags=STARTER_GROUPS.map(g=>({name:g.title,key:g.key}));
 function PreviewCard({meal}:{meal:MealPreview}){
  return <Pressable accessibilityRole="button" accessibilityLabel={"Read "+meal.title} onPress={()=>router.push({pathname:"/recipe/[id]",params:{id:meal.id}})} style={({pressed})=>({width:"48.5%",marginBottom:14,opacity:pressed?.78:1})}>
@@ -33,11 +33,18 @@ export default function Food(){
   const [real,good,preview]=await Promise.allSettled([
    api<Recipe[]>("/recipes"),api<{items:News[]}>("/news?category=food&limit=15"),SHOW_DEVELOPMENT_MEALS?getStarterMeals():Promise.resolve([] as MealPreview[])
   ]);
-  if(real.status==="fulfilled")setRecipes(real.value.filter(r=>hasPhoto(r.image_url)));
+  if(real.status==="fulfilled"){
+   const approved=real.value.filter(r=>hasPhoto(r.image_url));
+   setRecipes(approved);
+   void AsyncStorage.setItem(APPROVED_CACHE,JSON.stringify(approved.slice(0,100))).catch(()=>{});
+  }else{
+   const local=await AsyncStorage.getItem(APPROVED_CACHE).catch(()=>null);
+   if(local)try{const approved=JSON.parse(local);if(Array.isArray(approved))setRecipes(approved)}catch{}
+  }
   if(good.status==="fulfilled")setNews(good.value.items||[]);
   if(SHOW_DEVELOPMENT_MEALS && preview.status==="fulfilled"){setStarter(preview.value);void AsyncStorage.setItem(CACHE,JSON.stringify(preview.value)).catch(()=>{})}
   else if(SHOW_DEVELOPMENT_MEALS && preview.status==="rejected")setError("Development recipe previews are temporarily unavailable.");
-  if(real.status==="rejected")setError("Published recipes could not be loaded. Pull down to retry.");
+  if(real.status==="rejected")setError("Cannot refresh recipes. Previously downloaded recipes may still be available.");
   setLoading(false);
  };
  useEffect(()=>{
