@@ -116,7 +116,7 @@ export default function Profile(){
    avatarChangeRef.current++;
    setAvatarId(id);setAvatarImageUrl(selected?.image_url||"");setCustomAvatar(null);setAvatarPicker(false);
    if(session&&selected)await AsyncStorage.setItem(avatarKey(session),JSON.stringify({id,url:selected.image_url} satisfies SavedAvatar)).catch(()=>{});
-  }catch(e){Alert.alert("Unable to save avatar","The images are available, but saving your selection still requires the account service. Please try again when the connection is restored.")}
+  }catch(e){Alert.alert("Unable to save avatar",e instanceof Error?e.message:"The account service could not save the avatar. Please try again.")}
   finally{setBusy(false)}
  };
  const go=(path:string)=>router.push(path as any);
