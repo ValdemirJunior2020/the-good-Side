@@ -27,13 +27,13 @@ const terms:Record<AppCategory,RegExp>={
  faith:/\b(faith|church|prayer|religion|spiritual|chaplain|worship)\b/i,
  food:/\b(recipe|cooking|food|meal|kitchen|nutrition|chef|farming|agriculture)\b/i
 };
-const classify=(title:string,excerpt:string,proposed:string,sourceCategory:string):AppCategory=>{
+const classify=(title:string,excerpt:string,proposed:string,sourceCategory:string):AppCategory|null=>{
  const combined=title+" "+excerpt.slice(0,300);
  const matches=APP_CATEGORIES.filter(c=>terms[c].test(combined));
  if(APP_CATEGORIES.includes(proposed as AppCategory)&&matches.includes(proposed as AppCategory))return proposed as AppCategory;
  if(APP_CATEGORIES.includes(sourceCategory as AppCategory)&&matches.includes(sourceCategory as AppCategory))return sourceCategory as AppCategory;
  // Avoid assigning an unrelated topic: deterministic matching wins over invented model tags.
- return matches[0]||"world-progress";
+ return matches[0]||null;
 };
 
 const text=(s:unknown):string=>{
@@ -105,7 +105,9 @@ for(const source of sources) {
    examined++;
    let a;try{a=await analyze(title,description);}catch{console.log("Ollama offline; preserving unreviewed items");break;}
    if(!a.positive||a.confidence<70||a.positivity<70||!a.summary||a.summary.trim().length<25||negativeTerms.test(title)){rejected++;continue;}
-   const payload={news_id:hash(link).slice(0,24),title,summary:a.summary.slice(0,400),full_summary:a.summary.slice(0,400),category:classify(title,description,String(a.category||""),source.category),publisher:source.publisher,original_url:link,source_published_at:date.toISOString(),content_hash:hash(title.toLowerCase().replace(/[^a-z0-9]/g,"")),confidence_score:a.confidence,positivity_score:a.positivity,language:"en",country:"",image_url:""};
+   const category=classify(title,description,String(a.category||""),source.category);
+   if(!category){rejected++;console.log("Unclassified; not published:",title.slice(0,90));continue;}
+   const payload={news_id:hash(link).slice(0,24),title,summary:a.summary.slice(0,400),full_summary:a.summary.slice(0,400),category,publisher:source.publisher,original_url:link,source_published_at:date.toISOString(),content_hash:hash(title.toLowerCase().replace(/[^a-z0-9]/g,"")),confidence_score:a.confidence,positivity_score:a.positivity,language:"en",country:"",image_url:""};
    if(!process.env.RESEARCH_WORKER_KEY)throw Error("Missing worker key");
    const saved=await timedFetch((process.env.API_URL||"http://localhost:8788")+"/worker/candidates",{method:"POST",headers:{"content-type":"application/json","x-worker-key":process.env.RESEARCH_WORKER_KEY},body:JSON.stringify(payload)});
    if(saved.ok){
