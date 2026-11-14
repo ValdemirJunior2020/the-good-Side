@@ -1,5 +1,11 @@
 [
   {
+    "publisher": "NASA",
+    "feed": "https://www.nasa.gov/news-release/feed/",
+    "category": "science",
+    "status": "approved"
+  },
+  {
     "publisher": "Positive News",
     "feed": "https://www.positive.news/feed/",
     "category": "world-progress",
