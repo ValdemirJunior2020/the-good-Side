@@ -3,7 +3,7 @@ export type DigestCandidate = {news_id:string; title:string; category:string; ap
 export function canonicalCategory(value:unknown):string {
  const category=String(value||"").trim().toLowerCase();
  const aliases:Record<string,string>={
-  health:"medical",medicine:"medical",nature:"environment",wildlife:"animals",
+  health:"medical",medicine:"medical","medical breakthroughs":"medical",nature:"environment",wildlife:"animals",space:"science",astronomy:"science","science-discoveries":"science",
   "human-achievements":"achievements","human achievement":"achievements",
   "medical-breakthroughs":"medical","sports-achievements":"sports",
   families:"families",inspiration:"faith","world progress":"world-progress"
