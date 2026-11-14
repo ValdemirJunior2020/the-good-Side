@@ -1,4 +1,4 @@
-import React,{useEffect,useState,useRef} from "react";
+import React,{useEffect,useState} from "react";
 import {ScrollView,View,Text,TouchableOpacity,RefreshControl,StyleSheet,Linking} from "react-native";
 import {LinearGradient} from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -27,7 +27,6 @@ export default function Home(){
  const [loading,setLoading]=useState(true),[feedLoading,setFeedLoading]=useState(true),[refreshing,setRefreshing]=useState(false),[news,setNews]=useState<News[]>([]),[error,setError]=useState(""),[logged,setLogged]=useState(false),[category,setCategory]=useState("");
  const [discoveries,setDiscoveries]=useState<DiscoveryItem[]>([]);
  const [interests,setInterests]=useState<string[]>([]);
- const requestSeq=useRef(0);
  const discover=async()=>{
   const user=auth.currentUser;
   if(!user){setDiscoveries([]);setInterests([]);return;}
