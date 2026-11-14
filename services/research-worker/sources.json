@@ -136,5 +136,41 @@
     "feed": "https://news.google.com/rss/search?q=%22food%20bank%20volunteers%22%20OR%20%22community%20meals%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
     "category": "food",
     "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Technology for Good",
+    "feed": "https://news.google.com/rss/search?q=%22technology%20for%20good%22%20OR%20%22assistive%20technology%22%20OR%20%22innovation%20helps%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "technology",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Sports Achievements",
+    "feed": "https://news.google.com/rss/search?q=%22athlete%20inspiring%22%20OR%20%22sports%20record%22%20OR%20%22para-athlete%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "sports",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Children & Families",
+    "feed": "https://news.google.com/rss/search?q=%22families%20reunited%22%20OR%20%22children%20helped%22%20OR%20%22youth%20success%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "families",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Human Achievements",
+    "feed": "https://news.google.com/rss/search?q=%22human%20achievement%22%20OR%20%22record%20breaking%20accomplishment%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "achievements",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Faith & Inspiration",
+    "feed": "https://news.google.com/rss/search?q=%22faith%20community%20volunteers%22%20OR%20%22church%20charity%22%20OR%20%22interfaith%20kindness%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "faith",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Medical Breakthroughs",
+    "feed": "https://news.google.com/rss/search?q=%22medical%20breakthrough%22%20OR%20%22clinical%20trial%20positive%20result%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "medical",
+    "status": "review_terms"
   }
 ]
