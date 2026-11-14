@@ -316,12 +316,20 @@ app.post("/worker/candidates",asyncRoute(async(req,res)=>{
   language:z.string().default("en"),country:z.string().default(""),image_url:z.string().default("")
  }).parse(req.body);
  const url=new URL(story.original_url);
- const trusted=(url.hostname==="positive.news"||url.hostname==="www.positive.news")
-  &&url.protocol==="https:"&&!url.username&&!url.password
-  &&story.publisher.trim().toLowerCase()==="positive news";
+ // Autopublication is limited to clearly attributed NASA reporting and the
+ // existing explicitly trusted pilot source. Other publisher RSS remains on hold.
+ const nasa=url.hostname==="www.nasa.gov"||url.hostname==="nasa.gov";
+ const positiveNews=url.hostname==="positive.news"||url.hostname==="www.positive.news";
+ const trusted=url.protocol==="https:"&&!url.username&&!url.password
+  &&((nasa&&story.publisher.trim().toLowerCase()==="nasa")
+   ||(positiveNews&&story.publisher.trim().toLowerCase()==="positive news"));
  const quality=story.language==="en" && !/[\u3400-\u9fff]/u.test(story.title+" "+story.summary)
   &&story.confidence_score>=60 && story.positivity_score>=70
-  &&Number.isFinite(Date.parse(story.source_published_at));
+  &&Number.isFinite(Date.parse(story.source_published_at))
+  &&Date.parse(story.source_published_at)<=Date.now()+86400000
+  &&Date.parse(story.source_published_at)>=Date.now()-14*86400000
+  // Do not auto-publish third-party photos or remotely hosted imagery.
+  &&story.image_url==="";
  if(!trusted||!quality)return res.status(422).json({error:"Story does not meet automatic-publication requirements"});
  const record=await sheet("addNews",{...story,approval_status:"pending",actor_id:"research-worker"});
  // Respect existing approved/rejected rows; don't reverse explicit editorial decisions.
