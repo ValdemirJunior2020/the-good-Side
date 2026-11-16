@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from "react";
+import React,{useEffect,useRef,useState} from "react";
 import{ScrollView,Text,View,Switch,TouchableOpacity,Alert,TextInput,Platform}from"react-native";
 
 import{router}from"expo-router";
@@ -56,10 +56,12 @@ const weekdays=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const initial:Pref={selected_categories:"",notification_enabled:true,daily_digest_enabled:true,notification_local_time:"12:00",content_language:"en",notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/New_York",notification_frequency:"daily",notification_times:["12:00"],notification_weekdays:[],quiet_hours_start:"",quiet_hours_end:"",weekend_enabled:true,food_notifications_enabled:false,breaking_alerts_enabled:true,notification_sound_enabled:true};
 export default function Preferences(){
  const [editingTime,setEditingTime]=useState<number|null>(null);
+ const editsRef=useRef(0);
+ const loadRef=useRef(0);
  const[p,setP]=useState<Pref>(initial),[busy,setBusy]=useState(false),[error,setError]=useState(""),[preview,setPreview]=useState(""),[signedIn,setSignedIn]=useState(Boolean(auth.currentUser));
  const refreshPreview=()=>api<{next_at:string|null;timezone:string}>("/me/next-notification",{},true).then(v=>setPreview(v.next_at?new Date(v.next_at).toLocaleString(undefined,{timeZone:v.timezone,dateStyle:"medium",timeStyle:"short"})+" ("+v.timezone+")":"No digest currently scheduled")).catch(()=>setPreview("Preview unavailable"));
- useEffect(()=>{const unsubscribe=auth.subscribe(user=>{setSignedIn(Boolean(user));if(!user){setPreview("Sign in to view your notification schedule");return}api<Partial<Pref>>("/me/preferences",{},true).then(v=>setP({...initial,...v,notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||initial.notification_timezone,notification_frequency:v.notification_frequency==="breaking_only"?"daily":v.notification_frequency==="digest_plus_alerts"?"daily":v.notification_frequency||"daily",notification_times:cleanTimes(v.notification_times,v.notification_local_time,v.notification_frequency==="three_daily"?3:v.notification_frequency==="twice_daily"?2:1),notification_weekdays:parse(v.notification_weekdays,[])})).catch(e=>setError(String(e)));void refreshPreview()});void auth.restore();return unsubscribe},[]);
- const set=(key:keyof Pref,value:any)=>setP(prev=>({...prev,[key]:value}));
+ useEffect(()=>{let active=true;const unsubscribe=auth.subscribe(user=>{const generation=++loadRef.current;const editRevision=editsRef.current;setSignedIn(Boolean(user));if(!user){setPreview("Sign in to view your notification schedule");return}api<Partial<Pref>>("/me/preferences",{},true).then(v=>{if(!active||generation!==loadRef.current||editRevision!==editsRef.current)return;setError("");setP({...initial,...v,notification_timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||initial.notification_timezone,notification_frequency:v.notification_frequency==="breaking_only"?"daily":v.notification_frequency==="digest_plus_alerts"?"daily":v.notification_frequency||"daily",notification_times:cleanTimes(v.notification_times,v.notification_local_time,v.notification_frequency==="three_daily"?3:v.notification_frequency==="twice_daily"?2:1),notification_weekdays:parse(v.notification_weekdays,[])})}).catch(e=>{if(active&&generation===loadRef.current)setError(String(e))});void refreshPreview()});void auth.restore();return()=>{active=false;unsubscribe()}},[]);
+ const set=(key:keyof Pref,value:any)=>{editsRef.current++;setP(prev=>({...prev,[key]:value}))};
  const rawCategories=p.selected_categories as unknown;
  const selected=Array.isArray(rawCategories)?rawCategories.map(String):
   typeof rawCategories==="string"&&rawCategories.trim().startsWith("[")
@@ -119,7 +121,7 @@ export default function Preferences(){
     notification_times:cleanTimes(saved.notification_times,deliveryTimes[0],slots),
     notification_weekdays:parse(saved.notification_weekdays,days)}));
    void refreshPreview();
-   if(requestedNotifications){
+   if(requestedNotifications&&loadNotifications()){
     try{
      const Notifications=loadNotifications();
      if(!Notifications)throw Error("Push notifications require an installed iOS build.");
@@ -138,7 +140,7 @@ export default function Preferences(){
      return;
     }
    }
-   Alert.alert("Saved","Your good news preferences and schedule have been updated.");
+   Alert.alert("Saved",loadNotifications()?"Your good news preferences and schedule have been updated.":"Your preferences are saved to your account. Expo Go cannot register native push notifications; use the installed iOS build to test delivery.");
   }catch(e){Alert.alert("Unable to save",String(e))}finally{setBusy(false)}
  };
  const choice=(label:string,active:boolean,action:()=>void)=> <TouchableOpacity accessibilityRole="button" accessibilityState={{selected:active}} onPress={action} style={{paddingHorizontal:13,paddingVertical:11,margin:3,borderRadius:16,backgroundColor:active?colors.peach:"rgba(255,255,255,.9)",borderWidth:1,borderColor:active?colors.orange:colors.stroke}}><Text style={{color:colors.ink,fontWeight:active?"800":"500"}}>{label}</Text></TouchableOpacity>;
