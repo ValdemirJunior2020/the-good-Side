@@ -9,7 +9,7 @@ import {colors} from "../src/theme";
 import {GoodSideLoader} from "../src/components";
 import LuxuryIcon from "../src/LuxuryIcon";
 import {avatarCatalog} from "../src/avatarCatalog";
-import {getPublicAvatars,getPersonalAvatar,getPublicSettings,clearPersonalAvatar,syncManagedProfile} from "../src/remoteConfig";
+import {getPublicAvatars,getPersonalAvatar,getPublicSettings,savePersonalAvatar,syncManagedProfile} from "../src/remoteConfig";
 
 import {ArrowLeft,Camera,UserSquare2,Link2,Crown,Bell,SlidersHorizontal,Sparkles,Layers3,ShieldCheck,Bookmark,BookOpen,Lock,Download,LogOut,Headphones,Trash2,ChevronRight,House,Compass,ChefHat,Heart,UserRound,Pencil,Sun} from "lucide-react-native";
 
@@ -108,18 +108,21 @@ export default function Profile(){
   finally{setAvatarLoading(false)}
  };
  const pickAvatar=async(id:string)=>{
+  if(busy)return;
   setBusy(true);
   try{
-   await api("/me",put({avatar_id:id}),true);
-   // Confirm account persistence before presenting the choice as saved.
-   const verified=await api<{avatar_id?:string}>("/me",{},true);
-   if(verified?.avatar_id!==id)throw Error("The avatar update was not confirmed on your account. Please try again.");
-   if(customAvatar){const token=await auth.getFreshToken();if(token)await clearPersonalAvatar(token)}
+   const token=await auth.getFreshToken();
+   if(!token)throw Error("Sign in to save your avatar.");
+   // Save to the authenticated account's persistent avatar store, not the
+   // slower legacy profile gateway. Confirm the saved image with a readback.
+   const saved=await savePersonalAvatar(token,id);
+   const confirmed=await getPersonalAvatar(token);
+   if(!confirmed||confirmed!==saved.image_url)throw Error("The avatar wasn't confirmed in your account. Please try again.");
    const selected=avatars.find(a=>a.avatar_id===id)||avatarCatalog.find(a=>a.avatar_id===id);
    avatarChangeRef.current++;
-   setAvatarId(id);setAvatarImageUrl(selected?.image_url||"");setCustomAvatar(null);setAvatarPicker(false);
-   if(session&&selected)await AsyncStorage.setItem(avatarKey(session),JSON.stringify({id,url:selected.image_url} satisfies SavedAvatar)).catch(()=>{});
-  }catch(e){Alert.alert("Unable to save avatar",e instanceof Error?e.message:"The account service could not save the avatar. Please try again.")}
+   setAvatarId(id);setAvatarImageUrl(saved.image_url);setCustomAvatar(saved.image_url);setAvatarPicker(false);
+   if(session)await AsyncStorage.setItem(avatarKey(session),JSON.stringify({id,url:saved.image_url} satisfies SavedAvatar)).catch(()=>{});
+  }catch(e){Alert.alert("Unable to save avatar",e instanceof Error?e.message:"The avatar could not be saved. Please try again.")}
   finally{setBusy(false)}
  };
  const go=(path:string)=>router.push(path as any);
