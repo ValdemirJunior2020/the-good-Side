@@ -51,9 +51,11 @@ export const auth={
  subscribe(fn:(s:Session|null)=>void){listeners.add(fn);fn(current);return()=>{listeners.delete(fn)}},
  async restore(){
   if(loaded)return;loaded=true;
+  const initialSession=current;
   try{
    const value=Platform.OS==="web"?await AsyncStorage.getItem(KEY):await SecureStore.getItemAsync(KEY);
-   if(value)current=JSON.parse(value) as Session;
+   // Never replace a freshly signed-in user with a stale in-flight restore.
+   if(value&&current===initialSession)current=JSON.parse(value) as Session;
   }catch{
    // Storage read failed: don't delete credentials or silently sign the user out.
   }
@@ -90,14 +92,18 @@ export async function api<T>(path:string,options:RequestInit={},authenticated=fa
    return {status:result.status,body:await result.json()};
   }finally{clearTimeout(timer)}
  };
- const first=await request(authenticated?await auth.getFreshToken():null);
+ const requestToken=authenticated?await auth.getFreshToken():null;
+ const first=await request(requestToken);
  if(first.status!==401||!authenticated){
   if(first.status>=400||!first.body.ok)throw Error(first.body.error||"Request failed");
   return first.body.data as T;
  }
  // If the access token expired between checks, refresh and retry exactly once.
  if(auth.currentUser?.provider==="email"||auth.currentUser?.provider==="apple"){
-  const fresh=await auth.getFreshToken(true);
+  // Another request may already have refreshed the rotating token.
+  // Reuse that newer token instead of invalidating it with a second refresh.
+  const fresh=auth.currentUser?.token&&auth.currentUser.token!==requestToken
+   ?auth.currentUser.token:await auth.getFreshToken(true);
   const retry=await request(fresh);
   if(retry.status>=400||!retry.body.ok)throw Error(retry.body.error||"Couldn't save your settings. Please retry.");
   return retry.body.data as T;
