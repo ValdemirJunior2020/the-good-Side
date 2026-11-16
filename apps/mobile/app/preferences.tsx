@@ -141,7 +141,15 @@ export default function Preferences(){
     }
    }
    Alert.alert("Saved",loadNotifications()?"Your good news preferences and schedule have been updated.":"Your preferences are saved to your account. Expo Go cannot register native push notifications; use the installed iOS build to test delivery.");
-  }catch(e){Alert.alert("Unable to save",String(e))}finally{setBusy(false)}
+  }catch(e){
+   const detail=e instanceof Error?e.message:String(e);
+   if(/reconnect|sign in again|expired|verify your email/i.test(detail)){
+    Alert.alert("Sign-in needs attention","Your changes were not saved. Please sign in again, then retry.",[
+     {text:"Keep editing",style:"cancel"},
+     {text:"Go to sign in",onPress:()=>router.push("/auth")}
+    ]);
+   }else Alert.alert("Unable to save",detail);
+  }finally{setBusy(false)}
  };
  const choice=(label:string,active:boolean,action:()=>void)=> <TouchableOpacity accessibilityRole="button" accessibilityState={{selected:active}} onPress={action} style={{paddingHorizontal:13,paddingVertical:11,margin:3,borderRadius:16,backgroundColor:active?colors.peach:"rgba(255,255,255,.9)",borderWidth:1,borderColor:active?colors.orange:colors.stroke}}><Text style={{color:colors.ink,fontWeight:active?"800":"500"}}>{label}</Text></TouchableOpacity>;
  return <Background><ScrollView contentContainerStyle={{padding:22,paddingTop:58,paddingBottom:180}}>
