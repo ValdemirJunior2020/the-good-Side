@@ -24,6 +24,24 @@ export async function getPersonalAvatar(token:string):Promise<string|null>{
  return value.image_url;
 }
 
+export async function savePersonalAvatar(token:string,avatarId:string):Promise<{avatar_id:string;image_url:string}>{
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+ try{
+  const r=await fetch(ROOT+"?route=my-avatar",{
+   method:"POST",
+   headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},
+   body:JSON.stringify({avatar_id:avatarId}),
+   signal:controller.signal
+  });
+  const response=await r.json() as {ok:boolean;data?:{avatar_id:string;image_url:string};error?:string};
+  if(!r.ok||!response.ok||!response.data?.image_url)throw Error(response.error||"Unable to save your avatar");
+  return response.data;
+ }catch(error){
+  if(controller.signal.aborted)throw Error("The avatar service timed out. Please try again.");
+  throw error;
+ }finally{clearTimeout(timer)}
+}
+
 export async function clearPersonalAvatar(token:string):Promise<void>{
  const r=await fetch(ROOT+"?route=my-avatar",{method:"DELETE",headers:{Authorization:"Bearer "+token}});
  const response=await r.json() as {ok:boolean;error?:string};
