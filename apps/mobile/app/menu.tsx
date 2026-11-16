@@ -12,7 +12,7 @@ const items=[
  {icon:"♡",title:"Saved Stories",route:"/saved",auth:true},
  {icon:"♧",title:"Food & Recipes",route:"/food",auth:false},
  {icon:"◈",title:"Discover Good News",route:"/search",auth:false},
- {icon:"◷",title:"Notification History",route:"/notifications",auth:true},
+ {icon:"◷",title:"Notification History",route:"/notification-history",auth:true},
  {icon:"◉",title:"My Profile",route:"/profile",auth:false}
 ] as const;
 export default function MoreMenu(){
@@ -45,7 +45,7 @@ export default function MoreMenu(){
 }
 const ink="#251923";
 const styles=StyleSheet.create({
- page:{padding:22,paddingTop:65,paddingBottom:100},
+ page:{padding:22,paddingTop:65,paddingBottom:220},
  head:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:24},
  close:{padding:8,paddingLeft:0},closeText:{color:ink,fontSize:17,fontWeight:"700"},
  title:{fontSize:34,fontWeight:"900",color:ink,letterSpacing:-1},
