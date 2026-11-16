@@ -86,10 +86,16 @@ export async function api<T>(path:string,options:RequestInit={},authenticated=fa
  if(!API_URL)throw Error("Set EXPO_PUBLIC_API_URL to the HTTPS Node API gateway. Do not use Apps Script directly.");
  if(authenticated&&!auth.currentUser)throw Error("Sign in to continue");
  const request=async(token:string|null):Promise<{status:number;body:any}>=>{
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+  // Hosted APIs can cold-start; account writes also wait for the database gateway.
+  // Do not cancel a legitimate save after only 15 seconds.
+  const timeoutMs=authenticated?65000:40000;
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
    const result=await fetch(API_URL+path,{...options,headers:{"Content-Type":"application/json",...(authenticated&&token?{Authorization:"Bearer "+token}:{}),...(options.headers||{})},signal:controller.signal});
    return {status:result.status,body:await result.json()};
+  }catch(error){
+   if(controller.signal.aborted)throw Error("The account service took too long to respond. Your change was not confirmed. Please retry after a moment.");
+   throw error;
   }finally{clearTimeout(timer)}
  };
  const requestToken=authenticated?await auth.getFreshToken():null;
