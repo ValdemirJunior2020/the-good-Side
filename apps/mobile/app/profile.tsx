@@ -111,6 +111,9 @@ export default function Profile(){
   setBusy(true);
   try{
    await api("/me",put({avatar_id:id}),true);
+   // Confirm account persistence before presenting the choice as saved.
+   const verified=await api<{avatar_id?:string}>("/me",{},true);
+   if(verified?.avatar_id!==id)throw Error("The avatar update was not confirmed on your account. Please try again.");
    if(customAvatar){const token=await auth.getFreshToken();if(token)await clearPersonalAvatar(token)}
    const selected=avatars.find(a=>a.avatar_id===id)||avatarCatalog.find(a=>a.avatar_id===id);
    avatarChangeRef.current++;
