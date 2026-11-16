@@ -1,0 +1,171 @@
+import React,{useEffect,useMemo,useState} from "react";
+const ENDPOINT="https://tqdqekxvisgmotibjiwb.supabase.co/functions/v1/goodside-admin";
+type Member={user_id:string;email:string;display_name:string;avatar_id?:string;account_status?:string;created_at?:string;last_login_at?:string};
+type Override={user_id:string;image_url:string};
+type Avatar={avatar_id:string;label:string;image_url:string;credit:string;active:boolean;sort_order:number};
+type Setting={key:string;value:string;updated_at?:string};
+type Audit={admin_email:string;action:string;target:string;occurred_at:string};
+type Section="users"|"avatars"|"settings"|"audit";
+const defaults:Record<string,string>={welcome_message:"Real stories. Brighter perspectives.",support_email:"infojr.83@gmail.com",default_notification_time:"12:00",signup_enabled:"true",news_feed_enabled:"true"};
+const explanations:Record<string,string>={
+ welcome_message:"Welcome text displayed in the app when remote settings are loaded",
+ support_email:"Support email displayed on the Profile screen",
+ default_notification_time:"Stored for future onboarding defaults; not yet wired into the notification scheduler. Existing user preferences are never overridden.",
+ signup_enabled:"Controls whether the email registration button is shown in the mobile app (not a global Auth-provider shutdown)",
+ news_feed_enabled:"Controls whether the mobile Home feed presents articles (does not delete news or interrupt scheduled pushes)"
+};
+async function managementApi<T>(token:string,route:string,options:RequestInit={}):Promise<T>{
+ const [operation,...extra]=route.split("&");
+ const resp=await fetch(ENDPOINT+"?route="+encodeURIComponent(operation)+(extra.length?"&"+extra.join("&"):""),{...options,headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json",...(options.headers||{})}});
+ const obj=await resp.json() as {ok:boolean;data:T;error?:string};
+ if(!resp.ok||!obj.ok)throw Error(obj.error||"Unable to complete request");
+ return obj.data;
+}
+export function Management({token}:{token:string}){
+ const [section,setSection]=useState<Section>("users"),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
+ const [members,setMembers]=useState<Member[]>([]),[overrides,setOverrides]=useState<Override[]>([]),[avatars,setAvatars]=useState<Avatar[]>([]),[settings,setSettings]=useState<Setting[]>([]),[audit,setAudit]=useState<Audit[]>([]);
+ const [search,setSearch]=useState(""),[picked,setPicked]=useState(""),[customUrl,setCustomUrl]=useState(""),[selectedAvatar,setSelectedAvatar]=useState("");
+ const [avatarForm,setAvatarForm]=useState({avatar_id:"",label:"",image_url:"",credit:"",sort_order:"100",active:true});
+ const [changes,setChanges]=useState<Record<string,string>>({});
+ const [reviewEmail,setReviewEmail]=useState("infojr.83+apple-review@gmail.com");
+ const [reviewPassword,setReviewPassword]=useState("");
+ const [reviewAccountCreated,setReviewAccountCreated]=useState(false);
+ const generateReviewPassword=()=>{
+  const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*-_";
+  const bytes=new Uint32Array(32);crypto.getRandomValues(bytes);
+  setReviewPassword(Array.from(bytes,n=>alphabet[n%alphabet.length]).join(""));
+  setReviewAccountCreated(false);
+ };
+ const createReviewAccount=async()=>{
+  setError("");setNotice("");
+  if(!window.confirm("Create a STANDARD USER for Apple App Review? This account will NOT have Command Center access."))return;
+  if(!reviewEmail.toLowerCase().includes("apple-review")||reviewPassword.length<18){setError("Use a controlled Apple-review email and generate a strong password.");return}
+  setBusy(true);
+  try{
+   const result=await call<{created:boolean;email:string;role:string}>("apple-review-account",{method:"POST",body:JSON.stringify({email:reviewEmail,password:reviewPassword})});
+   if(!result.created||result.role!=="member")throw Error("Could not confirm safe member role");
+   setReviewAccountCreated(true);
+   setNotice("Apple review user created. Copy credentials securely to your password manager and later App Store Connect. This account has NO admin privileges.");
+   await reload("users");
+  }catch(e){setError(String(e))}finally{setBusy(false)}
+ };
+
+ const selected=members.find(u=>u.user_id===picked);
+ const users=useMemo(()=>members.filter(u=>(u.display_name+" "+u.email+" "+u.user_id).toLowerCase().includes(search.toLowerCase())).slice(0,100),[members,search]);
+ const call=<T,>(route:string,init:RequestInit={})=>managementApi<T>(token,route,init);
+ const reload=async(which=section)=>{
+  setLoading(true);setError("");
+  try{
+   if(which==="users"){const [d,aa]=await Promise.all([call<{users:Member[];overrides:Override[]}>("users"),call<Avatar[]>("avatars")]);setMembers(d.users);setOverrides(d.overrides);setAvatars(aa)}
+   if(which==="avatars")setAvatars(await call<Avatar[]>("avatars"));
+   if(which==="settings"){const d=await call<Setting[]>("settings");setSettings(d);setChanges(Object.fromEntries(d.map(x=>[x.key,x.value])))}
+   if(which==="audit")setAudit(await call<Audit[]>("audit"));
+  }catch(e){setError(String(e))}finally{setLoading(false)}
+ };
+ useEffect(()=>{void reload(section)},[section,token]);
+ const run=async(fn:()=>Promise<void>)=>{setBusy(true);setError("");setNotice("");try{await fn();setNotice("Saved successfully.")}catch(e){setError(String(e))}finally{setBusy(false)}};
+ const assign=()=>run(async()=>{
+  if(!selected)throw Error("Select a user first");
+  const image_url=customUrl.trim();
+  if(!image_url.startsWith("https://"))throw Error("An HTTPS avatar image URL is required");
+  if(!window.confirm("Assign this image to "+selected.email+"? This affects their profile only."))return;
+  await call("users",{method:"PUT",body:JSON.stringify({user_id:selected.user_id,avatar_url:image_url})});
+  await reload("users");
+ });
+ const clear=()=>run(async()=>{
+  if(!selected||!window.confirm("Remove the custom avatar override for "+selected.email+"?"))return;
+  await call("users",{method:"PUT",body:JSON.stringify({user_id:selected.user_id,clear_avatar:true})});
+  setCustomUrl("");await reload("users");
+ });
+ const sendRecovery=()=>run(async()=>{
+  if(!selected?.user_id.startsWith("supabase:"))throw Error("Password recovery is for email accounts. Google users recover access through Google.");
+  if(!selected.email||!window.confirm("Email password reset instructions to "+selected.email+"?"))return;
+  const url="https://tqdqekxvisgmotibjiwb.supabase.co/auth/v1/recover?redirect_to="+encodeURIComponent("https://the-good-side-command-center.netlify.app/reset-password.html");
+  const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json",apikey:"sb_publishable_FcW-IRdeyyBEmwxSAZZCXA_1T0qJIzo"},body:JSON.stringify({email:selected.email})});
+  const body=await response.json().catch(()=>({})) as {msg?:string;message?:string;error?:string};
+  if(!response.ok)throw Error(body.msg||body.message||body.error||"Could not send password recovery email");
+  setNotice("Password recovery email requested. The user must complete the reset themselves.");
+ });
+ const saveAvatar=()=>run(async()=>{
+  if(!avatarForm.avatar_id||!avatarForm.label.trim()||!avatarForm.image_url.startsWith("https://"))throw Error("Provide ID, label and HTTPS image URL");
+  await call("avatars",{method:"POST",body:JSON.stringify({...avatarForm,sort_order:Number(avatarForm.sort_order)||100})});
+  setAvatarForm({avatar_id:"",label:"",image_url:"",credit:"",sort_order:"100",active:true});
+  await reload("avatars");
+ });
+ const disableAvatar=(id:string)=>run(async()=>{
+  if(!window.confirm("Hide "+id+" from new gallery selections? Existing user references will remain."))return;
+  await call("avatars&id="+encodeURIComponent(id),{method:"DELETE"});await reload("avatars");
+ });
+ const saveSetting=(key:string)=>run(async()=>{
+  if(!window.confirm("Save "+key+"?"))return;
+  await call("settings",{method:"PUT",body:JSON.stringify({key,value:changes[key]??""})});await reload("settings");
+ });
+ return <div style={{display:"grid",gap:18}}>
+  <header><h2>App Management</h2><p className="description">Manage users, avatar artwork, app presentation settings and the admin audit log. This is separate from the news editorial tools.</p></header>
+  <div className="actions" style={{flexWrap:"wrap",gap:8}}>
+   {([["users","Users"],["avatars","Avatar catalog"],["settings","App settings"],["audit","Audit log"]] as const).map(([key,label])=>
+    <button type="button" className={section===key?"primary":"soft"} key={key} onClick={()=>setSection(key)}>{label}</button>)}
+   <button type="button" className="soft" disabled={loading} onClick={()=>void reload()}>↻ Refresh</button>
+  </div>
+  {loading&&<p className="hint">Loading records…</p>}{error&&<p role="alert" className="error">{error}</p>}{notice&&<p role="status" className="notice">{notice}</p>}
+  {section==="users"&&<>
+   <section className="panel form-panel" style={{marginBottom:16}}>
+    <h3>Apple App Review — test account</h3>
+    <p className="hint">Create a dedicated standard consumer account for Apple's reviewers. This is NOT a Command Center admin. Your normal Google admin permissions remain private.</p>
+    <label>Review email that you control<input type="email" value={reviewEmail} autoComplete="off" onChange={e=>{setReviewEmail(e.target.value);setReviewAccountCreated(false)}}/></label>
+    <label>Unique review password<input type="password" value={reviewPassword} autoComplete="new-password" onChange={e=>{setReviewPassword(e.target.value);setReviewAccountCreated(false)}} placeholder="Generate a unique strong password"/></label>
+    <div className="actions"><button type="button" className="soft" onClick={generateReviewPassword}>Generate secure password</button><button type="button" disabled={busy||reviewPassword.length<18} onClick={()=>void createReviewAccount()}>Create review user</button></div>
+    {reviewAccountCreated&&<div className="notice"><strong>Review user created:</strong> {reviewEmail}. Keep the password in your password manager and paste it into App Store Connect Review Information only. <button type="button" onClick={()=>{void navigator.clipboard.writeText(reviewPassword)}}>Copy password</button><button type="button" className="soft" onClick={()=>setReviewPassword("")}>Clear password from screen</button></div>}
+    <p className="hint">The suggested Gmail +alias delivers into the existing Gmail inbox, if your email service accepts plus-addresses. Verify sign-in on a real iPhone before submitting. Do not create another account if it already exists.</p>
+   </section>
+   <section className="panel form-panel"><h3>Members ({members.length})</h3>
+    <p className="hint">Includes users in the app profile table and verified-email accounts registered with Supabase. Admins cannot see passwords.</p>
+    <label>Search by name, email or user ID<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search members…"/></label>
+    <label>Choose an account<select value={picked} onChange={e=>{setPicked(e.target.value);const a=overrides.find(o=>o.user_id===e.target.value);setCustomUrl(a?.image_url||"");setSelectedAvatar("")}}>
+     <option value="">Select a user</option>{users.map(u=><option key={u.user_id} value={u.user_id}>{u.display_name||"Member"} · {u.email||u.user_id}</option>)}
+    </select></label>
+    {selected&&<div className="source-preview"><strong>{selected.display_name||selected.email}</strong><p className="hint">Account: {selected.user_id}</p><p>{selected.email}</p>
+     <label>Choose an existing avatar<select value={selectedAvatar} onChange={e=>{const value=e.target.value;setSelectedAvatar(value);if(value)setCustomUrl(avatars.find(a=>a.avatar_id===value)?.image_url||"")}}><option value="">Custom URL / choose one below</option>{avatars.filter(a=>a.active).map(a=><option key={a.avatar_id} value={a.avatar_id}>{a.label}</option>)}</select></label>
+     <label>Custom avatar URL for this user<input type="url" value={customUrl} onChange={e=>{setCustomUrl(e.target.value);setSelectedAvatar("")}} placeholder="https://example.com/avatar.png"/></label>
+     {customUrl.startsWith("https://")&&<img src={customUrl} alt="Avatar preview" style={{height:100,width:100,objectFit:"contain",borderRadius:20,background:"#fff"}}/>}
+     <p className="hint">Only this member's profile picture is changed. The shared avatar gallery is unaffected.</p>
+     <div className="actions"><button disabled={busy||!customUrl.trim()} onClick={assign}>Assign avatar URL</button>
+      <button className="soft" disabled={busy} onClick={clear}>Clear custom avatar</button>
+      {selected.user_id.startsWith("supabase:")&&<button className="soft" disabled={busy} onClick={sendRecovery}>Send password reset email</button>}</div>
+    </div>}
+   </section>
+  </>}
+  {section==="avatars"&&<>
+   <div className="panel form-panel"><h3>Avatar gallery · Create / Update</h3>
+    <p className="hint">Add new choices or update existing URLs. Deactivation hides images from the catalog without deleting user data. Use only artwork you have rights to display.</p>
+    <div className="two"><label>ID<input value={avatarForm.avatar_id} onChange={e=>setAvatarForm({...avatarForm,avatar_id:e.target.value})} placeholder="sun-avatar-02"/></label><label>Label<input value={avatarForm.label} onChange={e=>setAvatarForm({...avatarForm,label:e.target.value})}/></label></div>
+    <label>Image URL<input type="url" value={avatarForm.image_url} onChange={e=>setAvatarForm({...avatarForm,image_url:e.target.value})} placeholder="https://..."/></label>
+    <div className="two"><label>Image credit / rights<input value={avatarForm.credit} onChange={e=>setAvatarForm({...avatarForm,credit:e.target.value})}/></label><label>Sort order<input type="number" value={avatarForm.sort_order} onChange={e=>setAvatarForm({...avatarForm,sort_order:e.target.value})}/></label></div>
+    <label className="radio"><input type="checkbox" checked={avatarForm.active} onChange={e=>setAvatarForm({...avatarForm,active:e.target.checked})}/>Active in gallery</label>
+    <button disabled={busy} onClick={saveAvatar}>Save avatar</button>
+   </div>
+   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12}}>
+    {avatars.map(a=><div className="panel" key={a.avatar_id} style={{padding:14}}>
+     <img src={a.image_url} alt={a.label} style={{display:"block",height:95,width:"100%",objectFit:"contain",background:"#fff",borderRadius:14}}/>
+     <strong>{a.label}</strong><p className="hint" style={{wordBreak:"break-all",fontSize:11}}>{a.avatar_id}</p><p className="hint">{a.active?"Active":"Inactive"}</p>
+     <div className="actions"><button className="soft" onClick={()=>setAvatarForm({avatar_id:a.avatar_id,label:a.label,image_url:a.image_url,credit:a.credit||"",sort_order:String(a.sort_order||100),active:a.active})}>Edit</button>
+     {a.active&&<button className="soft" onClick={()=>disableAvatar(a.avatar_id)}>Deactivate</button>}</div>
+    </div>)}
+   </div>
+  </>}
+  {section==="settings"&&<>
+   <div className="panel form-panel"><h3>App presentation settings</h3><p className="hint">These are controlled settings, not raw database access. Existing user preferences are not overwritten.</p><div className="notice"><strong>Email account readiness:</strong> Email sign-up and the password-reset page are implemented. Before opening registration to the public, configure an SMTP provider and allow the hosted confirmation/reset URL in Supabase Authentication → URL Configuration. The built-in Supabase email sender cannot deliver to arbitrary addresses.</div>
+    {settings.map(item=><div key={item.key} style={{padding:"16px 0",borderBottom:"1px solid #e8d8da"}}>
+     <label>{item.key.replace(/_/g," ")}<input value={changes[item.key]??item.value} onChange={e=>setChanges({...changes,[item.key]:e.target.value})}/></label>
+     <p className="hint">{explanations[item.key]||"Configuration"} </p>
+     <div className="actions"><button disabled={busy||changes[item.key]===item.value} onClick={()=>saveSetting(item.key)}>Save change</button>
+     <button className="soft" disabled={busy} onClick={()=>setChanges({...changes,[item.key]:defaults[item.key]||item.value})}>Restore default value</button></div>
+    </div>)}
+   </div>
+  </>}
+  {section==="audit"&&<div className="panel"><h3>Recent management changes</h3><p className="hint">Audit shows the acting admin, action, target and time. Passwords and Google tokens are never recorded here.</p>
+   <div style={{overflowX:"auto"}}><table><thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target</th></tr></thead><tbody>{audit.map((a,i)=><tr key={a.occurred_at+i}><td>{new Date(a.occurred_at).toLocaleString()}</td><td>{a.admin_email}</td><td>{a.action}</td><td>{a.target}</td></tr>)}</tbody></table></div>
+   {!audit.length&&<p>No changes recorded yet.</p>}
+  </div>}
+ </div>;
+}

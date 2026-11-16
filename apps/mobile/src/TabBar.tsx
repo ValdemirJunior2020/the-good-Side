@@ -1,17 +1,45 @@
 import React from "react";
-import{View,Text,TouchableOpacity,StyleSheet,Platform}from"react-native";
-import{router,usePathname}from"expo-router";
-import{BlurView}from"expo-blur";
-import{colors}from"./theme";
-const tabs:[string,string,string][]=[["Home","⌂","/"],["Discover","⌕","/search"],["Food","🥗","/food"],["Saved","♡","/saved"],["You","◉","/profile"]];
+import {View,Text,Image,TouchableOpacity,StyleSheet} from "react-native";
+import {router,usePathname} from "expo-router";
+import {useSafeAreaInsets} from "react-native-safe-area-context";
+
+// The user's original supplied transparent artwork. Keep routes and app behavior unchanged.
+const tabs=[
+ {label:"Home",href:"/",art:require("../assets/navigation/home.png")},
+ {label:"Discover",href:"/search",art:require("../assets/navigation/discover.png")},
+ {label:"Food",href:"/food",art:require("../assets/navigation/food.png")},
+ {label:"Saved",href:"/saved",art:require("../assets/navigation/saved.png")},
+ {label:"You",href:"/profile",art:require("../assets/navigation/you.png")},
+] as const;
+
 export default function TabBar(){
- const path=usePathname();
- return <View pointerEvents="box-none" style={styles.outer}><View style={styles.container}>
-  {Platform.OS==="ios"?<BlurView tint="light" intensity={80} style={StyleSheet.absoluteFill}/>:null}
-  {tabs.map(([name,icon,href])=><TouchableOpacity key={name} accessibilityRole="tab" accessibilityLabel={name} accessibilityState={{selected:path===href}} onPress={()=>router.push(href as any)} style={styles.item}>
-   <Text style={{fontSize:23,color:path===href?colors.orange:colors.ink}}>{icon}</Text>
-   <Text style={{fontSize:11,fontWeight:path===href?"800":"600",color:path===href?colors.orange:colors.muted}}>{name}</Text>
-  </TouchableOpacity>)}
- </View></View>;
+ const pathname=usePathname();
+ const insets=useSafeAreaInsets();
+ return <View pointerEvents="box-none" style={[styles.outer,{bottom:Math.max(insets.bottom,12)}]}>
+  <View style={styles.dock}>
+   {tabs.map(({label,href,art})=>{
+    const active=pathname===href;
+    return <TouchableOpacity key={label} accessibilityRole="tab" accessibilityLabel={label}
+     accessibilityState={{selected:active}} activeOpacity={.8}
+     onPress={()=>{if(!active)router.push(href as any)}} style={[styles.tab,active&&styles.selected]}>
+     <Image source={art} resizeMode="contain"
+      style={[styles.icon,label==="You"&&styles.youIcon]}/>
+     <Text numberOfLines={1} style={[styles.text,active&&styles.activeText]}>{label}</Text>
+    </TouchableOpacity>
+   })}
+  </View>
+ </View>;
 }
-const styles=StyleSheet.create({outer:{position:"absolute",left:18,right:18,bottom:Platform.OS==="ios"?27:16,zIndex:20},container:{flexDirection:"row",borderRadius:28,minHeight:66,backgroundColor:Platform.OS==="ios"?"rgba(255,255,255,.69)":"#FFF8F0",borderWidth:1,borderColor:"rgba(255,255,255,.9)",overflow:"hidden",shadowOpacity:.14,shadowRadius:18,shadowOffset:{width:0,height:8},shadowColor:"#805C4C",elevation:8},item:{flex:1,alignItems:"center",justifyContent:"center",paddingVertical:8,gap:3}});
+const styles=StyleSheet.create({
+ outer:{position:"absolute",left:12,right:12,zIndex:30},
+ dock:{height:90,flexDirection:"row",alignItems:"center",paddingHorizontal:5,
+  backgroundColor:"#FFFAF7",borderRadius:33,borderWidth:1.5,borderColor:"#FFFFFF",
+  shadowColor:"#785C70",shadowOpacity:.19,shadowRadius:18,shadowOffset:{width:0,height:7},elevation:10},
+ tab:{flex:1,minWidth:0,height:78,alignItems:"center",justifyContent:"center",
+  borderRadius:26,paddingTop:2,paddingBottom:5},
+ selected:{backgroundColor:"#FFE9D3"},
+ icon:{width:49,height:49},
+ youIcon:{width:55,height:53},
+ text:{fontSize:11,fontWeight:"700",color:"#382B37",textAlign:"center",marginTop:1},
+ activeText:{fontWeight:"900",color:"#9D4E2C"}
+});

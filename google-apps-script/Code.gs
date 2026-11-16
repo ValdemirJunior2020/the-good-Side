@@ -6,11 +6,12 @@
  */
 const TAB_NAMES = {
  NEWS:"news_id,title,summary,full_summary,category,language,country,publisher,original_url,image_url,source_published_at,discovered_at,verified_at,confidence_score,positivity_score,content_hash,approval_status,featured,created_at,updated_at",
- USERS:"user_id,auth_provider_id,display_name,email,preferred_language,timezone,account_status,created_at,last_login_at,updated_at",
+ USERS:"user_id,auth_provider_id,display_name,email,preferred_language,timezone,account_status,created_at,last_login_at,updated_at,avatar_id",
  USER_PREFERENCES:"user_id,selected_categories,preferred_countries,notification_enabled,notification_local_time,daily_digest_enabled,content_language,updated_at,notification_timezone,notification_frequency,notification_times,notification_weekdays,quiet_hours_start,quiet_hours_end,weekend_enabled,food_notifications_enabled,breaking_alerts_enabled,notification_sound_enabled",
  PUSH_DEVICES:"device_id,user_id,platform,push_token_reference,enabled,last_registered_at,last_successful_delivery_at",
  NOTIFICATION_LOGS:"notification_id,user_id,news_id,scheduled_at,sent_at,delivery_status,error_code,idempotency_key",
  SAVED_NEWS:"user_id,news_id,saved_at",
+ PROFILE_AVATARS:"avatar_id,label,image_url,credit,active,sort_order",
  NEWS_SOURCES:"source_id,publisher,feed_url,homepage_url,category,country,language,reliability,terms_reviewed,active,last_fetched_at,created_at",
  SYSTEM_SETTINGS:"key,value,description,updated_at",
  RECIPES:"recipe_id,title,description,prep_minutes,cook_minutes,servings,ingredients,instructions,dietary_tags,source_name,source_url,image_url,image_license,language,approval_status,created_at,updated_at",
@@ -28,7 +29,7 @@ function doPost(e){
   const secret=PropertiesService.getScriptProperties().getProperty("BACKEND_SHARED_SECRET");
   if(!secret || typeof body.secret!=="string" || body.secret!==secret)return json_({ok:false,error:"Unauthorized"});
   const allowed={
-   listNews:listNews_,getNews:getNews_,getUser:getUser_,syncUser:syncUser_,updateUser:updateUser_,
+   listNews:listNews_,getNews:getNews_,listAvatars:listAvatars_,getUser:getUser_,syncUser:syncUser_,updateUser:updateUser_,
    getPreferences:getPreferences_,setPreferences:setPreferences_,listSaved:listSaved_,saveNews:saveNews_,
    unsaveNews:unsaveNews_,registerDevice:registerDevice_,listNotifications:listNotifications_,
    deleteUser:deleteUser_,stats:stats_,listPending:listPending_,addNews:addNews_,editNews:editNews_,
@@ -65,7 +66,22 @@ function listNews_(p){let all=records_("NEWS").filter(x=>x.approval_status==="ap
 function getNews_(p){return records_("NEWS").filter(x=>x.approval_status==="approved").map(publicNews_).find(x=>x.news_id===p.news_id)||null;}
 function getUser_(p){required_(p,"user_id");return find_("USERS","user_id",p.user_id)||null;}
 function syncUser_(p){required_(p,"user_id");const existing=getUser_(p);if(existing)return patch_("USERS",existing,{last_login_at:now_()});const stamp=now_();append_("USERS",{user_id:p.user_id,auth_provider_id:p.user_id,display_name:p.display_name||"",email:p.email||"",preferred_language:p.preferred_language||"en",timezone:p.timezone||"America/New_York",account_status:"active",created_at:stamp,last_login_at:stamp,updated_at:stamp});return getUser_(p);}
-function updateUser_(p){const u=getUser_(p);if(!u)throw Error("Profile not found");return patch_("USERS",u,{display_name:p.display_name,preferred_language:p.preferred_language,timezone:p.timezone,updated_at:now_()});}
+function listAvatars_(){
+ return records_("PROFILE_AVATARS").filter(x=>String(x.active).toLowerCase()==="true"&&isHttps_(String(x.image_url||"")))
+  .sort((a,b)=>Number(a.sort_order||999)-Number(b.sort_order||999))
+  .slice(0,40)
+  .map(x=>({avatar_id:String(x.avatar_id),label:String(x.label||""),image_url:String(x.image_url),credit:String(x.credit||"")}));
+}
+function updateUser_(p){
+ const u=getUser_(p);if(!u)throw Error("Profile not found");
+ const update={display_name:p.display_name,preferred_language:p.preferred_language,timezone:p.timezone,updated_at:now_()};
+ if(p.avatar_id!==undefined){
+  if(typeof p.avatar_id!=="string"||p.avatar_id.length>80)throw Error("Invalid avatar");
+  if(p.avatar_id!==""&&!listAvatars_().some(a=>a.avatar_id===p.avatar_id))throw Error("Avatar unavailable");
+  update.avatar_id=p.avatar_id;
+ }
+ return patch_("USERS",u,update);
+}
 function getPreferences_(p){required_(p,"user_id");return find_("USER_PREFERENCES","user_id",p.user_id)||{user_id:p.user_id,selected_categories:"",preferred_countries:"",notification_enabled:false,notification_local_time:"12:00",daily_digest_enabled:true,content_language:"en",notification_timezone:"",notification_frequency:"daily",notification_times:"[\"12:00\"]",notification_weekdays:"[]",quiet_hours_start:"",quiet_hours_end:"",weekend_enabled:true,food_notifications_enabled:false,breaking_alerts_enabled:false,notification_sound_enabled:true};}
 function setPreferences_(p){required_(p,"user_id");const old=find_("USER_PREFERENCES","user_id",p.user_id),data={...p,updated_at:now_()};for(const key of ["selected_categories","preferred_countries"])if(Array.isArray(data[key]))data[key]=data[key].join(",");if(old)return patch_("USER_PREFERENCES",old,data);return append_("USER_PREFERENCES",{...getPreferences_(p),...data});}
 function listSaved_(p){return records_("SAVED_NEWS").filter(x=>x.user_id===p.user_id).map(x=>getNews_({news_id:x.news_id})).filter(Boolean);}
@@ -145,12 +161,12 @@ function broadcastHistory_(p){return records_("NOTIFICATION_LOGS").filter(x=>Str
 
 /* Recipes are distinct from news and must be sourced and editorially approved. */
 function publicRecipe_(r){return Object.fromEntries(headers_("RECIPES").filter(k=>k!=="approval_status").map(k=>[k,r[k]]));}
-function listRecipes_(){return records_("RECIPES").filter(r=>r.approval_status==="approved"&&isHttps_(String(r.source_url||""))).slice(-100).reverse().map(publicRecipe_);}
-function getRecipe_(p){required_(p,"recipe_id");const r=find_("RECIPES","recipe_id",p.recipe_id);return r&&r.approval_status==="approved"&&isHttps_(String(r.source_url||""))?publicRecipe_(r):null;}
+function listRecipes_(){return records_("RECIPES").filter(r=>r.approval_status==="approved"&&isHttps_(String(r.source_url||""))&&isHttps_(String(r.image_url||""))).slice(-100).reverse().map(publicRecipe_);}
+function getRecipe_(p){required_(p,"recipe_id");const r=find_("RECIPES","recipe_id",p.recipe_id);return r&&r.approval_status==="approved"&&isHttps_(String(r.source_url||""))&&isHttps_(String(r.image_url||""))?publicRecipe_(r):null;}
 function upsertRecipe_(p){
- required_(p,"title");required_(p,"source_url");
+ required_(p,"title");required_(p,"source_url");required_(p,"image_url");
  if(!isHttps_(p.source_url))throw Error("Recipe must credit an HTTPS source");
- if(p.image_url&&(!isHttps_(p.image_url)||!String(p.image_license||"").trim()))throw Error("Recipe images require a licensed HTTPS source");
+ if(!isHttps_(p.image_url)||!String(p.image_license||"").trim())throw Error("Every recipe requires a HTTPS image URL and documented image permission");
  if(!Array.isArray(p.ingredients)||!p.ingredients.length||p.ingredients.length>80)throw Error("Ingredients required");
  if(!Array.isArray(p.instructions)||!p.instructions.length||p.instructions.length>80)throw Error("Instructions required");
  const clean=v=>v.map(x=>String(x).slice(0,500));

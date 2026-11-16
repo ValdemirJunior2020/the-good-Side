@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5d9d7"><meta name="description" content="Your personal corner of good news: discover positive stories, save favorites, choose interests and manage your daily good news.">
+<title>The Good Side · Your account</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/account.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script><script src="/account.js" defer></script></head>
+<body class="account-body">
+<header class="account-header wrap"><a href="/" class="brand"><span class="sun-mark">☀</span>the good side<span class="brand-dot">.</span></a><a href="/" class="secondary-button account-back">← News website</a></header>
+<main class="wrap account-shell">
+<section id="auth-screen" class="auth-area">
+<div class="auth-intro"><span class="eyebrow">YOUR CORNER OF GOOD NEWS</span><h1>Good news,<br><em>your way.</em></h1><p>Create a free account to carry your interests, saved stories and delivery preferences between the website and our iPhone app.</p></div>
+<div class="account-card auth-card glass">
+<div class="auth-tabs"><button class="active" id="tab-signup" type="button">Create free account</button><button id="tab-login" type="button">Log in</button></div>
+<form id="auth-form"><div id="name-field"><label for="auth-name">Your name</label><input id="auth-name" type="text" autocomplete="name" maxlength="80" placeholder="How should we call you?"></div>
+<label for="auth-email">Email address</label><input id="auth-email" type="email" autocomplete="email" required placeholder="you@example.com">
+<label for="auth-password">Password</label><input id="auth-password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
+<button id="auth-submit" class="primary-button full-button" type="submit">Create my account ↗</button></form>
+<button id="forgot-button" type="button" class="text-button" hidden>Forgot password?</button>
+<p id="auth-message" class="feedback" role="status"></p>
+<div class="auth-divider"><span>or continue with</span></div>
+<div id="google-button" aria-label="Sign in with Google"></div>
+<p class="fineprint">Use the same account in The Good Side mobile app. Email verification may be required. Automated email delivery is being configured.</p></div></section>
+<section id="workspace" hidden>
+<div class="welcome-row"><div><span class="eyebrow">YOUR BRIGHT CORNER</span><h1 id="hello">Welcome back!</h1><p>Small moments of good, selected for you.</p></div><button type="button" id="logout" class="secondary-button">Sign out</button></div>
+<nav id="account-tabs" class="account-tabs" aria-label="Account pages">
+<button type="button" data-view="discover" class="active">☀ Discover</button>
+<button type="button" data-view="food">♧ Food</button>
+<button type="button" data-view="saved">♡ Saved</button>
+<button type="button" data-view="history">◷ History</button><button type="button" data-view="notifications">♧ Notifications</button>
+<button type="button" data-view="preferences">♧ Preferences</button>
+<button type="button" data-view="profile">◉ You</button>
+</nav>
+<p id="workspace-message" class="feedback" role="status"></p>
+<section class="account-view" data-panel="discover"><div class="account-section-title"><div><span class="eyebrow">FIND THE GOOD</span><h2>Discover good news</h2></div><input type="search" id="story-search" placeholder="Search stories…" aria-label="Search stories"></div><div id="topic-filters" class="filters"></div><div id="discover-cards" class="stories-grid"></div></section>
+<section class="account-view" data-panel="food" hidden><div class="account-section-title"><div><span class="eyebrow">GOOD FOOD, GOOD STORIES</span><h2>Food & recipes</h2></div></div><p>Food stories and recipes from our approved collection.</p><div id="food-cards" class="stories-grid"></div></section>
+<section class="account-view" data-panel="saved" hidden><div class="account-section-title"><div><span class="eyebrow">YOUR FAVORITES</span><h2>Saved stories</h2></div></div><div id="saved-cards" class="stories-grid"></div><h3>Saved recipes</h3><div id="saved-recipes" class="stories-grid"></div></section>
+<section class="account-view" data-panel="history" hidden><div class="account-section-title"><div><span class="eyebrow">WHAT YOU'VE SEEN</span><h2>Reading history</h2></div></div><p class="muted">Stories you open on this browser appear here. Cross-device reading history will be added when the shared backend supports it.</p><div id="history-cards" class="stories-grid"></div></section>
+<section class="account-view" data-panel="notifications" hidden><div class="account-section-title"><div><span class="eyebrow">YOUR DAILY SUNSHINE</span><h2>Notification history</h2></div></div><p class="muted">Review news deliveries associated with your account. Configure your schedule in Preferences.</p><div id="notification-cards" class="stories-grid"></div></section><section class="account-view" data-panel="preferences" hidden><div class="account-section-title"><div><span class="eyebrow">MAKE IT YOURS</span><h2>Preferences & notifications</h2></div></div>
+<form id="preferences-form" class="account-card glass settings-card">
+<h3>Your interests</h3><p>Select the stories you'd like to see more of.</p><div id="interest-options" class="choice-options"></div>
+<h3>Your daily sunshine</h3><label class="check-line"><input type="checkbox" id="notify-enabled">Send me uplifting news</label><label class="check-line"><input type="checkbox" id="digest-enabled">Daily digest</label>
+<label for="frequency">Delivery frequency</label><select id="frequency"><option value="daily">Once daily</option><option value="twice_daily">Twice daily</option><option value="three_daily">Three times daily</option><option value="selected_weekdays">Selected weekdays</option><option value="breaking_only">Breaking only</option><option value="digest_plus_alerts">Daily digest + alerts</option></select>
+<div id="time-fields" class="time-grid"><label>Delivery time 1<input type="time" id="time-one" value="12:00"></label><label id="time-two-label" hidden>Delivery time 2<input type="time" id="time-two" value="18:00"></label><label id="time-three-label" hidden>Delivery time 3<input type="time" id="time-three" value="09:00"></label></div>
+<label for="timezone">Your timezone (IANA)</label><input id="timezone" value="America/New_York" placeholder="America/New_York" required>
+<h3>Your quiet time</h3><div class="time-grid"><label>From<input type="time" id="quiet-from" value="22:00"></label><label>Until<input type="time" id="quiet-until" value="07:00"></label></div>
+<label class="check-line"><input type="checkbox" id="weekends" checked>Include weekends</label><label>Selected weekdays</label><div id="weekday-options" class="choice-options"></div>
+<label class="check-line"><input type="checkbox" id="food-alerts">Food notifications</label><label class="check-line"><input type="checkbox" id="breaking-alerts">Breaking good news (opt-in)</label>
+<label for="language">Preferred language</label><select id="language"><option value="en">English</option><option value="pt">Português</option><option value="es">Español</option></select>
+<p class="fineprint">Your saved schedule syncs with the app. iPhone push requires the mobile app and its notification permission. Browser notifications are not enabled yet.</p>
+<p id="next-notification" class="muted"></p><button type="submit" class="primary-button">Save my preferences</button></form></section>
+<section class="account-view" data-panel="profile" hidden><div class="account-section-title"><div><span class="eyebrow">YOUR CORNER OF GOOD NEWS</span><h2>Your profile</h2></div></div>
+<div class="profile-grid"><div class="account-card glass profile-card"><img id="profile-avatar" alt="Your selected avatar" src="/favicon.svg"><p id="profile-name">Your profile</p><p id="profile-email" class="muted"></p><button id="choose-avatar" class="secondary-button" type="button">Choose avatar</button></div>
+<form id="profile-form" class="account-card glass settings-card"><h3>Profile info</h3><label for="display-name">Display name</label><input id="display-name" maxlength="80" required><label for="profile-lang">Preferred language</label><select id="profile-lang"><option value="en">English</option><option value="pt">Português</option><option value="es">Español</option></select><button type="submit" class="primary-button">Save profile</button></form></div>
+<div class="profile-grid secondary-grid"><section class="account-card glass settings-card"><h3>Connected apps</h3><p id="provider-label">Signed in to The Good Side.</p><h3>Subscription</h3><p>Free account. Premium subscriptions are not available yet.</p><h3>Data & privacy</h3><p>You can request a copy of your data or delete your account. <a href="/privacy.html">Privacy Policy</a> and <a href="/terms.html">Terms of Use</a> are available here.</p><a class="secondary-button" href="mailto:infojr.83@gmail.com?subject=The%20Good%20Side%20Data%20Export">Request data export</a><a class="secondary-button" href="mailto:infojr.83@gmail.com?subject=The%20Good%20Side%20Support">Contact support</a></section>
+<section class="account-card glass settings-card"><h3>Security & account</h3><button type="button" id="account-recovery" class="secondary-button">Reset email password</button><p class="fineprint">Google account passwords are managed by Google.</p><h3>Delete account and data</h3><p>This permanently removes your Good Side account data. Google accounts themselves remain with Google.</p><button type="button" id="account-delete" class="danger-button">Delete my account and data</button></section></div></section>
+<dialog id="recipe-dialog" class="recipe-dialog"><div class="dialog-top"><h2 id="recipe-title">Recipe</h2><button type="button" id="recipe-close" aria-label="Close recipe">✕</button></div><p id="recipe-description"></p><h3>Ingredients</h3><ul id="recipe-ingredients"></ul><h3>Instructions</h3><ol id="recipe-steps"></ol><a id="recipe-source" class="secondary-button" target="_blank" rel="noopener noreferrer" hidden>View original recipe ↗</a></dialog><div id="avatar-picker" class="avatar-dialog" hidden role="dialog" aria-modal="true" aria-label="Choose profile avatar"><div class="avatar-panel"><div class="dialog-top"><h2>Choose your sunshine</h2><button id="avatar-close" type="button" aria-label="Close avatar picker">✕</button></div><p>Pick an avatar. Your selection is saved to the same profile used by the mobile app.</p><div id="avatar-grid" class="avatar-grid"></div></div></div>
+</section>
+</main>
+<footer class="account-footer wrap"><p>☀ The Good Side · <a href="/">Good news website</a> · <a href="/privacy.html">Privacy Policy</a> · <a href="/terms.html">Terms</a> · <a href="/delete-account.html">Delete account help</a> · <a href="/support.html">Support</a></p></footer>
+</body></html>

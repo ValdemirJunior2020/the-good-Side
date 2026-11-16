@@ -1,5 +1,35 @@
 [
   {
+    "publisher": "NASA",
+    "feed": "https://www.nasa.gov/news-release/feed/",
+    "category": "science",
+    "status": "approved"
+  },
+  {
+    "publisher": "NOAA",
+    "feed": "https://www.noaa.gov/rss.xml",
+    "category": "environment",
+    "status": "approved"
+  },
+  {
+    "publisher": "USGS",
+    "feed": "https://www.usgs.gov/news/national-news-release/feed",
+    "category": "nature",
+    "status": "approved"
+  },
+  {
+    "publisher": "NIH",
+    "feed": "https://www.nih.gov/news-releases/feed.xml",
+    "category": "health",
+    "status": "approved"
+  },
+  {
+    "publisher": "USDA ARS",
+    "feed": "https://www.ars.usda.gov/rss/news/",
+    "category": "food",
+    "status": "review_feed"
+  },
+  {
     "publisher": "Positive News",
     "feed": "https://www.positive.news/feed/",
     "category": "world-progress",
@@ -57,6 +87,90 @@
     "publisher": "Sunny Skyz",
     "feed": "https://www.sunnyskyz.com/rss_tebow.php",
     "category": "kindness",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Kindness & Heroes",
+    "feed": "https://news.google.com/rss/search?q=%22random%20acts%20of%20kindness%22%20OR%20%22community%20heroes%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "kindness",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Animal Rescues",
+    "feed": "https://news.google.com/rss/search?q=%22animal%20rescued%22%20OR%20%22wildlife%20rescued%22%20OR%20%22shelter%20adoption%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "animals",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Health Breakthroughs",
+    "feed": "https://news.google.com/rss/search?q=%22medical%20breakthrough%22%20OR%20%22new%20treatment%20success%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "health",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Environment Wins",
+    "feed": "https://news.google.com/rss/search?q=%22conservation%20success%22%20OR%20%22habitat%20restored%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "environment",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Community Progress",
+    "feed": "https://news.google.com/rss/search?q=%22community%20volunteers%22%20OR%20%22neighbors%20helping%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "community",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Education & Young Innovators",
+    "feed": "https://news.google.com/rss/search?q=%22students%20invent%22%20OR%20%22scholarship%20success%22%20OR%20%22school%20community%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "education",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Science Discoveries",
+    "feed": "https://news.google.com/rss/search?q=%22new%20discovery%22%20OR%20%22research%20breakthrough%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "science",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Food & Giving",
+    "feed": "https://news.google.com/rss/search?q=%22food%20bank%20volunteers%22%20OR%20%22community%20meals%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "food",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Technology for Good",
+    "feed": "https://news.google.com/rss/search?q=%22technology%20for%20good%22%20OR%20%22assistive%20technology%22%20OR%20%22innovation%20helps%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "technology",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Sports Achievements",
+    "feed": "https://news.google.com/rss/search?q=%22athlete%20inspiring%22%20OR%20%22sports%20record%22%20OR%20%22para-athlete%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "sports",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Children & Families",
+    "feed": "https://news.google.com/rss/search?q=%22families%20reunited%22%20OR%20%22children%20helped%22%20OR%20%22youth%20success%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "families",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Human Achievements",
+    "feed": "https://news.google.com/rss/search?q=%22human%20achievement%22%20OR%20%22record%20breaking%20accomplishment%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "achievements",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Faith & Inspiration",
+    "feed": "https://news.google.com/rss/search?q=%22faith%20community%20volunteers%22%20OR%20%22church%20charity%22%20OR%20%22interfaith%20kindness%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "faith",
+    "status": "review_terms"
+  },
+  {
+    "publisher": "Google News Discovery — Medical Breakthroughs",
+    "feed": "https://news.google.com/rss/search?q=%22medical%20breakthrough%22%20OR%20%22clinical%20trial%20positive%20result%22%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+    "category": "medical",
     "status": "review_terms"
   }
 ]
